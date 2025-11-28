@@ -12,22 +12,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendJSON(['success' => false, 'message' => 'Method not allowed'], 405);
 }
 
-// For testing: allow request without token, or validate if provided
-$userData = null;
-$headers = getallheaders();
-$authHeader = $headers['Authorization'] ?? '';
-
-if (!empty($authHeader) && preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-    // If token provided, validate it
-    $token = $matches[1];
-    $userData = verifyToken($token);
-    if (!$userData) {
-        sendJSON(['success' => false, 'message' => 'Invalid or expired token'], 401);
-    }
-} else {
-    // If no token, use test user (can be removed for production)
-    $userData = ['userId' => 1, 'username' => 'test'];
-}
+// Require authentication for all requests
+$userData = requireAuth();
 
 $input = getJSONInput();
 
