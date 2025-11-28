@@ -1,14 +1,14 @@
-# AI-Powered Educational Platform
+# Professor Hawkeinstein Educational Platform
 
-An adaptive learning system with AI agents that assess, track, and teach students using biometric anti-cheating and progress-based evaluation.
+An adaptive learning system with AI agents that assess, track, and teach students using biometric anti-cheating and progress-based evaluation. Powered by local LLM inference via llama-server.
 
 ## Technology Stack
 
 - **Frontend**: HTML5, CSS3, JavaScript
 - **Backend**: PHP 8.0+ (LAMP Stack)
-- **Database**: MariaDB 10.7+ with vector plugin support
-- **AI Agents**: C++ HTTP microservice with Ollama integration
-- **LLM**: Self-hosted models via Ollama (llama2, mistral, etc.)
+- **Database**: MariaDB 10.7+
+- **AI Agents**: C++ HTTP microservice (agent_service)
+- **LLM**: Self-hosted models via llama-server (qwen2.5-1.5b-instruct)
 - **Biometric**: OpenCV for facial recognition, Web Audio API for voice
 
 ## Architecture Overview
@@ -35,10 +35,10 @@ An adaptive learning system with AI agents that assess, track, and teach student
 └─────────────┘  └──────┬───────┘
                         │
                         ▼
-                   ┌─────────┐
-                   │ Ollama  │
-                   │  LLMs   │
-                   └─────────┘
+                   ┌──────────────┐
+                   │ llama-server │
+                   │   :8090      │
+                   └──────────────┘
 ```
 
 ## Features
@@ -114,7 +114,7 @@ EXIT;
 
 ```bash
 # Import schema
-mysql -u eduai_user -p eduai_platform < schema.sql
+mysql -u professorhawkeinstein_user -p professorhawkeinstein_platform < schema.sql
 ```
 
 ### 2. PHP Configuration
@@ -123,9 +123,9 @@ Update `config/database.php` with your database credentials:
 
 ```php
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'eduai_platform');
-define('DB_USER', 'eduai_user');
-define('DB_PASS', 'your_secure_password');
+define('DB_NAME', 'professorhawkeinstein_platform');
+define('DB_USER', 'professorhawkeinstein_user');
+define('DB_PASS', 'BT1716lit');
 ```
 
 **Important**: Change security keys in production:
@@ -138,8 +138,8 @@ Create virtual host configuration:
 
 ```apache
 <VirtualHost *:80>
-    ServerName eduai.local
-    DocumentRoot /var/www/basic_educational
+    ServerName professorhawkeinstein.local
+    DocumentRoot /var/www/html/basic_educational
     
     <Directory /var/www/basic_educational>
         Options -Indexes +FollowSymLinks
@@ -147,8 +147,8 @@ Create virtual host configuration:
         Require all granted
     </Directory>
     
-    ErrorLog ${APACHE_LOG_DIR}/eduai_error.log
-    CustomLog ${APACHE_LOG_DIR}/eduai_access.log combined
+    ErrorLog ${APACHE_LOG_DIR}/professorhawkeinstein_error.log
+    CustomLog ${APACHE_LOG_DIR}/professorhawkeinstein_access.log combined
 </VirtualHost>
 ```
 
@@ -159,20 +159,22 @@ sudo a2enmod headers
 sudo systemctl restart apache2
 ```
 
-### 4. Ollama Setup
+### 4. llama-server Setup
 
-Install and run Ollama for local LLM hosting:
+Install and run llama-server for local LLM inference:
 
 ```bash
-# Install Ollama
-curl -fsSL https://ollama.com/install.sh | sh
+# Build llama.cpp
+git clone https://github.com/ggerganov/llama.cpp.git
+cd llama.cpp
+make
 
-# Pull models
-ollama pull llama2
-ollama pull mistral
+# Download model
+cd models
+wget https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf
 
-# Run Ollama (it will run on http://localhost:11434)
-ollama serve
+# Start llama-server
+../llama-server --model qwen2.5-1.5b-instruct-q4_k_m.gguf --port 8090 --threads 4 --ctx-size 4096
 ```
 
 ### 5. C++ Agent Microservice
@@ -180,10 +182,10 @@ ollama serve
 The C++ agent microservice needs to be implemented with the following components:
 
 **Required Libraries:**
-- libcurl (for Ollama API calls)
+- libcurl (for llama-server HTTP API)
 - nlohmann/json (JSON parsing)
 - cpp-httplib (HTTP server)
-- OpenCV (facial recognition)
+- MySQL Connector/C++ (database access)
 
 **Endpoints to implement:**
 - `POST /api/chat` - Process agent chat requests
@@ -195,8 +197,13 @@ The C++ agent microservice needs to be implemented with the following components
 **Compilation:**
 ```bash
 cd cpp_agent
-g++ -std=c++17 main.cpp -lcurl -lpthread -o agent_service
-./agent_service --port 8080
+make clean && make
+./bin/agent_service
+```
+
+Or use the startup script:
+```bash
+./start_services.sh
 ```
 
 ### 6. Permissions
@@ -217,7 +224,7 @@ sudo chmod -R 775 /var/www/Professor_Hawkeinstein/media
    ```
 
 2. **Test frontend:**
-   Navigate to `http://eduai.local` (or `http://localhost/Professor_Hawkeinstein`)
+   Navigate to `http://professorhawkeinstein.local` (or `http://localhost/basic_educational`)
 
 3. **Demo credentials:**
    - Username: `john_doe`
@@ -225,9 +232,9 @@ sudo chmod -R 775 /var/www/Professor_Hawkeinstein/media
 
 4. **Test API endpoints:**
    ```bash
-   curl -X POST http://eduai.local/api/auth/login.php \
+   curl -X POST http://localhost/basic_educational/api/auth/login.php \
      -H "Content-Type: application/json" \
-     -d '{"username":"john_doe","password":"student123"}'
+     -d '{"username":"root","password":"Root1234"}'
    ```
 
 ## Development Roadmap
@@ -239,11 +246,11 @@ sudo chmod -R 775 /var/www/Professor_Hawkeinstein/media
 - ✅ Basic authentication system
 
 ### Phase 2: C++ Agent Microservice
-- ⏳ HTTP server implementation
-- ⏳ Ollama integration
-- ⏳ RAG engine with vector search
-- ⏳ Memory management system
-- ⏳ Embedding generation
+- ✅ HTTP server implementation
+- ✅ llama-server integration
+- ✅ RAG engine with embedding search
+- ✅ Memory management system
+- ✅ Embedding generation
 
 ### Phase 3: Biometric Integration
 - ⏳ OpenCV facial recognition
@@ -306,9 +313,23 @@ sudo chmod -R 775 /var/www/Professor_Hawkeinstein/media
 7. **Biometric data encryption** at rest
 8. **CORS configuration** for production
 
-## Contributing
+## Quick Start
 
-This is a personal educational project. Implementation of the C++ agent microservice is the next critical step.
+For rapid deployment:
+
+```bash
+# Clone repository
+git clone https://github.com/stevemeierotto/Professor-Hawkeinstein.git
+cd Professor-Hawkeinstein
+
+# Start services
+./start_services.sh
+
+# Deploy to web directory
+make sync-web
+```
+
+See `SETUP_COMPLETE.md` for detailed setup instructions.
 
 ## License
 
@@ -320,4 +341,14 @@ For questions about this implementation, refer to the inline documentation in ea
 
 ---
 
-**Note**: This is a development version. The C++ agent microservice needs to be implemented before the system is fully functional. The frontend currently works with mock data and placeholder responses.
+## Documentation
+
+- `SETUP_COMPLETE.md` - Complete setup guide
+- `AUTH_FORMAT_CENTRALIZATION.md` - Authentication system documentation
+- `FILE_SYNC_GUIDE.md` - Deployment automation
+- `ADVISOR_INSTANCE_API.md` - Student advisor system API
+- `RAG_ENGINE_README.md` - RAG implementation details
+
+## Repository
+
+https://github.com/stevemeierotto/Professor-Hawkeinstein
