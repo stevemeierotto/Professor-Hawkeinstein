@@ -718,8 +718,11 @@
                 const agents = agentsData.agents || [];
                 if (agents.length === 0) throw new Error('No advisor agents available');
                 
-                // Prefer Professor Hawkeinstein, otherwise use first advisor
-                const advisorAgent = agents.find(a => a.agent_name.includes('Hawkeinstein')) || agents[0];
+                // Prefer Admin Advisor, then any Hawkeinstein, otherwise use first advisor
+                const advisorAgent = agents.find(a => a.agent_name.includes('Admin Advisor')) 
+                    || agents.find(a => a.agent_type === 'admin_advisor')
+                    || agents.find(a => a.agent_name.includes('Hawkeinstein')) 
+                    || agents[0];
                 
                 const response = await fetch('api/admin/create_agent_instance.php', {
                     method: 'POST',
