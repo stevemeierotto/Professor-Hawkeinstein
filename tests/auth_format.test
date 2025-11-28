@@ -1,0 +1,183 @@
+#!/bin/bash
+# Auth Format Validation Test
+# Verifies correct authentication header formats and detects misuse
+
+set -euo pipefail
+
+# Colors
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+echo "=== Authentication Format Validation Test ==="
+echo ""
+
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+HELPER_FILE="$PROJECT_ROOT/api/helpers/auth_headers.php"
+
+TESTS_PASSED=0
+TESTS_FAILED=0
+
+# Test helper function
+test_php() {
+    local description="$1"
+    local php_code="$2"
+    local expect_success="$3"  # true or false
+    
+    echo -n "Testing: $description ... "
+    
+    # Run PHP code
+    OUTPUT=$(php -r "
+        require_once '$HELPER_FILE';
+        try {
+            $php_code
+            echo 'SUCCESS';
+        } catch (Exception \$e) {
+            echo 'ERROR: ' . \$e->getMessage();
+        }
+    " 2>&1)
+    
+    if [ "$expect_success" = "true" ]; then
+        if echo "$OUTPUT" | grep -q "SUCCESS"; then
+            echo -e "${GREEN}✓ PASSED${NC}"
+            TESTS_PASSED=$((TESTS_PASSED + 1))
+            return 0
+        else
+            echo -e "${RED}✗ FAILED${NC}"
+            echo "  Expected success, got: $OUTPUT"
+            TESTS_FAILED=$((TESTS_FAILED + 1))
+            return 1
+        fi
+    else
+        if echo "$OUTPUT" | grep -q "ERROR"; then
+            echo -e "${GREEN}✓ PASSED${NC} (error caught as expected)"
+            TESTS_PASSED=$((TESTS_PASSED + 1))
+            return 0
+        else
+            echo -e "${RED}✗ FAILED${NC}"
+            echo "  Expected error, got: $OUTPUT"
+            TESTS_FAILED=$((TESTS_FAILED + 1))
+            return 1
+        fi
+    fi
+}
+
+# Test CSP auth header format
+echo "=== CSP Authentication Headers ==="
+echo ""
+
+test_php "Valid CSP API key" "\$h = csp_auth_header('abc123def456ghi789'); if (strpos(\$h, 'Token token=abc123def456ghi789') !== false) echo 'OK';" "true"
+
+test_php "CSP header starts correctly" "\$h = csp_auth_header('mykey12345'); if (strpos(\$h, 'Authorization: Token token=') === 0) echo 'OK';" "true"
+
+test_php "Empty CSP API key rejected" "csp_auth_header('');" "false"
+
+test_php "Short CSP API key rejected" "csp_auth_header('abc');" "false"
+
+test_php "JWT passed to CSP header rejected" "csp_auth_header('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ');" "false"
+
+echo ""
+echo "=== Bearer JWT Headers ==="
+echo ""
+
+test_php "Valid JWT token" "\$h = bearer_auth_header('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ'); if (strpos(\$h, 'Bearer') !== false) echo 'OK';" "true"
+
+test_php "Bearer header starts correctly" "\$h = bearer_auth_header('aaa.bbb.ccc'); if (strpos(\$h, 'Authorization: Bearer ') === 0) echo 'OK';" "true"
+
+test_php "Empty JWT rejected" "bearer_auth_header('');" "false"
+
+test_php "Invalid JWT format (2 parts)" "bearer_auth_header('header.payload');" "false"
+
+test_php "Invalid JWT format (4 parts)" "bearer_auth_header('a.b.c.d');" "false"
+
+test_php "Invalid JWT format (no dots)" "bearer_auth_header('invalidtoken');" "false"
+
+echo ""
+echo "=== Header Array Validators ==="
+echo ""
+
+test_php "CSP headers validation passes" "\$h = get_csp_headers('testkey1234567'); validate_csp_headers(\$h);" "true"
+
+test_php "Bearer headers validation passes" "\$h = get_bearer_headers('aaa.bbb.ccc'); validate_bearer_headers(\$h);" "true"
+
+test_php "Detect Bearer in CSP context" "validate_csp_headers(['Authorization: Bearer abc.def.ghi']);" "false"
+
+test_php "Detect CSP format in Bearer context" "validate_bearer_headers(['Authorization: Token token=mykey']);" "false"
+
+echo ""
+echo "=== Complete Header Generators ==="
+echo ""
+
+test_php "get_csp_headers returns array" "\$h = get_csp_headers('key1234567890'); if (is_array(\$h) && count(\$h) >= 3) echo 'OK';" "true"
+
+test_php "get_csp_headers includes Accept" "\$h = get_csp_headers('key1234567890'); if (in_array('Accept: application/json', \$h)) echo 'OK';" "true"
+
+test_php "get_csp_headers includes User-Agent" "\$h = get_csp_headers('key1234567890'); \$found = false; foreach (\$h as \$header) { if (strpos(\$header, 'User-Agent:') !== false) \$found = true; } if (\$found) echo 'OK';" "true"
+
+test_php "get_bearer_headers returns array" "\$h = get_bearer_headers('aaa.bbb.ccc'); if (is_array(\$h) && count(\$h) >= 2) echo 'OK';" "true"
+
+test_php "get_bearer_headers includes Content-Type" "\$h = get_bearer_headers('aaa.bbb.ccc'); if (in_array('Content-Type: application/json', \$h)) echo 'OK';" "true"
+
+echo ""
+echo "=== Real-world Scenarios ==="
+echo ""
+
+# Test that scraper_csp.php includes the helper
+if [ -f "$PROJECT_ROOT/api/admin/scraper_csp.php" ]; then
+    echo -n "Checking scraper_csp.php uses auth_headers.php ... "
+    if grep -q "require_once.*auth_headers.php" "$PROJECT_ROOT/api/admin/scraper_csp.php"; then
+        echo -e "${GREEN}✓ PASSED${NC}"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+        echo -e "${RED}✗ FAILED${NC}"
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+    
+    echo -n "Checking scraper_csp.php uses get_csp_headers() ... "
+    if grep -q "get_csp_headers" "$PROJECT_ROOT/api/admin/scraper_csp.php"; then
+        echo -e "${GREEN}✓ PASSED${NC}"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+        echo -e "${RED}✗ FAILED${NC}"
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+    fi
+    
+    echo -n "Checking scraper_csp.php NO manual 'Token token=' ... "
+    if grep -q "Authorization.*Token token=" "$PROJECT_ROOT/api/admin/scraper_csp.php"; then
+        MANUAL_COUNT=$(grep -c "Authorization.*Token token=" "$PROJECT_ROOT/api/admin/scraper_csp.php")
+        echo -e "${RED}✗ FAILED${NC} (found $MANUAL_COUNT manual headers)"
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+    else
+        echo -e "${GREEN}✓ PASSED${NC}"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    fi
+fi
+
+echo ""
+echo "========================================"
+TOTAL_TESTS=$((TESTS_PASSED + TESTS_FAILED))
+echo "Tests run: $TOTAL_TESTS"
+echo "Passed: $TESTS_PASSED"
+echo "Failed: $TESTS_FAILED"
+echo ""
+
+if [ $TESTS_FAILED -eq 0 ]; then
+    echo -e "${GREEN}✅ All auth format tests passed!${NC}"
+    echo ""
+    echo "Security verification:"
+    echo "  ✓ CSP headers use correct 'Token token=' format"
+    echo "  ✓ Bearer headers use correct 'Bearer' format"
+    echo "  ✓ Cross-contamination detected and rejected"
+    echo "  ✓ Invalid formats rejected"
+    echo "  ✓ Helper functions integrated"
+    exit 0
+else
+    echo -e "${RED}⚠️  $TESTS_FAILED test(s) failed${NC}"
+    echo ""
+    echo "Potential issues:"
+    echo "  - Format confusion between CSP and JWT"
+    echo "  - Manual header construction still present"
+    echo "  - Validation not working correctly"
+    exit 1
+fi

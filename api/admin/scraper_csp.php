@@ -5,6 +5,7 @@
  */
 
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../helpers/auth_headers.php';
 
 /**
  * Scrape standards from Common Standards Project API
@@ -68,11 +69,7 @@ function scrapeCSPStandards($jurisdictionId, $gradeLevel, $subject) {
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $jurisdictionUrl);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Authorization: Token token=' . $apiKey,
-        'Accept: application/json',
-        'User-Agent: ProfessorHawkeinstein/1.0'
-    ]);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, get_csp_headers($apiKey));
     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
     
@@ -143,11 +140,7 @@ function scrapeCSPStandards($jurisdictionId, $gradeLevel, $subject) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $setUrl);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Authorization: Token token=' . $apiKey,
-            'Accept: application/json',
-            'User-Agent: ProfessorHawkeinstein/1.0'
-        ]);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, get_csp_headers($apiKey));
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         
