@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="auth_storage.js?v=3"></script>
+    <script src="admin_auth.js?v=3"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Scraper - Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .scraper-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+        }
+
+        .scraper-form {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .scraped-content-list {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .content-item {
+            padding: 1.5rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .content-item:last-child {
+            border-bottom: none;
+        }
+
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+        }
+
+        .content-meta {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.875rem;
+            color: var(--text-light);
+            margin-top: 0.5rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-pending { background: #fff4e6; color: #f59e0b; }
+        .status-approved { background: #d1fae5; color: #059669; }
+        .status-rejected { background: #fee2e2; color: #dc2626; }
+
+        .credibility-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .credibility-bar {
+            width: 60px;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .credibility-fill {
+            height: 100%;
+            background: linear-gradient(to right, #ef4444, #f59e0b, #10b981);
+        }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="logo">🎓 Professor Hawkeinstein's Educational Foundation</a>
+            <ul class="nav-links">
+                <li><a href="admin_dashboard.html">← Admin Dashboard</a></li>
+                <li><a href="#" id="adminName">Admin</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="scraper-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <div>
+                <h1>🕷️ Content Scraper</h1>
+                <p style="color: var(--text-light);">Scrape educational content from trusted sources</p>
+            </div>
+            <button class="btn btn-outline" onclick="window.location.href='admin_content_review.html'">
+                Review Content →
+            </button>
+        </div>
+
+        <!-- Scraper Form -->
+        <div class="scraper-form">
+            <h2 style="margin-top: 0;">Scrape New Content</h2>
+            
+            <form id="scraperForm">
+                <div class="form-group">
+                    <label for="source Type">Source Type *</label>
+                    <select id="sourceType" name="source_type" required>
+                        <option value="url">Website URL Scraper</option>
+                        <option value="csp_api">Common Standards Project (API)</option>
+                    </select>
+                    <small style="color: var(--text-light);">Select the source to scrape content from</small>
+                </div>
+
+                <div class="form-group" id="urlGroup">
+                    <label for="url">Source URL *</label>
+                    <input type="url" id="url" name="url" 
+                           placeholder="https://www.example.com/educational-content">
+                    <small style="color: var(--text-light);">Enter the full URL of the page to scrape</small>
+                </div>
+
+                <div class="form-group" id="stateGroup" style="display: none;">
+                    <label for="state">State/Jurisdiction *</label>
+                    <select id="state" name="state">
+                        <option value="AK">Alaska (AK)</option>
+                    </select>
+                    <small style="color: var(--text-light);">Currently limited to Alaska standards</small>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="gradeLevel">Grade Level</label>
+                        <select id="gradeLevel" name="grade_level">
+                            <option value="">Select grade level...</option>
+                            <option value="pre_k">Pre-K</option>
+                            <option value="kindergarten">Kindergarten</option>
+                            <option value="grade_1">Grade 1</option>
+                            <option value="grade_2">Grade 2</option>
+                            <option value="grade_3">Grade 3</option>
+                            <option value="grade_4">Grade 4</option>
+                            <option value="grade_5">Grade 5</option>
+                            <option value="grade_6">Grade 6</option>
+                            <option value="middle_school">Middle School (7-8)</option>
+                            <option value="high_school">High School (9-12)</option>
+                            <option value="college">College/University</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="subjectArea">Subject Area</label>
+                        <select id="subjectArea" name="subject_area">
+                            <option value="">Select subject...</option>
+                            <option value="mathematics">Mathematics</option>
+                            <option value="science">Science</option>
+                            <option value="language_arts">Language Arts</option>
+                            <option value="social_studies">Social Studies</option>
+                            <option value="computer_science">Computer Science</option>
+                            <option value="arts">Arts</option>
+                            <option value="physical_education">Physical Education</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" id="contentTypeGroup">
+                    <label for="contentType">Content Type</label>
+                    <select id="contentType" name="content_type">
+                        <option value="educational">Educational Content</option>
+                        <option value="standard">Educational Standard</option>
+                        <option value="lesson">Lesson Plan</option>
+                        <option value="reference">Reference Material</option>
+                        <option value="assessment">Assessment/Quiz</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    🕷️ Scrape Content
+                </button>
+            </form>
+        </div>
+
+        <!-- Quick Links -->
+        <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+            <h3 style="margin-top: 0;">📚 Suggested Educational Sources</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+                <div>
+                    <strong>Grade 1-2 Math:</strong>
+                    <ul style="margin: 0.5rem 0;">
+                        <li><a href="http://www.corestandards.org/Math/" target="_blank">Common Core Math Standards</a></li>
+                        <li><a href="https://www.khanacademy.org" target="_blank">Khan Academy</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <strong>Educational Resources:</strong>
+                    <ul style="margin: 0.5rem 0;">
+                        <li><a href="https://www.nctm.org" target="_blank">NCTM Resources</a></li>
+                        <li><a href="https://www.mathisfun.com" target="_blank">Math is Fun</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Scraped Content -->
+        <h2>Recent Scraped Content</h2>
+        <div class="scraped-content-list" id="contentList">
+            <div style="padding: 2rem; text-align: center; color: var(--text-light);">
+                Loading content...
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>Scraping content...</p>
+        </div>
+    </div>
+
+    <script>
+        // Auth check
+        const user = getAdminSession('user' || '{}');
+        if (!user.username || (user.role !== 'admin' && user.role !== 'root')) {
+            window.location.href = 'login.html';
+        }
+        document.getElementById('adminName').textContent = user.name;
+
+        // Source type change handler
+        document.getElementById('sourceType').addEventListener('change', (e) => {
+            const sourceType = e.target.value;
+            const urlGroup = document.getElementById('urlGroup');
+            const stateGroup = document.getElementById('stateGroup');
+            const urlInput = document.getElementById('url');
+            
+            if (sourceType === 'csp_api') {
+                // API mode - hide URL, show state, require grade/subject
+                urlGroup.style.display = 'none';
+                stateGroup.style.display = 'block';
+                urlInput.removeAttribute('required');
+                document.getElementById('gradeLevel').setAttribute('required', 'required');
+                document.getElementById('subjectArea').setAttribute('required', 'required');
+            } else {
+                // URL scraper mode - show URL, hide state
+                urlGroup.style.display = 'block';
+                stateGroup.style.display = 'none';
+                urlInput.setAttribute('required', 'required');
+                document.getElementById('gradeLevel').removeAttribute('required');
+                document.getElementById('subjectArea').removeAttribute('required');
+            }
+        });
+
+        // Form submission
+        document.getElementById('scraperForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const sourceType = document.getElementById('sourceType').value;
+            const formData = {
+                source_type: sourceType,
+                grade_level: document.getElementById('gradeLevel').value || null,
+                subject_area: document.getElementById('subjectArea').value || null,
+                content_type: document.getElementById('contentType').value
+            };
+
+            if (sourceType === 'url') {
+                formData.url = document.getElementById('url').value;
+            } else if (sourceType === 'csp_api') {
+                formData.state = document.getElementById('state').value;
+                // Validate required fields for API
+                if (!formData.grade_level || !formData.subject_area) {
+                    alert('Grade level and subject area are required for Common Standards Project API');
+                    return;
+                }
+            }
+
+            document.getElementById('loadingOverlay').style.display = 'flex';
+
+            try {
+                const response = await fetch('api/admin/scraper.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    if (sourceType === 'csp_api') {
+                        alert(`Standards scraped successfully!\n\nStandards Found: ${result.standards_count || 0}\nJurisdiction: ${result.jurisdiction || 'N/A'}`);
+                    } else {
+                        alert(`Content scraped successfully!\n\nTitle: ${result.page_title}\nCredibility Score: ${result.credibility_score}\nText Length: ${result.text_length} characters`);
+                    }
+                    document.getElementById('scraperForm').reset();
+                    // Reset source type to default
+                    document.getElementById('sourceType').value = 'url';
+                    document.getElementById('sourceType').dispatchEvent(new Event('change'));
+                    loadContent();
+                } else {
+                    alert('Error: ' + (result.error || 'Failed to scrape content'));
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            } finally {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+        });
+
+        // Load recent content
+        async function loadContent() {
+            try {
+                const response = await fetch('api/admin/list_scraped_content.php?limit=20', {
+                });
+
+                if (response.ok) {
+                    const content = await response.json();
+                    displayContent(content);
+                } else {
+                    document.getElementById('contentList').innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-light);">Error loading content</div>';
+                }
+            } catch (error) {
+                console.error('Error loading content:', error);
+            }
+        }
+
+        function displayContent(items) {
+            const list = document.getElementById('contentList');
+            
+            if (items.length === 0) {
+                list.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-light);">No content scraped yet</div>';
+                return;
+            }
+
+            list.innerHTML = items.map(item => {
+                const statusClass = `status-${item.review_status}`;
+                const credibilityPercent = (item.credibility_score * 100).toFixed(0);
+                const domain = new URL(item.url).hostname;
+                
+                return `
+                    <div class="content-item">
+                        <div class="content-header">
+                            <div style="flex: 1;">
+                                <h3 style="margin: 0 0 0.5rem 0;">${item.title || 'Untitled'}</h3>
+                                <a href="${item.url}" target="_blank" style="font-size: 0.875rem; color: var(--primary);">
+                                    ${domain}
+                                </a>
+                                <div class="content-meta">
+                                    <span>${item.grade_level || 'Unspecified'}</span>
+                                    <span>•</span>
+                                    <span>${item.subject || 'General'}</span>
+                                    <span>•</span>
+                                    <span>${new Date(item.scraped_at).toLocaleDateString()}</span>
+                                    <span>•</span>
+                                    <div class="credibility-indicator">
+                                        <span>Credibility: ${credibilityPercent}%</span>
+                                        <div class="credibility-bar">
+                                            <div class="credibility-fill" style="width: ${credibilityPercent}%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="status-badge ${statusClass}">${item.review_status}</span>
+                            </div>
+                        </div>
+                        <p style="margin: 0.5rem 0; color: var(--text-light); font-size: 0.875rem;">
+                            ${item.content_preview || 'No preview available'}
+                        </p>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                            <button class="btn btn-sm btn-primary" onclick="reviewContent(${item.content_id})">
+                                Review
+                            </button>
+                            <button class="btn btn-sm btn-outline" onclick="viewContent(${item.content_id})">
+                                View Full Text
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function reviewContent(contentId) {
+            window.location.href = `admin_content_review.html?id=${contentId}`;
+        }
+
+        function viewContent(contentId) {
+            window.location.href = `admin_view_content.html?id=${contentId}`;
+        }
+
+        // Initial load
+        loadContent();
+    </script>
+</body>
+</html>

@@ -13,6 +13,7 @@ WorkingDirectory=/home/steve/Professor_Hawkeinstein
 # Environment variables
 Environment="LLAMA_MODEL_PATH=/home/steve/Professor_Hawkeinstein/models/qwen2.5-1.5b-instruct-q4_k_m.gguf"
 Environment="LLAMA_PORT=8090"
+Environment="LD_LIBRARY_PATH=/home/steve/Professor_Hawkeinstein/llama.cpp/build/bin"
 
 # Start command
 ExecStart=/home/steve/Professor_Hawkeinstein/llama.cpp/build/bin/llama-server \

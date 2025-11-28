@@ -18,6 +18,7 @@ sleep 2
 
 # Start llama-server
 echo "Starting llama-server on port 8090..."
+export LD_LIBRARY_PATH="/home/steve/Professor_Hawkeinstein/llama.cpp/build/bin:$LD_LIBRARY_PATH"
 nohup /home/steve/Professor_Hawkeinstein/llama.cpp/build/bin/llama-server \
     -m /home/steve/Professor_Hawkeinstein/models/qwen2.5-1.5b-instruct-q4_k_m.gguf \
     --port 8090 \

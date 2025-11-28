@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workbook - Professor Hawkeinstein's Educational Foundation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="logo">🎓 Professor Hawkeinstein's Educational Foundation</a>
+            <ul class="nav-links">
+                <li><a href="student_dashboard.html">← Back to Dashboard</a></li>
+                <li><a href="#" id="studentName">John Doe</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Workbook Layout -->
+    <div class="workbook-container">
+        <!-- Left Column: AI Agent Chat (1/3 width) -->
+        <aside class="workbook-chat">
+            <div class="chat-container" style="height: calc(100vh - 80px);">
+                <div class="chat-header">
+                    <div class="agent-avatar">PH</div>
+                    <div>
+                        <h4 style="margin: 0; color: white;">Professor Hawkeinstein</h4>
+                        <p style="margin: 0; font-size: 0.875rem; opacity: 0.9;">Math Expert • Online</p>
+                    </div>
+                </div>
+
+                <div class="chat-messages" id="workbookChat">
+                    <div class="message agent">
+                        <div class="message-avatar">PH</div>
+                        <div class="message-content">
+                            <p><strong>Professor Hawkeinstein</strong></p>
+                            <p>Welcome to today's lesson! I'm here to help you understand this material. Feel free to ask me anything about what you're reading or watching.</p>
+                            <small style="opacity: 0.7;">Just now</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-container">
+                    <input type="text" id="workbookChatInput" placeholder="Ask your expert agent..." />
+                    <button class="btn btn-primary" id="workbookSendBtn">Send</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Column: Content Area (2/3 width) -->
+        <main class="workbook-content">
+            <!-- Top Half: Reading Material -->
+            <section class="workbook-reading">
+                <div class="workbook-header">
+                    <div>
+                        <h1 id="unitTitle">Unit 4: Quadratic Equations</h1>
+                        <p class="workbook-meta">
+                            <span>📚 Algebra Fundamentals</span>
+                            <span>•</span>
+                            <span>⏱️ 15 min read</span>
+                            <span>•</span>
+                            <span>Unit 4 of 6</span>
+                        </p>
+                    </div>
+                    <div class="unit-progress">
+                        <span>Progress: <strong>65%</strong></span>
+                    </div>
+                </div>
+
+                <div class="reading-content">
+                    <div class="alert alert-info">
+                        <strong>🔒 Session Monitored:</strong> Your learning session is being monitored for academic integrity.
+                    </div>
+
+                    <h2>Introduction to Quadratic Equations</h2>
+                    <p>A quadratic equation is a second-order polynomial equation in a single variable x, where a ≠ 0. The general form is:</p>
+                    
+                    <div class="formula-box">
+                        <strong>ax² + bx + c = 0</strong>
+                    </div>
+
+                    <p>Quadratic equations appear in many real-world applications, from calculating projectile motion to optimizing business profits. Understanding how to solve these equations is fundamental to advanced mathematics.</p>
+
+                    <h3>Key Components</h3>
+                    <ul>
+                        <li><strong>a</strong> - The coefficient of x² (must not be zero)</li>
+                        <li><strong>b</strong> - The coefficient of x (can be zero)</li>
+                        <li><strong>c</strong> - The constant term (can be zero)</li>
+                    </ul>
+
+                    <h3>The Quadratic Formula</h3>
+                    <p>The most powerful tool for solving quadratic equations is the quadratic formula:</p>
+                    
+                    <div class="formula-box">
+                        <strong>x = (-b ± √(b² - 4ac)) / 2a</strong>
+                    </div>
+
+                    <p>This formula works for <em>any</em> quadratic equation, regardless of whether it can be factored easily.</p>
+
+                    <h3>The Discriminant</h3>
+                    <p>The expression under the square root sign, <strong>b² - 4ac</strong>, is called the discriminant. It tells us about the nature of the solutions:</p>
+                    
+                    <div class="info-box">
+                        <ul>
+                            <li>If b² - 4ac > 0: Two distinct real solutions</li>
+                            <li>If b² - 4ac = 0: One repeated real solution</li>
+                            <li>If b² - 4ac < 0: Two complex solutions</li>
+                        </ul>
+                    </div>
+
+                    <h3>Example Problem</h3>
+                    <p>Let's solve: <strong>2x² + 5x - 3 = 0</strong></p>
+                    
+                    <div class="example-box">
+                        <p><strong>Step 1:</strong> Identify a, b, and c</p>
+                        <p style="margin-left: 2rem;">a = 2, b = 5, c = -3</p>
+                        
+                        <p><strong>Step 2:</strong> Calculate the discriminant</p>
+                        <p style="margin-left: 2rem;">b² - 4ac = 5² - 4(2)(-3) = 25 + 24 = 49</p>
+                        
+                        <p><strong>Step 3:</strong> Apply the quadratic formula</p>
+                        <p style="margin-left: 2rem;">x = (-5 ± √49) / 4 = (-5 ± 7) / 4</p>
+                        
+                        <p><strong>Step 4:</strong> Find both solutions</p>
+                        <p style="margin-left: 2rem;">x₁ = (-5 + 7) / 4 = 2/4 = 0.5</p>
+                        <p style="margin-left: 2rem;">x₂ = (-5 - 7) / 4 = -12/4 = -3</p>
+                        
+                        <p><strong>Answer:</strong> x = 0.5 or x = -3</p>
+                    </div>
+
+                    <h3>Practice Exercises</h3>
+                    <p>Try these problems on your own. Ask your expert agent if you need help!</p>
+                    <ol>
+                        <li>x² - 7x + 10 = 0</li>
+                        <li>3x² + 2x - 8 = 0</li>
+                        <li>x² - 4x + 4 = 0</li>
+                    </ol>
+                </div>
+            </section>
+
+            <!-- Bottom Half: Video/Simulation -->
+            <section class="workbook-media">
+                <div class="media-tabs">
+                    <button class="media-tab active" data-tab="video">📹 Video Lesson</button>
+                    <button class="media-tab" data-tab="simulation">🎮 Interactive Simulation</button>
+                    <button class="media-tab" data-tab="animation">🎬 Animation</button>
+                </div>
+
+                <div class="media-content-area">
+                    <!-- Video Tab -->
+                    <div class="media-panel active" id="video-panel">
+                        <div class="video-container" style="margin: 0;">
+                            <div class="video-placeholder">
+                                <div>
+                                    <p>▶️</p>
+                                    <p>Video: "Solving Quadratic Equations - Step by Step"</p>
+                                    <p style="font-size: 1rem; margin-top: 1rem;">Duration: 12:45</p>
+                                    <button class="btn btn-secondary mt-2" id="playVideoBtn">Play Video</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="media-controls">
+                            <p><strong>Chapter 4.2:</strong> Using the Quadratic Formula</p>
+                            <p style="font-size: 0.875rem; color: var(--text-light);">Watch this video explanation before attempting the practice problems.</p>
+                        </div>
+                    </div>
+
+                    <!-- Simulation Tab -->
+                    <div class="media-panel" id="simulation-panel">
+                        <div class="simulation-container">
+                            <div class="simulation-placeholder">
+                                <div>
+                                    <p>🎮</p>
+                                    <p>Interactive Quadratic Equation Solver</p>
+                                    <p style="font-size: 1rem; margin-top: 1rem;">Adjust coefficients and see the graph change in real-time</p>
+                                    <button class="btn btn-secondary mt-2">Launch Simulation</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="media-controls">
+                            <p><strong>Interactive Tool:</strong> Quadratic Graph Explorer</p>
+                            <p style="font-size: 0.875rem; color: var(--text-light);">Experiment with different values to understand how coefficients affect the parabola.</p>
+                        </div>
+                    </div>
+
+                    <!-- Animation Tab -->
+                    <div class="media-panel" id="animation-panel">
+                        <div class="animation-container">
+                            <div class="animation-placeholder">
+                                <div>
+                                    <p>🎬</p>
+                                    <p>Animated Guide: Completing the Square</p>
+                                    <p style="font-size: 1rem; margin-top: 1rem;">Visual representation of the algebraic process</p>
+                                    <button class="btn btn-secondary mt-2">Play Animation</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="media-controls">
+                            <p><strong>Visual Learning:</strong> Step-by-step animation</p>
+                            <p style="font-size: 0.875rem; color: var(--text-light);">Watch how the equation transforms through each step.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Navigation Arrows -->
+            <div class="workbook-navigation">
+                <button class="btn btn-outline" id="prevUnit">
+                    <span>←</span>
+                    <div>
+                        <small>Previous Unit</small>
+                        <strong>Linear Equations</strong>
+                    </div>
+                </button>
+                
+                <div class="workbook-nav-center">
+                    <span class="unit-indicator">Unit 4 of 6</span>
+                    <div class="progress-bar" style="width: 200px; margin: 0.5rem auto;">
+                        <div class="progress-bar-fill" style="width: 65%;"></div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" id="nextUnit">
+                    <div>
+                        <small>Next Unit</small>
+                        <strong>Systems of Equations</strong>
+                    </div>
+                    <span>→</span>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Check authentication
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (!user.username) {
+            window.location.href = 'login.html';
+        } else {
+            document.getElementById('studentName').textContent = user.name;
+        }
+
+        // Chat functionality
+        const workbookChat = document.getElementById('workbookChat');
+        const workbookChatInput = document.getElementById('workbookChatInput');
+        const workbookSendBtn = document.getElementById('workbookSendBtn');
+
+        function addWorkbookMessage(text, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'agent'}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = isUser ? 'JD' : 'PH';
+            
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            
+            const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            
+            if (!isUser) {
+                content.innerHTML = `<p><strong>Professor Hawkeinstein</strong></p><p>${text}</p><small style="opacity: 0.7;">${time}</small>`;
+            } else {
+                content.innerHTML = `<p>${text}</p><small style="opacity: 0.8;">${time}</small>`;
+            }
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(content);
+            workbookChat.appendChild(messageDiv);
+            
+            workbookChat.scrollTop = workbookChat.scrollHeight;
+        }
+
+        function sendWorkbookMessage() {
+            const text = workbookChatInput.value.trim();
+            if (!text) return;
+            
+            addWorkbookMessage(text, true);
+            workbookChatInput.value = '';
+            
+            // Simulate contextual response
+            setTimeout(() => {
+                const responses = [
+                    "Great question about the quadratic formula! Let me explain that part in more detail...",
+                    "I see you're working on the discriminant. Remember, it tells us about the nature of the solutions...",
+                    "That's exactly right! You're understanding the concept well. Let's apply it to the example...",
+                    "Looking at the reading material above, notice how we identify a, b, and c first..."
+                ];
+                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                addWorkbookMessage(randomResponse, false);
+            }, 1500);
+        }
+
+        workbookSendBtn.addEventListener('click', sendWorkbookMessage);
+        workbookChatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendWorkbookMessage();
+        });
+
+        // Media tabs
+        document.querySelectorAll('.media-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                
+                // Update active tab
+                document.querySelectorAll('.media-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // Update active panel
+                document.querySelectorAll('.media-panel').forEach(p => p.classList.remove('active'));
+                document.getElementById(tabName + '-panel').classList.add('active');
+            });
+        });
+
+        // Navigation
+        document.getElementById('prevUnit').addEventListener('click', () => {
+            alert('Loading Unit 3: Linear Equations...');
+            // In production: window.location.href = 'workbook.html?course=1&unit=3';
+        });
+
+        document.getElementById('nextUnit').addEventListener('click', () => {
+            alert('Loading Unit 5: Systems of Equations...');
+            // In production: window.location.href = 'workbook.html?course=1&unit=5';
+        });
+
+        // Track reading progress
+        const readingContent = document.querySelector('.reading-content');
+        let hasScrolledToBottom = false;
+
+        readingContent.addEventListener('scroll', () => {
+            const scrollPercentage = (readingContent.scrollTop / (readingContent.scrollHeight - readingContent.clientHeight)) * 100;
+            
+            if (scrollPercentage > 90 && !hasScrolledToBottom) {
+                hasScrolledToBottom = true;
+                console.log('Student has read through the material');
+                // In production: track progress
+            }
+        });
+    </script>
+</body>
+</html>
