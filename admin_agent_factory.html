@@ -714,7 +714,8 @@
                 const agentsResponse = await fetch('api/admin/list_agents.php?is_advisor=1');
                 if (!agentsResponse.ok) throw new Error('Failed to load advisor agents');
                 
-                const agents = await agentsResponse.json();
+                const agentsData = await agentsResponse.json();
+                const agents = agentsData.agents || [];
                 if (agents.length === 0) throw new Error('No advisor agents available');
                 
                 // Prefer Professor Hawkeinstein, otherwise use first advisor
