@@ -101,13 +101,39 @@ New tables created:
 
 ## 🛠️ Important Files
 
-- `/var/www/html/Professor_Hawkeinstein/` - Web directory
+- `/var/www/html/basic_educational/` - Production web directory
+- `/home/steve/Professor_Hawkeinstein/` - Development directory
 - `admin_dashboard.html` - Main admin interface
 - `admin_manage_users.html` - User management (root only)
 - `admin_agent_factory.html` - Create agents
 - `admin_scraper.html` - Content scraping
 - `admin_content_review.html` - Review content
 - `api/admin/` - Backend APIs
+
+## 📦 Deployment
+
+### Deploy Changes to Web
+```bash
+# Preview what will be synced
+make sync-web-dry
+
+# Deploy to production
+make sync-web
+
+# Verify deployment
+make test-sync
+```
+
+### File Sync
+- **Automatic:** Uses rsync for safe, idempotent deployment
+- **Excludes:** Sensitive files (.env, database.php, tests/)
+- **Logs:** `/tmp/sync_to_web.log`
+- **Guide:** See `FILE_SYNC_GUIDE.md` for details
+
+**After making code changes, always deploy:**
+```bash
+make sync-web
+```
 
 ## 🔐 Security
 

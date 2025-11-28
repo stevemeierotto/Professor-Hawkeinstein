@@ -152,17 +152,31 @@ $stmt->execute([json_encode($turn), $studentId]);
 
 ## File Sync Requirements
 
-**Always sync to web directory after editing:**
+**Always use automated sync instead of manual copying:**
 ```bash
-cp /home/steve/Professor_Hawkeinstein/{file} /var/www/html/Professor_Hawkeinstein/
+# Deploy changes to web directory
+make sync-web
+
+# Preview changes (dry run)
+make sync-web-dry
+
+# Verify sync
+make test-sync
 ```
 
-**Critical paths:**
-- PHP APIs: `/var/www/html/Professor_Hawkeinstein/api/`
-- Admin panels: `/var/www/html/Professor_Hawkeinstein/admin_*.html`
-- Config: `/var/www/html/Professor_Hawkeinstein/config/database.php`
+**Architecture:**
+- Development: `/home/steve/Professor_Hawkeinstein`
+- Production: `/var/www/html/basic_educational`
+- Sync script: `scripts/sync_to_web.sh`
+- Exclusions: `.rsyncignore`
+- Logs: `/tmp/sync_to_web.log`
 
-**Verify sync:** `md5sum` both files, check timestamps with `ls -lh`
+**Never manually copy files.** Use `make sync-web` instead.
+
+**Excluded files (never synced):**
+- `.env`, `config/database.php` (sensitive)
+- `tests/`, `migrations/`, `*.md` (development)
+- `models/`, `llama.cpp/`, `build/` (large/build artifacts)
 
 ## API Endpoint Reference
 
