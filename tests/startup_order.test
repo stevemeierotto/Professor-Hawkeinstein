@@ -1,0 +1,86 @@
+#!/bin/bash
+# Startup Order Test
+# Simulates llama-server being delayed and confirms the system waits properly
+
+set -e
+
+TEST_NAME="Startup Order Test"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+WAIT_SCRIPT="$PROJECT_ROOT/scripts/wait_for_services.sh"
+
+echo "=== $TEST_NAME ==="
+echo "Testing that services wait for dependencies to be healthy"
+echo
+
+# Test 1: Health check script should timeout on non-existent service
+echo "Test 1: Health check timeout on non-existent service"
+if "$WAIT_SCRIPT" "fake-service" "http://localhost:9999/health" 5 2>/dev/null; then
+    echo "✗ FAILED: Should have timed out"
+    exit 1
+else
+    echo "✓ PASSED: Timeout works correctly"
+fi
+echo
+
+# Test 2: Health check should succeed immediately for healthy service
+echo "Test 2: Health check on already-healthy llama-server"
+# First check if llama-server is actually running
+if curl -sf http://localhost:8090/health > /dev/null 2>&1; then
+    if "$WAIT_SCRIPT" "llama-server" "http://localhost:8090/health" 10; then
+        echo "✓ PASSED: Health check succeeds for healthy service"
+    else
+        echo "✗ FAILED: Health check failed for healthy service"
+        exit 1
+    fi
+else
+    echo "⊘ SKIPPED: llama-server not running (this is OK for test)"
+fi
+echo
+
+# Test 3: Verify start_services.sh has proper error handling
+echo "Test 3: Verify start_services.sh uses health check script"
+if grep -q "wait_for_services.sh" "$PROJECT_ROOT/start_services.sh"; then
+    echo "✓ PASSED: start_services.sh uses health check script"
+else
+    echo "✗ FAILED: start_services.sh doesn't use health check script"
+    exit 1
+fi
+
+if grep -q "set -e" "$PROJECT_ROOT/start_services.sh"; then
+    echo "✓ PASSED: start_services.sh has error handling (set -e)"
+else
+    echo "✗ FAILED: start_services.sh missing error handling"
+    exit 1
+fi
+echo
+
+# Test 4: Verify systemd service dependencies
+echo "Test 4: Verify systemd service has proper dependencies"
+if [ -f "$PROJECT_ROOT/scripts/agent-service.service" ]; then
+    if grep -q "After=.*llama-server.service" "$PROJECT_ROOT/scripts/agent-service.service"; then
+        echo "✓ PASSED: agent-service.service has After= dependency"
+    else
+        echo "✗ FAILED: agent-service.service missing After= dependency"
+        exit 1
+    fi
+    
+    if grep -q "ExecStartPre=.*wait_for_services.sh" "$PROJECT_ROOT/scripts/agent-service.service"; then
+        echo "✓ PASSED: agent-service.service has ExecStartPre health check"
+    else
+        echo "✗ FAILED: agent-service.service missing ExecStartPre health check"
+        exit 1
+    fi
+else
+    echo "⊘ SKIPPED: agent-service.service not found"
+fi
+echo
+
+echo "=== All Tests Passed ==="
+echo
+echo "Manual verification steps:"
+echo "1. Stop all services: pkill -9 llama-server; pkill -9 agent_service"
+echo "2. Start using new script: ./start_services.sh"
+echo "3. Observe that agent_service waits for llama-server health check"
+echo "4. Check logs for health check progress indicators"
+echo

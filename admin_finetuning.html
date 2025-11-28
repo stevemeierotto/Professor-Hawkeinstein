@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="auth_storage.js"></script>
+    <script src="admin_auth.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Fine-Tuning - Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .finetuning-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+        }
+
+        .export-form {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        .exports-list {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .export-item {
+            padding: 1.5rem;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .export-item:last-child {
+            border-bottom: none;
+        }
+
+        .code-example {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="logo">🎓 Professor Hawkeinstein's Educational Foundation</a>
+            <ul class="nav-links">
+                <li><a href="admin_dashboard.html">← Admin Dashboard</a></li>
+                <li><a href="#" id="adminName">Admin</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="finetuning-container">
+        <h1>🎯 Model Fine-Tuning</h1>
+        <p style="color: var(--text-light); margin-bottom: 2rem;">
+            Export training data and manage fine-tuned models
+        </p>
+
+        <!-- Export Form -->
+        <div class="export-form">
+            <h2 style="margin-top: 0;">Export Training Data</h2>
+            
+            <form id="exportForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Agent</label>
+                        <select id="agentId">
+                            <option value="">All Agents</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Export Format</label>
+                        <select id="exportFormat">
+                            <option value="jsonl">JSONL (Ollama Fine-tuning)</option>
+                            <option value="json">JSON (Structured)</option>
+                            <option value="csv">CSV (Analysis)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Export Name</label>
+                    <input type="text" id="exportName" placeholder="e.g., math_grade1_export_2025">
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Minimum Importance Score</label>
+                        <input type="number" id="minImportance" min="0" max="1" step="0.05" value="0.70">
+                        <small style="color: var(--text-light);">Only export high-quality conversations</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Date Range (Optional)</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="date" id="dateFrom" style="flex: 1;">
+                            <input type="date" id="dateTo" style="flex: 1;">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                    📊 Export Training Data
+                </button>
+            </form>
+        </div>
+
+        <!-- Fine-Tuning Instructions -->
+        <div style="background: #eff6ff; padding: 2rem; border-radius: 12px; margin-bottom: 2rem; border: 1px solid #3b82f6;">
+            <h2 style="margin-top: 0;">🔧 How to Fine-Tune with Ollama</h2>
+            
+            <p><strong>Step 1: Export your training data</strong> (JSONL format)</p>
+            
+            <p><strong>Step 2: Create a Modelfile</strong></p>
+            <div class="code-example">
+FROM llama2
+
+# Training data
+ADAPTER /path/to/your/training_export.jsonl
+
+# System prompt for your specialized agent
+SYSTEM """You are Ms. Numbers, a patient first grade math tutor..."""
+
+# Parameters
+PARAMETER temperature 0.7
+PARAMETER top_p 0.9
+            </div>
+
+            <p><strong>Step 3: Create the fine-tuned model</strong></p>
+            <div class="code-example">
+ollama create ms-math-grade1 -f Modelfile
+            </div>
+
+            <p><strong>Step 4: Update your agent in the database</strong></p>
+            <div class="code-example">
+UPDATE agents 
+SET model_name = 'ms-math-grade1' 
+WHERE agent_id = YOUR_AGENT_ID;
+            </div>
+
+            <p style="margin-bottom: 0;"><strong>Step 5: Test your fine-tuned agent!</strong></p>
+        </div>
+
+        <!-- Recent Exports -->
+        <h2>Recent Exports</h2>
+        <div class="exports-list" id="exportsList">
+            <div style="padding: 2rem; text-align: center; color: var(--text-light);">
+                Loading exports...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auth check
+        const user = getAdminSession('user' || '{}');
+        if (!user.username || (user.role !== 'admin' && user.role !== 'root')) {
+            window.location.href = 'login.html';
+        }
+        document.getElementById('adminName').textContent = user.name;
+
+        // Load agents for dropdown
+        async function loadAgents() {
+            try {
+                const response = await fetch('api/agent/list.php', {
+                });
+
+                if (response.ok) {
+                    const agents = await response.json();
+                    const select = document.getElementById('agentId');
+                    
+                    agents.forEach(agent => {
+                        const option = document.createElement('option');
+                        option.value = agent.agent_id;
+                        option.textContent = `${agent.agent_name} (${agent.agent_type})`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading agents:', error);
+            }
+        }
+
+        // Form submission
+        document.getElementById('exportForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const exportData = {
+                agent_id: document.getElementById('agentId').value || null,
+                export_name: document.getElementById('exportName').value || 
+                             `training_export_${new Date().getTime()}`,
+                format: document.getElementById('exportFormat').value,
+                min_importance_score: parseFloat(document.getElementById('minImportance').value),
+                date_from: document.getElementById('dateFrom').value || null,
+                date_to: document.getElementById('dateTo').value || null
+            };
+
+            try {
+                const response = await fetch('api/admin/export_training_data.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        
+                    },
+                    body: JSON.stringify(exportData)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert(`Export successful!\n\nFile: ${result.file_name}\nConversations: ${result.conversation_count}\nSize: ${(result.file_size / 1024).toFixed(2)} KB`);
+                    
+                    // Trigger download
+                    window.open(result.download_url, '_blank');
+                    
+                    // Reload exports list
+                    loadExports();
+                    document.getElementById('exportForm').reset();
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.error || 'Failed to export data'));
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            }
+        });
+
+        // Load exports list
+        async function loadExports() {
+            try {
+                const response = await fetch('api/admin/list_exports.php', {
+                });
+
+                if (response.ok) {
+                    const exports = await response.json();
+                    displayExports(exports);
+                }
+            } catch (error) {
+                console.error('Error loading exports:', error);
+            }
+        }
+
+        function displayExports(exports) {
+            const list = document.getElementById('exportsList');
+
+            if (exports.length === 0) {
+                list.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-light);">No exports yet</div>';
+                return;
+            }
+
+            list.innerHTML = exports.map(exp => `
+                <div class="export-item">
+                    <div>
+                        <h3 style="margin: 0 0 0.5rem 0;">${exp.export_name}</h3>
+                        <div style="font-size: 0.875rem; color: var(--text-light);">
+                            ${exp.agent_name || 'All Agents'} • 
+                            ${exp.total_conversations} conversations • 
+                            ${exp.export_format.toUpperCase()} • 
+                            ${new Date(exp.exported_at).toLocaleDateString()}
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <a href="${exp.file_path.replace('/home/steve/Professor_Hawkeinstein/', '')}" 
+                           download class="btn btn-sm btn-primary">
+                            Download
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Initialize
+        loadAgents();
+        loadExports();
+    </script>
+</body>
+</html>

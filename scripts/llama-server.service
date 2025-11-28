@@ -1,0 +1,49 @@
+[Unit]
+Description=LLaMA Server for Professor Hawkeinstein Platform
+Documentation=https://github.com/ggerganov/llama.cpp
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=steve
+Group=steve
+WorkingDirectory=/home/steve/Professor_Hawkeinstein
+
+# Environment variables
+Environment="LLAMA_MODEL_PATH=/home/steve/Professor_Hawkeinstein/models/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+Environment="LLAMA_PORT=8090"
+Environment="LD_LIBRARY_PATH=/home/steve/Professor_Hawkeinstein/llama.cpp/build/bin"
+
+# Start command
+ExecStart=/home/steve/Professor_Hawkeinstein/llama.cpp/build/bin/llama-server \
+    -m ${LLAMA_MODEL_PATH} \
+    --port ${LLAMA_PORT} \
+    --ctx-size 4096 \
+    --n-predict 512 \
+    --threads 4 \
+    --threads-batch 4 \
+    --cache-reuse 256 \
+    --parallel 2 \
+    --cont-batching
+
+# Logging
+StandardOutput=append:/var/log/llama-server.log
+StandardError=append:/var/log/llama-server.log
+
+# Restart policy
+Restart=on-failure
+RestartSec=10s
+StartLimitInterval=200s
+StartLimitBurst=5
+
+# Resource limits
+MemoryMax=8G
+CPUQuota=400%
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

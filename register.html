@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Professor Hawkeinstein's Educational Foundation</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .registration-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .registration-form {
+            background: var(--bg-light);
+            padding: 2rem;
+            border-radius: var(--radius-lg);
+        }
+
+        .facial-recognition {
+            background: var(--bg-light);
+            padding: 2rem;
+            border-radius: var(--radius-lg);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #cameraFeed {
+            width: 100%;
+            border-radius: var(--radius-md);
+            background: #000;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .camera-container {
+            position: relative;
+            background: #000;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            margin-bottom: 1rem;
+            aspect-ratio: 4/3;
+        }
+
+        #cameraCanvas {
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+
+        .camera-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: white;
+            gap: 1rem;
+        }
+
+        .camera-placeholder p {
+            font-size: 3rem;
+            margin: 0;
+        }
+
+        .facial-status {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .status-card {
+            background: var(--bg-primary);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            text-align: center;
+            border: 2px solid var(--border-color);
+        }
+
+        .status-card.success {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .status-card.warning {
+            border-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .status-card.error {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .status-card h4 {
+            margin: 0 0 0.5rem 0;
+        }
+
+        .status-card p {
+            margin: 0;
+            font-size: 0.875rem;
+        }
+
+        .capture-button {
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .verification-timer {
+            text-align: center;
+            font-size: 0.875rem;
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+
+        .timer-circle {
+            display: inline-block;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        @media (max-width: 1024px) {
+            .registration-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .progress-steps {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .step {
+            flex: 1;
+            height: 4px;
+            background: var(--border-color);
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .step.active {
+            background: var(--primary-color);
+        }
+
+        .step.complete {
+            background: var(--success-color);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="logo">🎓 Professor Hawkeinstein's Educational Foundation</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="login.html" class="btn btn-primary">Login</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Registration Container -->
+    <div class="form-container">
+        <h2 class="text-center">Create Your Account</h2>
+        <p class="text-center" style="color: var(--text-light); margin-bottom: 2rem;">Join Professor Hawkeinstein's Educational Foundation and begin your personalized learning journey</p>
+
+        <!-- Progress Indicator -->
+        <div class="progress-steps">
+            <div class="step complete" id="step1"></div>
+            <div class="step active" id="step2"></div>
+            <div class="step" id="step3"></div>
+        </div>
+
+        <div class="registration-container">
+            <!-- Left Side: Registration Form -->
+            <div class="registration-form">
+                <h3>📋 Your Information</h3>
+                
+                <form id="registrationForm">
+                    <div class="form-group">
+                        <label for="fullName">Full Name</label>
+                        <input type="text" id="fullName" name="fullName" required placeholder="John Doe">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" name="email" required placeholder="john@example.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required placeholder="john_doe">
+                        <small style="color: var(--text-light);">3-20 characters, letters and numbers only</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required placeholder="At least 8 characters">
+                        <small style="color: var(--text-light);">Must be at least 8 characters with uppercase, lowercase, and number</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Confirm password">
+                    </div>
+
+                    <div class="alert alert-info">
+                        <strong>ℹ️ Security Notice:</strong> Your facial recognition data will be securely stored and used only for ID verification during login.
+                    </div>
+                </form>
+            </div>
+
+            <!-- Right Side: Facial Recognition -->
+            <div class="facial-recognition">
+                <h3>📷 Facial Recognition</h3>
+                <p style="color: var(--text-light); font-size: 0.9rem;">We'll capture a facial image for ID verification. This helps ensure academic integrity and secure access.</p>
+
+                <div class="camera-container">
+                    <video id="cameraFeed" autoplay playsinline></video>
+                    <canvas id="cameraCanvas"></canvas>
+                    <div class="camera-placeholder" id="cameraPlaceholder">
+                        <p>📷</p>
+                        <p style="font-size: 1rem;">Camera Access Required</p>
+                    </div>
+                </div>
+
+                <div class="facial-status">
+                    <div class="status-card" id="faceDetectionStatus">
+                        <h4>😐 Face Detection</h4>
+                        <p>Not Started</p>
+                    </div>
+                    <div class="status-card" id="captureStatus">
+                        <h4>📸 Capture Status</h4>
+                        <p>Ready</p>
+                    </div>
+                </div>
+
+                <div class="verification-timer" id="verificationTimer" style="display: none;">
+                    <p>Re-verification in:</p>
+                    <div class="timer-circle"><span id="timerValue">15</span>s</div>
+                </div>
+
+                <button type="button" id="enableCameraBtn" class="btn btn-secondary capture-button">
+                    🎥 Enable Camera
+                </button>
+
+                <button type="button" id="captureFaceBtn" class="btn btn-primary capture-button" disabled style="display: none;">
+                    📸 Capture Face
+                </button>
+
+                <button type="button" id="verifyCameraBtn" class="btn btn-primary capture-button" disabled style="display: none;">
+                    ✅ Verify Facial Match
+                </button>
+
+                <div id="facialRecognitionMessage" style="padding: 1rem; border-radius: var(--radius-md); margin-top: 1rem; display: none;"></div>
+            </div>
+        </div>
+
+        <hr style="margin: 2rem 0; border: none; border-top: 2px solid var(--border-color);">
+
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+            <button type="submit" form="registrationForm" class="btn btn-primary" style="flex: 1;" id="registerBtn" disabled>
+                Create Account
+            </button>
+            <button type="button" class="btn btn-outline" style="flex: 1;" id="cancelBtn">
+                Cancel
+            </button>
+        </div>
+
+        <div class="text-center" style="margin-top: 2rem;">
+            <p>Already have an account? <a href="login.html" style="color: var(--primary-color); font-weight: 600; text-decoration: none;">Login here</a></p>
+        </div>
+    </div>
+
+    <!-- Load TensorFlow.js first (required by face-api.js) -->
+    <script async src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@2.14.0"></script>
+    
+    <!-- Load face-api.js for facial recognition -->
+    <script async src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js" onload="onFaceApiLoaded()"></script>
+
+    <script>
+        const cameraFeed = document.getElementById('cameraFeed');
+        const cameraCanvas = document.getElementById('cameraCanvas');
+        const cameraContext = cameraCanvas.getContext('2d');
+        const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+        const enableCameraBtn = document.getElementById('enableCameraBtn');
+        const captureFaceBtn = document.getElementById('captureFaceBtn');
+        const verifyCameraBtn = document.getElementById('verifyCameraBtn');
+        const registerBtn = document.getElementById('registerBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const registrationForm = document.getElementById('registrationForm');
+        const faceDetectionStatus = document.getElementById('faceDetectionStatus');
+        const captureStatus = document.getElementById('captureStatus');
+        const verificationTimer = document.getElementById('verificationTimer');
+        const timerValue = document.getElementById('timerValue');
+        const facialRecognitionMessage = document.getElementById('facialRecognitionMessage');
+
+        let stream = null;
+        let capturedFaceDescriptor = null;
+        let verificationFaceDescriptor = null;
+        let modelsLoaded = false;
+        let detectionInterval = null;
+        let verificationCountdown = null;
+        let faceApiReady = false;
+
+        // Called when face-api.js finishes loading
+        function onFaceApiLoaded() {
+            console.log('✅ face-api.js library loaded');
+            faceApiReady = true;
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', loadModels);
+            } else {
+                loadModels();
+            }
+        }
+
+        // Load face-api models with better error handling and retry logic
+        async function loadModels() {
+            try {
+                // Ensure face-api is loaded
+                if (typeof faceapi === 'undefined') {
+                    console.error('face-api.js library is not defined');
+                    throw new Error('face-api.js library failed to load');
+                }
+
+                const currentUrl = new URL(window.location.href);
+                const baseUrl = `${currentUrl.protocol}//${currentUrl.host}`;
+                
+                const modelPaths = [
+                    {
+                        name: 'Local Models',
+                        paths: {
+                            faceRecognition: `${baseUrl}/Professor_Hawkeinstein/models/`,
+                            faceLandmark68: `${baseUrl}/Professor_Hawkeinstein/models/`,
+                            faceDetection: `${baseUrl}/Professor_Hawkeinstein/models/`
+                        }
+                    },
+                    {
+                        name: 'GitHub CDN',
+                        paths: {
+                            faceRecognition: 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/',
+                            faceLandmark68: 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/',
+                            faceDetection: 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights/'
+                        }
+                    }
+                ];
+
+                let lastError = null;
+                for (const config of modelPaths) {
+                    try {
+                        console.log(`Attempting to load models from ${config.name}...`);
+                        await loadModelsFromPath(config.paths);
+                        modelsLoaded = true;
+                        console.log(`✅ Face-api models loaded from ${config.name}`);
+                        showMessage('✅ Facial recognition ready!', 'success');
+                        enableCameraBtn.disabled = false;
+                        return;
+                    } catch (error) {
+                        console.warn(`❌ ${config.name} failed:`, error.message);
+                        console.warn('Full error:', error);
+                        lastError = error;
+                    }
+                }
+
+                // If all attempts failed, show error
+                console.error('All model loading attempts failed:', lastError);
+                showMessage('Error loading facial recognition models. Please refresh the page.', 'error');
+                enableCameraBtn.disabled = true;
+            } catch (error) {
+                console.error('Error in loadModels:', error);
+                showMessage('❌ Error loading facial recognition. Please refresh the page.', 'error');
+                enableCameraBtn.disabled = true;
+            }
+        }
+
+        async function loadModelsFromPath(paths) {
+            if (typeof faceapi === 'undefined') {
+                throw new Error('face-api.js library not loaded');
+            }
+
+            console.log('Loading models from paths:', paths);
+            try {
+                console.log('1. Loading faceRecognitionNet from:', paths.faceRecognition);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(paths.faceRecognition);
+                console.log('   ✅ faceRecognitionNet loaded');
+
+                console.log('2. Loading faceLandmark68Net from:', paths.faceLandmark68);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(paths.faceLandmark68);
+                console.log('   ✅ faceLandmark68Net loaded');
+
+                console.log('3. Loading faceDetectionNet from:', paths.faceDetection);
+                await faceapi.nets.faceDetectionNet.loadFromUri(paths.faceDetection);
+                console.log('   ✅ faceDetectionNet loaded');
+
+                console.log('✅ All models loaded successfully!');
+            } catch (error) {
+                console.error('Error loading models from path:', error);
+                throw error;
+            }
+        }
+
+        // Enable camera
+        enableCameraBtn.addEventListener('click', async () => {
+            // Check if models are loaded first
+            if (!modelsLoaded) {
+                showMessage('⏳ Loading facial recognition models... Please wait.', 'warning');
+                enableCameraBtn.disabled = true;
+                // Wait a bit longer for models to load
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                if (!modelsLoaded) {
+                    showMessage('❌ Models still loading. Please try again in a moment.', 'error');
+                    enableCameraBtn.disabled = false;
+                    return;
+                }
+            }
+
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+                    audio: false 
+                });
+                
+                cameraFeed.srcObject = stream;
+                cameraPlaceholder.style.display = 'none';
+                cameraFeed.style.display = 'block';
+                enableCameraBtn.style.display = 'none';
+                captureFaceBtn.style.display = 'block';
+
+                // Set canvas size to match video
+                cameraFeed.onloadedmetadata = () => {
+                    cameraCanvas.width = cameraFeed.videoWidth;
+                    cameraCanvas.height = cameraFeed.videoHeight;
+                };
+
+                // Start continuous face detection
+                if (modelsLoaded) {
+                    startFaceDetection();
+                } else {
+                    showMessage('⚠️ Models still loading. Face detection will start automatically when ready.', 'warning');
+                }
+            } catch (error) {
+                console.error('Camera access denied:', error);
+                showMessage('Camera access denied. Please check your browser permissions.', 'error');
+                enableCameraBtn.disabled = false;
+            }
+        });
+
+        // Start continuous face detection
+        function startFaceDetection() {
+            detectionInterval = setInterval(async () => {
+                if (cameraFeed.readyState === cameraFeed.HAVE_ENOUGH_DATA) {
+                    try {
+                        const detections = await faceapi.detectSingleFace(cameraFeed)
+                            .withFaceLandmarks()
+                            .withFaceDescriptor();
+
+                        if (detections) {
+                            updateFaceDetectionStatus('success', 'Face Detected ✓');
+                            captureFaceBtn.disabled = false;
+                        } else {
+                            updateFaceDetectionStatus('warning', 'No Face Detected');
+                            captureFaceBtn.disabled = true;
+                        }
+                    } catch (error) {
+                        console.error('Detection error:', error);
+                    }
+                }
+            }, 100);
+        }
+
+        // Update face detection status
+        function updateFaceDetectionStatus(status, message) {
+            faceDetectionStatus.className = `status-card ${status}`;
+            faceDetectionStatus.innerHTML = `<h4>😐 Face Detection</h4><p>${message}</p>`;
+        }
+
+        // Capture face
+        captureFaceBtn.addEventListener('click', async () => {
+            if (!modelsLoaded || !capturedFaceDescriptor) {
+                try {
+                    // Draw current frame to canvas
+                    cameraContext.drawImage(cameraFeed, 0, 0, cameraCanvas.width, cameraCanvas.height);
+                    
+                    // Get face descriptor
+                    const detections = await faceapi.detectSingleFace(cameraCanvas)
+                        .withFaceLandmarks()
+                        .withFaceDescriptor();
+
+                    if (detections) {
+                        capturedFaceDescriptor = detections.descriptor;
+                        updateCaptureStatus('success', 'Face Captured ✓');
+                        captureFaceBtn.textContent = '📸 Retake Photo';
+                        captureFaceBtn.classList.remove('btn-primary');
+                        captureFaceBtn.classList.add('btn-secondary');
+                        verifyCameraBtn.style.display = 'block';
+                        verifyCameraBtn.disabled = false;
+
+                        // Start verification countdown
+                        startVerificationCountdown();
+                    } else {
+                        updateCaptureStatus('error', 'Face Not Detected');
+                    }
+                } catch (error) {
+                    console.error('Capture error:', error);
+                    updateCaptureStatus('error', 'Capture Failed');
+                }
+            }
+        });
+
+        // Start verification countdown (15 seconds for testing)
+        function startVerificationCountdown() {
+            verificationTimer.style.display = 'block';
+            let countdown = 15;
+            
+            verificationCountdown = setInterval(() => {
+                countdown--;
+                timerValue.textContent = countdown;
+                
+                if (countdown <= 0) {
+                    clearInterval(verificationCountdown);
+                    verifyCameraBtn.click(); // Auto-trigger verification
+                }
+            }, 1000);
+        }
+
+        // Update capture status
+        function updateCaptureStatus(status, message) {
+            captureStatus.className = `status-card ${status}`;
+            captureStatus.innerHTML = `<h4>📸 Capture Status</h4><p>${message}</p>`;
+        }
+
+        // Verify facial match
+        verifyCameraBtn.addEventListener('click', async () => {
+            if (!modelsLoaded) {
+                showMessage('Models still loading. Please wait...', 'warning');
+                return;
+            }
+
+            try {
+                // Get current frame
+                cameraContext.drawImage(cameraFeed, 0, 0, cameraCanvas.width, cameraCanvas.height);
+                
+                // Get face descriptor from current frame
+                const detections = await faceapi.detectSingleFace(cameraCanvas)
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
+
+                if (!detections) {
+                    updateCaptureStatus('error', 'Face Not Detected');
+                    // Restart countdown
+                    startVerificationCountdown();
+                    return;
+                }
+
+                verificationFaceDescriptor = detections.descriptor;
+
+                // Compare face descriptors (Euclidean distance)
+                const distance = faceapi.euclideanDistance(capturedFaceDescriptor, verificationFaceDescriptor);
+                const threshold = 0.6; // Typical threshold for face matching
+
+                console.log('Face match distance:', distance);
+
+                if (distance < threshold) {
+                    updateCaptureStatus('success', `Match Confirmed (Distance: ${distance.toFixed(3)}) ✓`);
+                    showMessage('✅ Facial recognition successful! Your face has been verified.', 'success');
+                    
+                    // Stop detection
+                    clearInterval(detectionInterval);
+                    if (verificationCountdown) clearInterval(verificationCountdown);
+                    
+                    // Close camera
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                    
+                    cameraFeed.style.display = 'none';
+                    cameraPlaceholder.style.display = 'flex';
+                    captureFaceBtn.style.display = 'none';
+                    verifyCameraBtn.style.display = 'none';
+                    verificationTimer.style.display = 'none';
+                    
+                    // Enable register button
+                    registerBtn.disabled = false;
+                    registerBtn.textContent = '✅ Create Account with Facial ID';
+                } else {
+                    updateCaptureStatus('warning', `Face Mismatch (Distance: ${distance.toFixed(3)})`);
+                    showMessage('⚠️ Face does not match. Please align your face and try again.', 'warning');
+                    
+                    // Restart countdown for re-verification
+                    startVerificationCountdown();
+                }
+            } catch (error) {
+                console.error('Verification error:', error);
+                updateCaptureStatus('error', 'Verification Failed');
+                showMessage('Error during verification. Please try again.', 'error');
+            }
+        });
+
+        // Show message
+        function showMessage(message, type = 'info') {
+            facialRecognitionMessage.textContent = message;
+            facialRecognitionMessage.className = `alert alert-${type}`;
+            facialRecognitionMessage.style.display = 'block';
+        }
+
+        // Registration form submission
+        registrationForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Validate form
+            const fullName = document.getElementById('fullName').value;
+            const email = document.getElementById('email').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Validate username
+            if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+                showMessage('Username must be 3-20 characters (letters, numbers, underscores only).', 'error');
+                return;
+            }
+
+            // Validate password
+            if (password.length < 8) {
+                showMessage('Password must be at least 8 characters.', 'error');
+                return;
+            }
+
+            if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+                showMessage('Password must contain uppercase, lowercase, and numbers.', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showMessage('Passwords do not match.', 'error');
+                return;
+            }
+
+            if (!capturedFaceDescriptor) {
+                showMessage('Please capture and verify your facial recognition first.', 'error');
+                return;
+            }
+
+            // Prepare registration data
+            const registrationData = {
+                fullName,
+                email,
+                username,
+                password,
+                facialDescriptor: Array.from(capturedFaceDescriptor)
+            };
+
+            try {
+                registerBtn.disabled = true;
+                registerBtn.textContent = '⏳ Creating account...';
+
+                const response = await fetch('api/auth/register.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(registrationData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('✅ Account created successfully! Redirecting to login...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+                } else {
+                    showMessage('Error: ' + (data.message || 'Registration failed'), 'error');
+                    registerBtn.disabled = false;
+                    registerBtn.textContent = '✅ Create Account with Facial ID';
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                showMessage('Network error during registration. Please try again.', 'error');
+                registerBtn.disabled = false;
+                registerBtn.textContent = '✅ Create Account with Facial ID';
+            }
+        });
+
+        // Cancel button
+        cancelBtn.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+
+        // Load models on page load and show status
+        console.log('🚀 Starting initialization...');
+        console.log('Current location:', window.location.href);
+        
+        // Wait for DOM to be ready, then wait for face-api to load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('DOM ready, waiting for face-api.js to load...');
+                showMessage('⏳ Loading facial recognition models... This may take a moment.', 'info');
+            });
+        } else {
+            console.log('DOM already ready');
+            showMessage('⏳ Loading facial recognition models... This may take a moment.', 'info');
+        }
+        
+        // Check every 100ms if face-api is loaded
+        const faceApiCheckInterval = setInterval(() => {
+            if (faceApiReady && typeof faceapi !== 'undefined') {
+                clearInterval(faceApiCheckInterval);
+                console.log('face-api.js is ready, loading models...');
+                loadModels().catch(err => {
+                    console.error('Fatal error loading models:', err);
+                });
+            }
+        }, 100);
+    </script>
+</body>
+</html>

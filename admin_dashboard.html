@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="auth_storage.js"></script>
+    <script src="admin_auth.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Professor Hawkeinstein's Educational Foundation</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .admin-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .admin-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+
+        .admin-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .admin-card-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .admin-card h3 {
+            margin: 0 0 0.5rem 0;
+            color: var(--primary);
+        }
+
+        .admin-card p {
+            color: var(--text-light);
+            margin: 0;
+        }
+
+        .admin-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-box h4 {
+            margin: 0 0 0.5rem 0;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .stat-box p {
+            margin: 0;
+            opacity: 0.9;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="logo">🎓 Professor Hawkeinstein's Educational Foundation</a>
+            <ul class="nav-links">
+                <li><a href="student_dashboard.html">Student View</a></li>
+                <li><a href="#" id="adminName">Admin</a></li>
+                <li><a href="#" id="logoutBtn">Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Admin Dashboard -->
+    <div class="container" style="max-width: 1400px; margin-top: 2rem;">
+        <div class="admin-header">
+            <div>
+                <h1>🔧 Admin Dashboard</h1>
+                <p style="color: var(--text-light);">Manage agents, courses, and content for the educational platform</p>
+            </div>
+            <div class="quick-actions">
+                <button class="btn btn-primary" onclick="window.location.href='admin_agent_factory.html'">
+                    ➕ Create New Agent
+                </button>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="admin-stats">
+            <div class="stat-box">
+                <h4 id="totalAgents">-</h4>
+                <p>Total Agents</p>
+            </div>
+            <div class="stat-box">
+                <h4 id="totalCourses">-</h4>
+                <p>Active Courses</p>
+            </div>
+            <div class="stat-box">
+                <h4 id="totalStudents">-</h4>
+                <p>Students Enrolled</p>
+            </div>
+            <div class="stat-box">
+                <h4 id="pendingReviews">-</h4>
+                <p>Content Pending Review</p>
+            </div>
+        </div>
+
+        <!-- Admin Module Cards -->
+        <div class="admin-grid">
+            <!-- Agent Factory -->
+            <div class="admin-card" onclick="window.location.href='admin_agent_factory.html'">
+                <div class="admin-card-icon">🤖</div>
+                <h3>Agent Factory</h3>
+                <p>Create and manage AI teaching agents with specialized knowledge bases and grade-level customization</p>
+            </div>
+
+            <!-- Web Scraper -->
+            <div class="admin-card" onclick="window.location.href='admin_scraper.html'">
+                <div class="admin-card-icon">🕷️</div>
+                <h3>Content Scraper</h3>
+                <p>Scrape educational content from trusted sources with automatic metadata capture and source tracking</p>
+            </div>
+
+            <!-- Content Review -->
+            <div class="admin-card" onclick="window.location.href='admin_content_review.html'">
+                <div class="admin-card-icon">✅</div>
+                <h3>Content Review</h3>
+                <p>Review and approve scraped content for accuracy before adding to agent knowledge bases</p>
+            </div>
+
+            <!-- Agent Management -->
+            <div class="admin-card" onclick="window.location.href='admin_agents.html'">
+                <div class="admin-card-icon">👥</div>
+                <h3>Agent Management</h3>
+                <p>View, edit, and configure existing AI teaching agents, personalities, and system prompts</p>
+            </div>
+
+            <!-- Course Management -->
+            <div class="admin-card" onclick="window.location.href='admin_courses.html'">
+                <div class="admin-card-icon">📚</div>
+                <h3>Course Management</h3>
+                <p>Create and manage courses, lessons, and curriculum with multimedia content</p>
+            </div>
+
+            <!-- Analytics -->
+            <div class="admin-card" onclick="window.location.href='admin_analytics.html'">
+                <div class="admin-card-icon">📊</div>
+                <h3>Analytics & Insights</h3>
+                <p>View agent performance, student engagement, and learning outcome metrics</p>
+            </div>
+
+            <!-- Fine-Tuning -->
+            <div class="admin-card" onclick="window.location.href='admin_finetuning.html'">
+                <div class="admin-card-icon">🎯</div>
+                <h3>Model Fine-Tuning</h3>
+                <p>Export training data and manage fine-tuned models for specialized agent behaviors</p>
+            </div>
+
+            <!-- User Management -->
+            <div class="admin-card" onclick="window.location.href='admin_manage_users.html'">
+                <div class="admin-card-icon">👤</div>
+                <h3>User Management</h3>
+                <p>Manage student and admin accounts, permissions, and course enrollments</p>
+            </div>
+
+            <!-- System Settings -->
+            <div class="admin-card" onclick="window.location.href='admin_settings.html'">
+                <div class="admin-card-icon">⚙️</div>
+                <h3>System Settings</h3>
+                <p>Configure system-wide settings, llama.cpp models, and platform parameters</p>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div style="margin-top: 3rem;">
+            <h2>Recent Activity</h2>
+            <div class="card">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #eee; text-align: left;">
+                            <th style="padding: 1rem;">Timestamp</th>
+                            <th style="padding: 1rem;">Action</th>
+                            <th style="padding: 1rem;">Details</th>
+                            <th style="padding: 1rem;">User</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activityLog">
+                        <tr>
+                            <td colspan="4" style="padding: 2rem; text-align: center; color: var(--text-light);">
+                                Loading recent activity...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check admin authentication
+        const user = getAdminSession('user' || '{}');
+        
+        if (!user.username) {
+            window.location.href = 'login.html';
+        } else if (user.role !== 'admin' && user.role !== 'root') {
+            alert('Access Denied: Admin privileges required');
+            window.location.href = 'student_dashboard.html';
+        } else {
+            const roleLabel = user.role === 'root' ? 'Root' : 'Admin';
+            document.getElementById('adminName').textContent = user.name + ' (' + roleLabel + ')';
+        }
+
+        // Logout functionality
+        document.getElementById('logoutBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            // Pure JWT - just clear admin session storage (no server-side session)
+            clearAdminSession();
+            window.location.href = 'admin_login.html';
+        });
+
+        // Load dashboard statistics
+        async function loadStatistics() {
+            try {
+                const response = await fetch('api/admin/statistics.php', {
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('totalAgents').textContent = data.total_agents || 0;
+                    document.getElementById('totalCourses').textContent = data.total_courses || 0;
+                    document.getElementById('totalStudents').textContent = data.total_students || 0;
+                    document.getElementById('pendingReviews').textContent = data.pending_reviews || 0;
+                } else {
+                    console.error('Failed to load statistics');
+                }
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+
+        // Load recent activity
+        async function loadActivity() {
+            try {
+                const response = await fetch('api/admin/activity.php?limit=10', {
+                });
+
+                if (response.ok) {
+                    const activities = await response.json();
+                    const tbody = document.getElementById('activityLog');
+                    
+                    if (activities.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="padding: 2rem; text-align: center; color: var(--text-light);">No recent activity</td></tr>';
+                    } else {
+                        tbody.innerHTML = activities.map(activity => `
+                            <tr style="border-bottom: 1px solid #eee;">
+                                <td style="padding: 1rem;">${new Date(activity.timestamp).toLocaleString()}</td>
+                                <td style="padding: 1rem;"><strong>${activity.action}</strong></td>
+                                <td style="padding: 1rem;">${activity.details}</td>
+                                <td style="padding: 1rem;">${activity.user_name}</td>
+                            </tr>
+                        `).join('');
+                    }
+                } else {
+                    console.error('Failed to load activity');
+                }
+            } catch (error) {
+                console.error('Error loading activity:', error);
+                document.getElementById('activityLog').innerHTML = '<tr><td colspan="4" style="padding: 2rem; text-align: center; color: var(--text-light);">Error loading activity</td></tr>';
+            }
+        }
+
+        // Initialize dashboard
+        loadStatistics();
+        loadActivity();
+    </script>
+</body>
+</html>

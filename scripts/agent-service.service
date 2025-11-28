@@ -1,0 +1,37 @@
+[Unit]
+Description=C++ Agent Service for Professor Hawkeinstein Platform
+Documentation=file:///home/steve/Professor_Hawkeinstein/cpp_agent/README.md
+After=network.target llama-server.service
+Requires=llama-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=steve
+Group=steve
+WorkingDirectory=/home/steve/Professor_Hawkeinstein/cpp_agent
+
+# Start command with health check wait
+ExecStartPre=/home/steve/Professor_Hawkeinstein/scripts/wait_for_services.sh llama-server http://localhost:8090/health 120
+ExecStart=/home/steve/Professor_Hawkeinstein/cpp_agent/bin/agent_service
+
+# Logging
+StandardOutput=append:/var/log/agent-service.log
+StandardError=append:/var/log/agent-service.log
+
+# Restart policy
+Restart=on-failure
+RestartSec=5s
+StartLimitInterval=200s
+StartLimitBurst=5
+
+# Resource limits
+MemoryMax=2G
+CPUQuota=200%
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

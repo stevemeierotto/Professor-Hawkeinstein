@@ -1,0 +1,140 @@
+#!/bin/bash
+# Authentication Backdoor Scanner
+# Scans all API files for unsafe authentication bypasses
+
+set -euo pipefail
+
+# Colors
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+echo "=== Authentication Backdoor Scanner ==="
+echo ""
+
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+API_DIR="$PROJECT_ROOT/api"
+
+ISSUES_FOUND=0
+
+# Patterns to search for
+DANGEROUS_PATTERNS=(
+    "skipAuth"
+    "bypass.*auth"
+    "TEST_MODE"
+    "DEV_MODE"
+    "debug.*token"
+    "For testing.*allow.*without"
+    "\\\$userId.*=.*1[^0-9]"
+    "user_id.*=.*1[^0-9]"
+    "\\\$_GET\['test'\]"
+    "\\\$_POST\['test'\]"
+    "\\\$_REQUEST\['test'\]"
+    "if.*false.*auth"
+    "// TEMP"
+    "// TODO.*auth"
+    "hardcoded.*user"
+)
+
+echo "Scanning API directory: $API_DIR"
+echo "Checking for dangerous patterns..."
+echo ""
+
+for pattern in "${DANGEROUS_PATTERNS[@]}"; do
+    echo -n "Checking: $pattern ... "
+    
+    # Search for pattern in all PHP files
+    MATCHES=$(grep -r -n -i -E "$pattern" "$API_DIR" --include="*.php" 2>/dev/null || true)
+    
+    if [ -n "$MATCHES" ]; then
+        echo -e "${RED}FOUND${NC}"
+        echo "$MATCHES" | while read -r line; do
+            echo "  ${RED}⚠${NC}  $line"
+        done
+        echo ""
+        ISSUES_FOUND=$((ISSUES_FOUND + 1))
+    else
+        echo -e "${GREEN}CLEAN${NC}"
+    fi
+done
+
+echo ""
+echo "=== Checking requireAuth() Usage ==="
+echo ""
+
+# Find all PHP files that don't use requireAuth() or are login/register endpoints
+echo "Files without requireAuth():"
+UNPROTECTED=0
+
+find "$API_DIR" -name "*.php" -type f | while read -r file; do
+    # Skip login/register/logout (these shouldn't require auth)
+    if echo "$file" | grep -qE "(login|register|logout|verify_face|verify-voice)\.php"; then
+        continue
+    fi
+    
+    # Skip internal helper files
+    if echo "$file" | grep -qE "helpers/"; then
+        continue
+    fi
+    
+    # Check if file contains requireAuth()
+    if ! grep -q "requireAuth()" "$file"; then
+        RELATIVE=$(echo "$file" | sed "s|$PROJECT_ROOT/||")
+        echo -e "  ${YELLOW}⚠${NC}  $RELATIVE"
+        UNPROTECTED=$((UNPROTECTED + 1))
+    fi
+done
+
+echo ""
+echo "=== Checking for Hardcoded Credentials ==="
+echo ""
+
+HARDCODED_PATTERNS=(
+    "password.*=.*['\"]"
+    "api_key.*=.*['\"]"
+    "secret.*=.*['\"]"
+    "token.*=.*['\"].*[a-zA-Z0-9]{20,}"
+)
+
+for pattern in "${HARDCODED_PATTERNS[@]}"; do
+    echo -n "Checking: $pattern ... "
+    
+    MATCHES=$(grep -r -n -i -E "$pattern" "$API_DIR" --include="*.php" 2>/dev/null || true)
+    
+    # Filter out comments and obvious non-credentials
+    MATCHES=$(echo "$MATCHES" | grep -v "//" | grep -v "password.*password" | grep -v "api_key.*key" || true)
+    
+    if [ -n "$MATCHES" ]; then
+        echo -e "${RED}FOUND${NC}"
+        echo "$MATCHES" | head -5 | while read -r line; do
+            echo "  ${RED}⚠${NC}  $line"
+        done
+        echo ""
+        ISSUES_FOUND=$((ISSUES_FOUND + 1))
+    else
+        echo -e "${GREEN}CLEAN${NC}"
+    fi
+done
+
+echo ""
+echo "========================================"
+
+if [ $ISSUES_FOUND -eq 0 ]; then
+    echo -e "${GREEN}✅ No authentication backdoors detected${NC}"
+    echo ""
+    echo "Summary:"
+    echo "  - All dangerous patterns: CLEAN"
+    echo "  - Hardcoded credentials: NONE"
+    echo "  - Auth bypasses: NONE"
+    exit 0
+else
+    echo -e "${RED}⚠️  $ISSUES_FOUND potential security issues found${NC}"
+    echo ""
+    echo "Action required:"
+    echo "  1. Review flagged files above"
+    echo "  2. Remove test bypasses"
+    echo "  3. Add requireAuth() to unprotected endpoints"
+    echo "  4. Remove hardcoded credentials"
+    exit 1
+fi

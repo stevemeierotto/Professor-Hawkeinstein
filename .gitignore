@@ -1,0 +1,88 @@
+# Environment and Secrets
+.env
+.env.*
+*.key
+*.pem
+config/secrets.php
+
+# LLaMA Source and Model Binaries
+llama.cpp/
+models/
+*.gguf
+*.bin
+*.safetensors
+
+# Logs and Temporary Files
+logs/
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+nohup.out
+/tmp/
+
+# C++ Build Artifacts
+cpp_agent/build/
+cpp_agent/bin/
+cpp_agent/*.o
+cpp_agent/*.so
+cpp_agent/*.a
+cpp_agent/*.dylib
+*.o
+*.so
+*.a
+*.dylib
+*.out
+*.exe
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+.project
+.settings/
+.classpath
+
+# Test Files and Outputs
+test_*.php
+test_*.html
+test_*.log
+test-*.html
+minimal-test.html
+direct-face-test.html
+
+# OS-Specific Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Icon?
+Desktop.ini
+
+# PHP/Composer
+vendor/
+composer.lock
+
+# Node (if applicable)
+node_modules/
+package-lock.json
+
+# Database Dumps
+*.sql.gz
+*.sql.bak
+backup_*.sql
+
+# Media Uploads (uncomment if needed)
+# media/uploads/
+# media/temp/
+
+# Session Files
+sessions/
+*.sess
