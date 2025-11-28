@@ -750,7 +750,7 @@
                     <div>
                         <p style="margin: 0; font-weight: 500;">✅ Your advisor is ready!</p>
                         <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-light);">
-                            ${adminAdvisorInstance.agent_name} • Last active: ${new Date(adminAdvisorInstance.last_interaction).toLocaleString()}
+                            ${adminAdvisorInstance.agent_name} • Last active: ${adminAdvisorInstance.last_interaction ? new Date(adminAdvisorInstance.last_interaction).toLocaleString() : 'Just now'}
                         </p>
                     </div>
                     <button class="btn btn-sm btn-outline" onclick="toggleAdvisorChat()">Chat</button>

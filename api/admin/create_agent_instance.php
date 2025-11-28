@@ -150,6 +150,8 @@ try {
                 'owner_type' => $ownerType,
                 'model_path' => $modelPath,
                 'model_name' => $agent['model_name'],
+                'conversation_history' => [],
+                'last_interaction' => date('Y-m-d H:i:s'),
                 'created_at' => date('Y-m-d H:i:s')
             ]
         ]);
