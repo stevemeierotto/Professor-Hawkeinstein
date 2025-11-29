@@ -29,7 +29,6 @@
                 <ul class="sidebar-menu">
                     <li><a href="#overview" class="active">📊 Overview</a></li>
                     <li><a href="#my-courses">📚 My Courses</a></li>
-                    <li><a href="workbook.html" class="workbook-link">📖 Workbook</a></li>
                     <li><a href="#agents">🤖 AI Agents</a></li>
                     <li><a href="#progress">📈 Progress</a></li>
                     <li><a href="#settings">⚙️ Settings</a></li>
@@ -45,11 +44,13 @@
 
             <!-- Main Content -->
             <main class="main-content">
-                <!-- Welcome Section -->
-                <div>
-                    <h1>Welcome back, <span id="welcomeName">John</span>! 👋</h1>
-                    <p style="color: var(--text-light); font-size: 1.1rem;">Continue your learning journey with your AI expert agents</p>
-                </div>
+                <!-- Overview Section (default view) -->
+                <div id="overview-section">
+                    <!-- Welcome Section -->
+                    <div>
+                        <h1>Welcome back, <span id="welcomeName">John</span>! 👋</h1>
+                        <p style="color: var(--text-light); font-size: 1.1rem;">Continue your learning journey with your AI expert agents</p>
+                    </div>
 
                 <!-- Progress Overview Cards -->
                 <div class="progress-overview">
@@ -220,6 +221,73 @@
                         </div>
                     </div>
                 </section>
+                </div>
+                <!-- End Overview Section -->
+
+                <!-- My Courses Section (hidden by default) -->
+                <div id="my-courses-section" style="display: none;">
+                    <h1>📚 My Courses</h1>
+                    <p style="color: var(--text-light); font-size: 1.1rem; margin-bottom: 2rem;">Select a course to open in the workbook</p>
+                    
+                    <div class="courses-grid">
+                        <!-- Algebra I -->
+                        <div class="course-card" style="cursor: pointer;" onclick="window.location.href='workbook.html?course=algebra_1'">
+                            <div class="course-thumbnail">📐</div>
+                            <div class="course-content">
+                                <h3>Algebra I</h3>
+                                <span class="difficulty-badge difficulty-beginner">Grade 9</span>
+                                <p style="font-size: 0.9rem; color: var(--text-light); margin: 1rem 0;">Foundational algebra concepts including linear equations, polynomials, and functions</p>
+                                <div class="course-meta">
+                                    <span>📖 6 Units</span>
+                                    <span style="margin-left: 1rem;">📝 30 Lessons</span>
+                                </div>
+                                <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Open in Workbook →</button>
+                            </div>
+                        </div>
+
+                        <!-- Geometry (Coming Soon) -->
+                        <div class="course-card" style="opacity: 0.6;">
+                            <div class="course-thumbnail">📏</div>
+                            <div class="course-content">
+                                <h3>Geometry</h3>
+                                <span class="difficulty-badge difficulty-intermediate">Grade 10</span>
+                                <p style="font-size: 0.9rem; color: var(--text-light); margin: 1rem 0;">Shapes, angles, proofs, and spatial reasoning</p>
+                                <div class="course-meta">
+                                    <span>📖 6 Units</span>
+                                    <span style="margin-left: 1rem;">📝 30 Lessons</span>
+                                </div>
+                                <button class="btn btn-secondary" style="width: 100%; margin-top: 1rem;" disabled>🔒 Coming Soon</button>
+                            </div>
+                        </div>
+
+                        <!-- Algebra II (Coming Soon) -->
+                        <div class="course-card" style="opacity: 0.6;">
+                            <div class="course-thumbnail">🔢</div>
+                            <div class="course-content">
+                                <h3>Algebra II</h3>
+                                <span class="difficulty-badge difficulty-advanced">Grade 11</span>
+                                <p style="font-size: 0.9rem; color: var(--text-light); margin: 1rem 0;">Advanced algebra topics including quadratics, exponentials, and logarithms</p>
+                                <div class="course-meta">
+                                    <span>📖 6 Units</span>
+                                    <span style="margin-left: 1rem;">📝 30 Lessons</span>
+                                </div>
+                                <button class="btn btn-secondary" style="width: 100%; margin-top: 1rem;" disabled>🔒 Coming Soon</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 3rem; padding: 2rem; background: var(--bg-light); border-radius: var(--radius-lg); border-left: 4px solid var(--primary);">
+                        <h3>💡 How to use the Workbook</h3>
+                        <ul style="line-height: 1.8;">
+                            <li>Click on any available course to open it in the interactive workbook</li>
+                            <li>Navigate through units and lessons using the breadcrumb trail</li>
+                            <li>Use Previous/Next buttons to move between lessons</li>
+                            <li>Chat with Professor Hawkeinstein for help with any lesson</li>
+                            <li>Your progress is automatically saved as you complete lessons</li>
+                        </ul>
+                    </div>
+                </div>
+                <!-- End My Courses Section -->
             </main>
         </div>
     </div>
@@ -646,16 +714,33 @@
             if (e.key === 'Enter') sendMessage();
         });
 
-        // Sidebar navigation
+        // Sidebar navigation with section switching
         document.querySelectorAll('.sidebar-menu a').forEach(link => {
             link.addEventListener('click', (e) => {
-                // Don't prevent default for actual page links (like workbook)
-                if (!link.classList.contains('workbook-link')) {
-                    e.preventDefault();
-                    document.querySelectorAll('.sidebar-menu a').forEach(l => l.classList.remove('active'));
-                    link.classList.add('active');
+                e.preventDefault();
+                
+                // Update active state
+                document.querySelectorAll('.sidebar-menu a').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+                
+                // Get the target section from href
+                const target = link.getAttribute('href').substring(1); // Remove #
+                
+                // Hide all sections
+                document.getElementById('overview-section').style.display = 'none';
+                document.getElementById('my-courses-section').style.display = 'none';
+                
+                // Show the selected section
+                if (target === 'overview') {
+                    document.getElementById('overview-section').style.display = 'block';
+                } else if (target === 'my-courses') {
+                    document.getElementById('my-courses-section').style.display = 'block';
+                } else {
+                    // For other sections (agents, progress, settings), show overview for now
+                    document.getElementById('overview-section').style.display = 'block';
+                    // TODO: Implement these sections later
+                    console.log('Section not yet implemented:', target);
                 }
-                // Let workbook link navigate normally to workbook.html
             });
         });
     </script>
