@@ -69,74 +69,12 @@
                     </div>
                 </div>
 
-                <div class="reading-content">
+                <div class="reading-content" id="lessonContent">
                     <div class="alert alert-info">
                         <strong>🔒 Session Monitored:</strong> Your learning session is being monitored for academic integrity.
                     </div>
-
-                    <h2>Introduction to Quadratic Equations</h2>
-                    <p>A quadratic equation is a second-order polynomial equation in a single variable x, where a ≠ 0. The general form is:</p>
-                    
-                    <div class="formula-box">
-                        <strong>ax² + bx + c = 0</strong>
-                    </div>
-
-                    <p>Quadratic equations appear in many real-world applications, from calculating projectile motion to optimizing business profits. Understanding how to solve these equations is fundamental to advanced mathematics.</p>
-
-                    <h3>Key Components</h3>
-                    <ul>
-                        <li><strong>a</strong> - The coefficient of x² (must not be zero)</li>
-                        <li><strong>b</strong> - The coefficient of x (can be zero)</li>
-                        <li><strong>c</strong> - The constant term (can be zero)</li>
-                    </ul>
-
-                    <h3>The Quadratic Formula</h3>
-                    <p>The most powerful tool for solving quadratic equations is the quadratic formula:</p>
-                    
-                    <div class="formula-box">
-                        <strong>x = (-b ± √(b² - 4ac)) / 2a</strong>
-                    </div>
-
-                    <p>This formula works for <em>any</em> quadratic equation, regardless of whether it can be factored easily.</p>
-
-                    <h3>The Discriminant</h3>
-                    <p>The expression under the square root sign, <strong>b² - 4ac</strong>, is called the discriminant. It tells us about the nature of the solutions:</p>
-                    
-                    <div class="info-box">
-                        <ul>
-                            <li>If b² - 4ac > 0: Two distinct real solutions</li>
-                            <li>If b² - 4ac = 0: One repeated real solution</li>
-                            <li>If b² - 4ac < 0: Two complex solutions</li>
-                        </ul>
-                    </div>
-
-                    <h3>Example Problem</h3>
-                    <p>Let's solve: <strong>2x² + 5x - 3 = 0</strong></p>
-                    
-                    <div class="example-box">
-                        <p><strong>Step 1:</strong> Identify a, b, and c</p>
-                        <p style="margin-left: 2rem;">a = 2, b = 5, c = -3</p>
-                        
-                        <p><strong>Step 2:</strong> Calculate the discriminant</p>
-                        <p style="margin-left: 2rem;">b² - 4ac = 5² - 4(2)(-3) = 25 + 24 = 49</p>
-                        
-                        <p><strong>Step 3:</strong> Apply the quadratic formula</p>
-                        <p style="margin-left: 2rem;">x = (-5 ± √49) / 4 = (-5 ± 7) / 4</p>
-                        
-                        <p><strong>Step 4:</strong> Find both solutions</p>
-                        <p style="margin-left: 2rem;">x₁ = (-5 + 7) / 4 = 2/4 = 0.5</p>
-                        <p style="margin-left: 2rem;">x₂ = (-5 - 7) / 4 = -12/4 = -3</p>
-                        
-                        <p><strong>Answer:</strong> x = 0.5 or x = -3</p>
-                    </div>
-
-                    <h3>Practice Exercises</h3>
-                    <p>Try these problems on your own. Ask your expert agent if you need help!</p>
-                    <ol>
-                        <li>x² - 7x + 10 = 0</li>
-                        <li>3x² + 2x - 8 = 0</li>
-                        <li>x² - 4x + 4 = 0</li>
-                    </ol>
+                    <!-- Lesson content will be rendered here -->
+                    <p style="text-align: center; color: var(--text-light); padding: 2rem;">Loading lesson...</p>
                 </div>
             </section>
 
@@ -152,18 +90,17 @@
                     <!-- Video Tab -->
                     <div class="media-panel active" id="video-panel">
                         <div class="video-container" style="margin: 0;">
-                            <div class="video-placeholder">
+                            <div class="video-placeholder" id="videoPlaceholder">
                                 <div>
                                     <p>▶️</p>
-                                    <p>Video: "Solving Quadratic Equations - Step by Step"</p>
-                                    <p style="font-size: 1rem; margin-top: 1rem;">Duration: 12:45</p>
+                                    <p id="videoTitle">Loading video...</p>
+                                    <p style="font-size: 1rem; margin-top: 1rem;" id="videoDuration">Duration: --:--</p>
                                     <button class="btn btn-secondary mt-2" id="playVideoBtn">Play Video</button>
                                 </div>
                             </div>
                         </div>
                         <div class="media-controls">
-                            <p><strong>Chapter 4.2:</strong> Using the Quadratic Formula</p>
-                            <p style="font-size: 0.875rem; color: var(--text-light);">Watch this video explanation before attempting the practice problems.</p>
+                            <p id="videoDescription">Video description will appear here</p>
                         </div>
                     </div>
 
@@ -234,6 +171,171 @@
     </div>
 
     <script>
+        // ============================================================================
+        // LESSON RENDERER - Displays lessons using lesson schema
+        // ============================================================================
+        
+        function renderLesson(lessonObject) {
+            const container = document.getElementById('lessonContent');
+            if (!container) return;
+            
+            // Keep the monitoring alert
+            let html = `<div class="alert alert-info">
+                <strong>🔒 Session Monitored:</strong> Your learning session is being monitored for academic integrity.
+            </div>`;
+            
+            // Lesson title
+            html += `<h2>${lessonObject.lessonTitle || 'Lesson ' + lessonObject.lessonNumber}</h2>`;
+            
+            // Objectives
+            if (lessonObject.objectives && lessonObject.objectives.length > 0) {
+                html += `<h3>Learning Objectives</h3><ul>`;
+                lessonObject.objectives.forEach(obj => {
+                    html += `<li>${obj}</li>`;
+                });
+                html += `</ul>`;
+            }
+            
+            // Explanation (supports markdown-style formatting)
+            if (lessonObject.explanation) {
+                html += `<div class="lesson-explanation">${lessonObject.explanation}</div>`;
+            }
+            
+            // Guided Examples
+            if (lessonObject.guidedExamples && lessonObject.guidedExamples.length > 0) {
+                html += `<h3>Guided Examples</h3>`;
+                lessonObject.guidedExamples.forEach((example, idx) => {
+                    html += `<div class="example-box">
+                        <h4>Example ${idx + 1}: ${example.title || 'Practice Problem'}</h4>
+                        <p><strong>Problem:</strong> ${example.problem}</p>`;
+                    
+                    if (example.steps && example.steps.length > 0) {
+                        html += `<div style="margin-top: 1rem;">`;
+                        example.steps.forEach((step, stepIdx) => {
+                            html += `<p><strong>Step ${stepIdx + 1}:</strong> ${step}</p>`;
+                        });
+                        html += `</div>`;
+                    }
+                    
+                    if (example.solution) {
+                        html += `<p><strong>Answer:</strong> ${example.solution}</p>`;
+                    }
+                    html += `</div>`;
+                });
+            }
+            
+            // Practice Problems
+            if (lessonObject.practiceProblems && lessonObject.practiceProblems.length > 0) {
+                html += `<h3>Practice Problems</h3>
+                    <p>Try these problems on your own. Ask your expert agent if you need help!</p>
+                    <ol>`;
+                lessonObject.practiceProblems.forEach(problem => {
+                    html += `<li>${problem.problem || problem}</li>`;
+                });
+                html += `</ol>`;
+            }
+            
+            // Quiz Questions
+            if (lessonObject.quizQuestions && lessonObject.quizQuestions.length > 0) {
+                html += `<h3>Knowledge Check</h3>`;
+                lessonObject.quizQuestions.forEach((quiz, idx) => {
+                    html += `<div class="info-box" style="margin-bottom: 1rem;">
+                        <p><strong>Question ${idx + 1}:</strong> ${quiz.question}</p>`;
+                    
+                    if (quiz.type === 'multiple-choice' && quiz.options) {
+                        html += `<ul style="list-style: none; padding-left: 0;">`;
+                        quiz.options.forEach((option, optIdx) => {
+                            const label = String.fromCharCode(65 + optIdx); // A, B, C, D
+                            html += `<li style="margin: 0.5rem 0;">
+                                <input type="radio" name="quiz${idx}" id="quiz${idx}_${optIdx}" value="${label}">
+                                <label for="quiz${idx}_${optIdx}" style="margin-left: 0.5rem;">${label}. ${option}</label>
+                            </li>`;
+                        });
+                        html += `</ul>`;
+                    } else if (quiz.type === 'true-false') {
+                        html += `<ul style="list-style: none; padding-left: 0;">
+                            <li style="margin: 0.5rem 0;">
+                                <input type="radio" name="quiz${idx}" id="quiz${idx}_true" value="true">
+                                <label for="quiz${idx}_true" style="margin-left: 0.5rem;">True</label>
+                            </li>
+                            <li style="margin: 0.5rem 0;">
+                                <input type="radio" name="quiz${idx}" id="quiz${idx}_false" value="false">
+                                <label for="quiz${idx}_false" style="margin-left: 0.5rem;">False</label>
+                            </li>
+                        </ul>`;
+                    } else if (quiz.type === 'short-answer') {
+                        html += `<input type="text" placeholder="Your answer..." style="width: 100%; padding: 0.5rem; margin-top: 0.5rem;">`;
+                    }
+                    html += `</div>`;
+                });
+            }
+            
+            // Summary
+            if (lessonObject.summary) {
+                html += `<h3>Summary</h3>
+                    <div class="info-box">${lessonObject.summary}</div>`;
+            }
+            
+            // Vocabulary (if present)
+            if (lessonObject.vocabulary && lessonObject.vocabulary.length > 0) {
+                html += `<h3>Key Terms</h3><dl>`;
+                lessonObject.vocabulary.forEach(term => {
+                    html += `<dt style="font-weight: bold; margin-top: 1rem;">${term.term}</dt>
+                        <dd style="margin-left: 2rem;">${term.definition}</dd>`;
+                });
+                html += `</dl>`;
+            }
+            
+            container.innerHTML = html;
+            
+            // Update video placeholder
+            if (lessonObject.videoPlaceholder) {
+                updateVideoPlaceholder(lessonObject.videoPlaceholder);
+            }
+            
+            // Update header info
+            if (lessonObject.lessonTitle) {
+                document.getElementById('unitTitle').textContent = lessonObject.lessonTitle;
+            }
+            
+            // Update metadata if available
+            if (lessonObject.estimatedDuration) {
+                const metaElement = document.querySelector('.workbook-meta');
+                if (metaElement) {
+                    const durationSpan = metaElement.querySelector('span:nth-child(3)');
+                    if (durationSpan) {
+                        durationSpan.textContent = `⏱️ ${lessonObject.estimatedDuration} min`;
+                    }
+                }
+            }
+        }
+        
+        function updateVideoPlaceholder(videoInfo) {
+            const videoTitle = document.getElementById('videoTitle');
+            const videoDescription = document.getElementById('videoDescription');
+            
+            if (typeof videoInfo === 'string') {
+                if (videoTitle) videoTitle.textContent = videoInfo;
+                if (videoDescription) videoDescription.innerHTML = `<p><strong>Video:</strong> ${videoInfo}</p>`;
+            } else if (typeof videoInfo === 'object') {
+                if (videoTitle) videoTitle.textContent = videoInfo.title || videoInfo.topic || 'Video Lesson';
+                if (videoInfo.duration && document.getElementById('videoDuration')) {
+                    document.getElementById('videoDuration').textContent = `Duration: ${videoInfo.duration}`;
+                }
+                if (videoDescription) {
+                    videoDescription.innerHTML = `<p><strong>Video:</strong> ${videoInfo.description || videoInfo.title || ''}</p>`;
+                }
+            }
+        }
+        
+        // ============================================================================
+        // AUTHENTICATION & INITIALIZATION
+        // ============================================================================
+        
+        // ============================================================================
+        // AUTHENTICATION & INITIALIZATION
+        // ============================================================================
+        
         // Check authentication
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         if (!user.username) {
@@ -241,7 +343,96 @@
         } else {
             document.getElementById('studentName').textContent = user.name;
         }
+        
+        // ============================================================================
+        // DEMO: Load sample lesson on page load
+        // ============================================================================
+        
+        // Sample lesson data (following lesson schema)
+        const sampleLesson = {
+            "lessonNumber": 1,
+            "lessonTitle": "Introduction to Quadratic Equations",
+            "objectives": [
+                "Understand the standard form of a quadratic equation",
+                "Identify coefficients a, b, and c in quadratic equations",
+                "Learn the quadratic formula and when to use it",
+                "Understand the discriminant and what it tells us about solutions"
+            ],
+            "explanation": `<h3>What is a Quadratic Equation?</h3>
+                <p>A quadratic equation is a second-order polynomial equation in a single variable x, where a ≠ 0. The general form is:</p>
+                <div class="formula-box"><strong>ax² + bx + c = 0</strong></div>
+                <p>Quadratic equations appear in many real-world applications, from calculating projectile motion to optimizing business profits.</p>
+                
+                <h3>Key Components</h3>
+                <ul>
+                    <li><strong>a</strong> - The coefficient of x² (must not be zero)</li>
+                    <li><strong>b</strong> - The coefficient of x (can be zero)</li>
+                    <li><strong>c</strong> - The constant term (can be zero)</li>
+                </ul>
+                
+                <h3>The Quadratic Formula</h3>
+                <p>The most powerful tool for solving quadratic equations is the quadratic formula:</p>
+                <div class="formula-box"><strong>x = (-b ± √(b² - 4ac)) / 2a</strong></div>
+                <p>This formula works for <em>any</em> quadratic equation, regardless of whether it can be factored easily.</p>`,
+            "guidedExamples": [
+                {
+                    "title": "Solving with the Quadratic Formula",
+                    "problem": "2x² + 5x - 3 = 0",
+                    "steps": [
+                        "Identify a, b, and c: a = 2, b = 5, c = -3",
+                        "Calculate the discriminant: b² - 4ac = 5² - 4(2)(-3) = 25 + 24 = 49",
+                        "Apply the quadratic formula: x = (-5 ± √49) / 4 = (-5 ± 7) / 4",
+                        "Find both solutions: x₁ = (-5 + 7) / 4 = 0.5 and x₂ = (-5 - 7) / 4 = -3"
+                    ],
+                    "solution": "x = 0.5 or x = -3"
+                }
+            ],
+            "practiceProblems": [
+                {"problem": "x² - 7x + 10 = 0"},
+                {"problem": "3x² + 2x - 8 = 0"},
+                {"problem": "x² - 4x + 4 = 0"}
+            ],
+            "quizQuestions": [
+                {
+                    "question": "In the equation 5x² - 3x + 7 = 0, what is the value of coefficient a?",
+                    "type": "multiple-choice",
+                    "options": ["5", "-3", "7", "0"],
+                    "correctAnswer": "A"
+                },
+                {
+                    "question": "The discriminant b² - 4ac determines the number and type of solutions.",
+                    "type": "true-false",
+                    "correctAnswer": "true"
+                }
+            ],
+            "videoPlaceholder": "Solving Quadratic Equations - Step by Step Guide",
+            "summary": "Quadratic equations follow the form ax² + bx + c = 0. The quadratic formula x = (-b ± √(b² - 4ac)) / 2a can solve any quadratic equation. The discriminant (b² - 4ac) tells us about the nature of solutions: positive means two real solutions, zero means one repeated solution, and negative means complex solutions.",
+            "vocabulary": [
+                {
+                    "term": "Quadratic Equation",
+                    "definition": "A polynomial equation of degree 2, in the form ax² + bx + c = 0"
+                },
+                {
+                    "term": "Discriminant",
+                    "definition": "The expression b² - 4ac, which determines the nature of the solutions"
+                }
+            ],
+            "estimatedDuration": 45,
+            "difficulty": "intermediate"
+        };
+        
+        // Render the sample lesson
+        renderLesson(sampleLesson);
 
+        // ============================================================================
+        // CHAT FUNCTIONALITY
+        // ============================================================================
+
+
+        // ============================================================================
+        // CHAT FUNCTIONALITY
+        // ============================================================================
+        
         // Chat functionality
         const workbookChat = document.getElementById('workbookChat');
         const workbookChatInput = document.getElementById('workbookChatInput');
