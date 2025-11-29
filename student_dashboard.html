@@ -649,9 +649,13 @@
         // Sidebar navigation
         document.querySelectorAll('.sidebar-menu a').forEach(link => {
             link.addEventListener('click', (e) => {
-                e.preventDefault();
-                document.querySelectorAll('.sidebar-menu a').forEach(l => l.classList.remove('active'));
-                link.classList.add('active');
+                // Don't prevent default for actual page links (like workbook)
+                if (!link.classList.contains('workbook-link')) {
+                    e.preventDefault();
+                    document.querySelectorAll('.sidebar-menu a').forEach(l => l.classList.remove('active'));
+                    link.classList.add('active');
+                }
+                // Let workbook link navigate normally to workbook.html
             });
         });
     </script>
