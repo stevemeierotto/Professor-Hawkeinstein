@@ -106,7 +106,7 @@ sudo mysql
 
 ```sql
 CREATE DATABASE professorhawkeinstein_platform;
-CREATE USER 'professorhawkeinstein_user'@'localhost' IDENTIFIED BY 'BT1716lit';
+CREATE USER 'professorhawkeinstein_user'@'localhost' IDENTIFIED BY 'your_secure_password_here';
 GRANT ALL PRIVILEGES ON professorhawkeinstein_platform.* TO 'professorhawkeinstein_user'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
@@ -125,7 +125,7 @@ Update `config/database.php` with your database credentials:
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'professorhawkeinstein_platform');
 define('DB_USER', 'professorhawkeinstein_user');
-define('DB_PASS', 'BT1716lit');
+define('DB_PASS', 'your_secure_password_here');
 ```
 
 **Important**: Change security keys in production:
