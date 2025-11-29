@@ -1,0 +1,111 @@
+{
+  "courseName": "Introduction to Algebra",
+  "subject": "Mathematics",
+  "level": "High School",
+  "description": "A comprehensive introduction to algebraic concepts and problem-solving",
+  "instructor": "Professor Hawkeinstein",
+  "duration": 40,
+  "prerequisites": ["Basic Arithmetic", "Pre-Algebra"],
+  "tags": ["algebra", "mathematics", "equations", "functions"],
+  "version": "1.0.0",
+  "createdAt": "2025-11-28T00:00:00Z",
+  "updatedAt": "2025-11-28T00:00:00Z",
+  "units": [
+    {
+      "unitNumber": 1,
+      "unitTitle": "Foundations of Algebra",
+      "description": "Introduction to variables, expressions, and basic operations",
+      "estimatedHours": 8,
+      "lessons": [
+        {
+          "lessonNumber": 1,
+          "lessonTitle": "Variables and Expressions",
+          "description": "Learn what variables are and how to write algebraic expressions",
+          "duration": 45,
+          "contentType": "video",
+          "mediaUrl": "/media/courses/algebra/unit1/lesson1.mp4"
+        },
+        {
+          "lessonNumber": 2,
+          "lessonTitle": "Order of Operations",
+          "description": "Master PEMDAS and evaluate complex expressions",
+          "duration": 50,
+          "contentType": "mixed",
+          "mediaUrl": "/media/courses/algebra/unit1/lesson2.mp4"
+        },
+        {
+          "lessonNumber": 3,
+          "lessonTitle": "Combining Like Terms",
+          "description": "Simplify expressions by combining similar terms",
+          "duration": 40,
+          "contentType": "interactive",
+          "mediaUrl": "/media/courses/algebra/unit1/lesson3.mp4"
+        }
+      ]
+    },
+    {
+      "unitNumber": 2,
+      "unitTitle": "Solving Linear Equations",
+      "description": "Techniques for solving equations with one variable",
+      "estimatedHours": 10,
+      "lessons": [
+        {
+          "lessonNumber": 1,
+          "lessonTitle": "One-Step Equations",
+          "description": "Solve simple equations using inverse operations",
+          "duration": 35,
+          "contentType": "video",
+          "mediaUrl": "/media/courses/algebra/unit2/lesson1.mp4"
+        },
+        {
+          "lessonNumber": 2,
+          "lessonTitle": "Multi-Step Equations",
+          "description": "Solve equations requiring multiple operations",
+          "duration": 55,
+          "contentType": "mixed",
+          "mediaUrl": "/media/courses/algebra/unit2/lesson2.mp4"
+        },
+        {
+          "lessonNumber": 3,
+          "lessonTitle": "Equations with Variables on Both Sides",
+          "description": "Advanced equation solving techniques",
+          "duration": 60,
+          "contentType": "interactive",
+          "mediaUrl": "/media/courses/algebra/unit2/lesson3.mp4"
+        }
+      ]
+    },
+    {
+      "unitNumber": 3,
+      "unitTitle": "Graphing Linear Functions",
+      "description": "Visualize relationships between variables using graphs",
+      "estimatedHours": 12,
+      "lessons": [
+        {
+          "lessonNumber": 1,
+          "lessonTitle": "The Coordinate Plane",
+          "description": "Understanding x and y axes and plotting points",
+          "duration": 40,
+          "contentType": "video",
+          "mediaUrl": "/media/courses/algebra/unit3/lesson1.mp4"
+        },
+        {
+          "lessonNumber": 2,
+          "lessonTitle": "Slope and Y-Intercept",
+          "description": "Learn to identify slope and intercepts from equations",
+          "duration": 50,
+          "contentType": "mixed",
+          "mediaUrl": "/media/courses/algebra/unit3/lesson2.mp4"
+        },
+        {
+          "lessonNumber": 3,
+          "lessonTitle": "Graphing Linear Equations",
+          "description": "Plot linear functions using slope-intercept form",
+          "duration": 60,
+          "contentType": "interactive",
+          "mediaUrl": "/media/courses/algebra/unit3/lesson3.mp4"
+        }
+      ]
+    }
+  ]
+}

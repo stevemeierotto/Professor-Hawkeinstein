@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Course Metadata Schema",
+  "description": "Flexible JSON structure for storing course information",
+  "type": "object",
+  "required": ["courseName", "subject", "level", "units"],
+  "properties": {
+    "courseName": {
+      "type": "string",
+      "description": "Full name of the course"
+    },
+    "subject": {
+      "type": "string",
+      "description": "Subject area (e.g., Mathematics, Science, History)"
+    },
+    "level": {
+      "type": "string",
+      "description": "Course difficulty level (e.g., Elementary, Middle School, High School, College)"
+    },
+    "units": {
+      "type": "array",
+      "description": "Array of course units",
+      "items": {
+        "type": "object",
+        "required": ["unitNumber", "unitTitle", "lessons"],
+        "properties": {
+          "unitNumber": {
+            "type": "integer",
+            "description": "Sequential unit number",
+            "minimum": 1
+          },
+          "unitTitle": {
+            "type": "string",
+            "description": "Title of the unit"
+          },
+          "lessons": {
+            "type": "array",
+            "description": "Array of lessons within this unit",
+            "items": {
+              "type": "object",
+              "required": ["lessonNumber", "lessonTitle"],
+              "properties": {
+                "lessonNumber": {
+                  "type": "integer",
+                  "description": "Sequential lesson number within the unit",
+                  "minimum": 1
+                },
+                "lessonTitle": {
+                  "type": "string",
+                  "description": "Title of the lesson"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Optional lesson description"
+                },
+                "duration": {
+                  "type": "integer",
+                  "description": "Estimated duration in minutes"
+                },
+                "mediaUrl": {
+                  "type": "string",
+                  "description": "URL to video or media content"
+                },
+                "contentType": {
+                  "type": "string",
+                  "enum": ["video", "text", "interactive", "quiz", "mixed"],
+                  "description": "Type of lesson content"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional unit description"
+          },
+          "estimatedHours": {
+            "type": "number",
+            "description": "Estimated hours to complete unit"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "description": {
+      "type": "string",
+      "description": "Optional course description"
+    },
+    "instructor": {
+      "type": "string",
+      "description": "Instructor or course creator name"
+    },
+    "duration": {
+      "type": "integer",
+      "description": "Total course duration in hours"
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of prerequisite courses or skills"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Searchable tags for course categorization"
+    },
+    "version": {
+      "type": "string",
+      "description": "Course version for tracking updates",
+      "default": "1.0.0"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of course creation"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of last update"
+    }
+  },
+  "additionalProperties": true
+}
