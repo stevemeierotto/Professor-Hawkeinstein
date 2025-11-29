@@ -240,6 +240,102 @@ class CourseMetadata {
     }
     
     /**
+     * Insert or update a lesson in the correct unit and position
+     * This safely handles inserting lessons by lesson number, replacing existing ones
+     * 
+     * @param int $unitNumber Unit number
+     * @param array $lessonData Complete lesson object
+     * @return array Result with success status and message
+     */
+    public function insertLesson($unitNumber, $lessonData) {
+        // Validate lesson has required fields
+        if (!isset($lessonData['lessonNumber'])) {
+            return [
+                'success' => false,
+                'error' => 'Lesson must have a lessonNumber field'
+            ];
+        }
+        
+        $lessonNumber = $lessonData['lessonNumber'];
+        $units = &$this->data['units'];
+        $unitFound = false;
+        
+        // Find the unit
+        foreach ($units as $unitIndex => &$unit) {
+            if ($unit['unitNumber'] == $unitNumber) {
+                $unitFound = true;
+                
+                if (!isset($unit['lessons'])) {
+                    $unit['lessons'] = [];
+                }
+                
+                // Check if lesson with this number already exists
+                $lessonExists = false;
+                foreach ($unit['lessons'] as $index => &$existingLesson) {
+                    if ($existingLesson['lessonNumber'] == $lessonNumber) {
+                        // Replace existing lesson
+                        $unit['lessons'][$index] = $lessonData;
+                        $lessonExists = true;
+                        $this->data['updatedAt'] = date('c');
+                        
+                        return [
+                            'success' => true,
+                            'action' => 'updated',
+                            'message' => "Lesson $lessonNumber in Unit $unitNumber updated successfully",
+                            'unitNumber' => $unitNumber,
+                            'lessonNumber' => $lessonNumber
+                        ];
+                    }
+                }
+                
+                // If lesson doesn't exist, insert it in the correct position
+                if (!$lessonExists) {
+                    $inserted = false;
+                    $newLessons = [];
+                    
+                    foreach ($unit['lessons'] as $existingLesson) {
+                        if (!$inserted && $existingLesson['lessonNumber'] > $lessonNumber) {
+                            $newLessons[] = $lessonData;
+                            $inserted = true;
+                        }
+                        $newLessons[] = $existingLesson;
+                    }
+                    
+                    // If not inserted yet, append at end
+                    if (!$inserted) {
+                        $newLessons[] = $lessonData;
+                    }
+                    
+                    $unit['lessons'] = $newLessons;
+                    $this->data['updatedAt'] = date('c');
+                    
+                    return [
+                        'success' => true,
+                        'action' => 'inserted',
+                        'message' => "Lesson $lessonNumber added to Unit $unitNumber successfully",
+                        'unitNumber' => $unitNumber,
+                        'lessonNumber' => $lessonNumber
+                    ];
+                }
+                
+                break;
+            }
+        }
+        
+        if (!$unitFound) {
+            return [
+                'success' => false,
+                'error' => "Unit $unitNumber not found in course"
+            ];
+        }
+        
+        return [
+            'success' => false,
+            'error' => 'Unknown error occurred'
+        ];
+    }
+    
+    /**
      * Get course statistics
      * @return array
      */

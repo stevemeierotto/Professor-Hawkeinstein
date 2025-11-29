@@ -1,0 +1,46 @@
+{
+  "courseName": "Algebra Fundamentals",
+  "subject": "Mathematics",
+  "level": "High School",
+  "description": "Master the fundamentals of algebra with comprehensive lessons covering equations, functions, and polynomials.",
+  "units": [
+    {
+      "unitNumber": 1,
+      "unitTitle": "Foundations of Algebra",
+      "description": "Learn the basic building blocks of algebra",
+      "lessons": []
+    },
+    {
+      "unitNumber": 2,
+      "unitTitle": "Linear Equations",
+      "description": "Master solving and graphing linear equations",
+      "lessons": [
+        {
+          "lessonNumber": 1,
+          "lessonTitle": "Introduction to Linear Equations",
+          "objectives": [
+            "Understand what a linear equation is",
+            "Identify slope and y-intercept"
+          ],
+          "explanation": "Linear equations form straight lines...",
+          "guidedExamples": [],
+          "practiceProblems": [],
+          "quizQuestions": [],
+          "videoPlaceholder": "Introduction to Linear Equations",
+          "summary": "Linear equations are first-degree polynomials.",
+          "estimatedDuration": 30,
+          "difficulty": "beginner"
+        }
+      ]
+    },
+    {
+      "unitNumber": 3,
+      "unitTitle": "Quadratic Equations",
+      "description": "Explore second-degree polynomial equations",
+      "lessons": []
+    }
+  ],
+  "version": "1.0.0",
+  "createdAt": "2025-11-28T00:00:00Z",
+  "updatedAt": "2025-11-28T00:00:00Z"
+}
