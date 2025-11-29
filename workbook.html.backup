@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workbook - Professor Hawkeinstein's Educational Foundation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="logo">🎓 Professor Hawkeinstein's Educational Foundation</a>
+            <ul class="nav-links">
+                <li><a href="student_dashboard.html">← Back to Dashboard</a></li>
+                <li><a href="#" id="studentName">John Doe</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Workbook Layout -->
+    <div class="workbook-container">
+        <!-- Left Column: AI Agent Chat (1/3 width) -->
+        <aside class="workbook-chat">
+            <div class="chat-container" style="height: calc(100vh - 80px);">
+                <div class="chat-header">
+                    <div class="agent-avatar">PH</div>
+                    <div>
+                        <h4 style="margin: 0; color: white;">Professor Hawkeinstein</h4>
+                        <p style="margin: 0; font-size: 0.875rem; opacity: 0.9;">Math Expert • Online</p>
+                    </div>
+                </div>
+
+                <div class="chat-messages" id="workbookChat">
+                    <div class="message agent">
+                        <div class="message-avatar">PH</div>
+                        <div class="message-content">
+                            <p><strong>Professor Hawkeinstein</strong></p>
+                            <p>Welcome to today's lesson! I'm here to help you understand this material. Feel free to ask me anything about what you're reading or watching.</p>
+                            <small style="opacity: 0.7;">Just now</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-container">
+                    <input type="text" id="workbookChatInput" placeholder="Ask your expert agent..." />
+                    <button class="btn btn-primary" id="workbookSendBtn">Send</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Column: Content Area (2/3 width) -->
+        <main class="workbook-content">
+            <!-- Top Half: Reading Material -->
+            <section class="workbook-reading">
+                <div class="workbook-header">
+                    <div>
+                        <h1 id="unitTitle">Unit 4: Quadratic Equations</h1>
+                        <p class="workbook-meta">
+                            <span>📚 Algebra Fundamentals</span>
+                            <span>•</span>
+                            <span>⏱️ 15 min read</span>
+                            <span>•</span>
+                            <span>Unit 4 of 6</span>
+                        </p>
+                    </div>
+                    <div class="unit-progress">
+                        <span>Progress: <strong>65%</strong></span>
+                    </div>
+                </div>
+
+                <div class="reading-content" id="lessonContent">
+                    <div class="alert alert-info">
+                        <strong>🔒 Session Monitored:</strong> Your learning session is being monitored for academic integrity.
+                    </div>
+                    <!-- Lesson content will be rendered here -->
+                    <p style="text-align: center; color: var(--text-light); padding: 2rem;">Loading lesson...</p>
+                </div>
+            </section>
+
+            <!-- Bottom Half: Video/Simulation -->
+            <section class="workbook-media">
+                <div class="media-tabs">
+                    <button class="media-tab active" data-tab="video">📹 Video Lesson</button>
+                    <button class="media-tab" data-tab="simulation">🎮 Interactive Simulation</button>
+                    <button class="media-tab" data-tab="animation">🎬 Animation</button>
+                </div>
+
+                <div class="media-content-area">
+                    <!-- Video Tab -->
+                    <div class="media-panel active" id="video-panel">
+                        <div class="video-container" style="margin: 0;">
+                            <div class="video-placeholder" id="videoPlaceholder">
+                                <div>
+                                    <p>▶️</p>
+                                    <p id="videoTitle">Loading video...</p>
+                                    <p style="font-size: 1rem; margin-top: 1rem;" id="videoDuration">Duration: --:--</p>
+                                    <button class="btn btn-secondary mt-2" id="playVideoBtn">Play Video</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="media-controls">
+                            <p id="videoDescription">Video description will appear here</p>
+                        </div>
+                    </div>
+
+                    <!-- Simulation Tab -->
+                    <div class="media-panel" id="simulation-panel">
+                        <div class="simulation-container">
+                            <div class="simulation-placeholder">
+                                <div>
+                                    <p>🎮</p>
+                                    <p>Interactive Quadratic Equation Solver</p>
+                                    <p style="font-size: 1rem; margin-top: 1rem;">Adjust coefficients and see the graph change in real-time</p>
+                                    <button class="btn btn-secondary mt-2">Launch Simulation</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="media-controls">
+                            <p><strong>Interactive Tool:</strong> Quadratic Graph Explorer</p>
+                            <p style="font-size: 0.875rem; color: var(--text-light);">Experiment with different values to understand how coefficients affect the parabola.</p>
+                        </div>
+                    </div>
+
+                    <!-- Animation Tab -->
+                    <div class="media-panel" id="animation-panel">
+                        <div class="animation-container">
+                            <div class="animation-placeholder">
+                                <div>
+                                    <p>🎬</p>
+                                    <p>Animated Guide: Completing the Square</p>
+                                    <p style="font-size: 1rem; margin-top: 1rem;">Visual representation of the algebraic process</p>
+                                    <button class="btn btn-secondary mt-2">Play Animation</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="media-controls">
+                            <p><strong>Visual Learning:</strong> Step-by-step animation</p>
+                            <p style="font-size: 0.875rem; color: var(--text-light);">Watch how the equation transforms through each step.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Navigation Arrows -->
+            <div class="workbook-navigation">
+                <button class="btn btn-outline" id="prevUnit">
+                    <span>←</span>
+                    <div>
+                        <small>Previous Unit</small>
+                        <strong>Linear Equations</strong>
+                    </div>
+                </button>
+                
+                <div class="workbook-nav-center">
+                    <span class="unit-indicator">Unit 4 of 6</span>
+                    <div class="progress-bar" style="width: 200px; margin: 0.5rem auto;">
+                        <div class="progress-bar-fill" style="width: 65%;"></div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" id="nextUnit">
+                    <div>
+                        <small>Next Unit</small>
+                        <strong>Systems of Equations</strong>
+                    </div>
+                    <span>→</span>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // ============================================================================
+        // LESSON RENDERER - Displays lessons using lesson schema
+        // ============================================================================
+        
+        function renderLesson(lessonObject) {
+            const container = document.getElementById('lessonContent');
+            if (!container) return;
+            
+            // Keep the monitoring alert
+            let html = `<div class="alert alert-info">
+                <strong>🔒 Session Monitored:</strong> Your learning session is being monitored for academic integrity.
+            </div>`;
+            
+            // Lesson title
+            html += `<h2>${lessonObject.lessonTitle || 'Lesson ' + lessonObject.lessonNumber}</h2>`;
+            
+            // Objectives
+            if (lessonObject.objectives && lessonObject.objectives.length > 0) {
+                html += `<h3>Learning Objectives</h3><ul>`;
+                lessonObject.objectives.forEach(obj => {
+                    html += `<li>${obj}</li>`;
+                });
+                html += `</ul>`;
+            }
+            
+            // Explanation (supports markdown-style formatting)
+            if (lessonObject.explanation) {
+                html += `<div class="lesson-explanation">${lessonObject.explanation}</div>`;
+            }
+            
+            // Guided Examples
+            if (lessonObject.guidedExamples && lessonObject.guidedExamples.length > 0) {
+                html += `<h3>Guided Examples</h3>`;
+                lessonObject.guidedExamples.forEach((example, idx) => {
+                    html += `<div class="example-box">
+                        <h4>Example ${idx + 1}: ${example.title || 'Practice Problem'}</h4>
+                        <p><strong>Problem:</strong> ${example.problem}</p>`;
+                    
+                    if (example.steps && example.steps.length > 0) {
+                        html += `<div style="margin-top: 1rem;">`;
+                        example.steps.forEach((step, stepIdx) => {
+                            html += `<p><strong>Step ${stepIdx + 1}:</strong> ${step}</p>`;
+                        });
+                        html += `</div>`;
+                    }
+                    
+                    if (example.solution) {
+                        html += `<p><strong>Answer:</strong> ${example.solution}</p>`;
+                    }
+                    html += `</div>`;
+                });
+            }
+            
+            // Practice Problems
+            if (lessonObject.practiceProblems && lessonObject.practiceProblems.length > 0) {
+                html += `<h3>Practice Problems</h3>
+                    <p>Try these problems on your own. Ask your expert agent if you need help!</p>
+                    <ol>`;
+                lessonObject.practiceProblems.forEach(problem => {
+                    html += `<li>${problem.problem || problem}</li>`;
+                });
+                html += `</ol>`;
+            }
+            
+            // Quiz Questions
+            if (lessonObject.quizQuestions && lessonObject.quizQuestions.length > 0) {
+                html += `<h3>Knowledge Check</h3>`;
+                lessonObject.quizQuestions.forEach((quiz, idx) => {
+                    html += `<div class="info-box" style="margin-bottom: 1rem;">
+                        <p><strong>Question ${idx + 1}:</strong> ${quiz.question}</p>`;
+                    
+                    if (quiz.type === 'multiple-choice' && quiz.options) {
+                        html += `<ul style="list-style: none; padding-left: 0;">`;
+                        quiz.options.forEach((option, optIdx) => {
+                            const label = String.fromCharCode(65 + optIdx); // A, B, C, D
+                            html += `<li style="margin: 0.5rem 0;">
+                                <input type="radio" name="quiz${idx}" id="quiz${idx}_${optIdx}" value="${label}">
+                                <label for="quiz${idx}_${optIdx}" style="margin-left: 0.5rem;">${label}. ${option}</label>
+                            </li>`;
+                        });
+                        html += `</ul>`;
+                    } else if (quiz.type === 'true-false') {
+                        html += `<ul style="list-style: none; padding-left: 0;">
+                            <li style="margin: 0.5rem 0;">
+                                <input type="radio" name="quiz${idx}" id="quiz${idx}_true" value="true">
+                                <label for="quiz${idx}_true" style="margin-left: 0.5rem;">True</label>
+                            </li>
+                            <li style="margin: 0.5rem 0;">
+                                <input type="radio" name="quiz${idx}" id="quiz${idx}_false" value="false">
+                                <label for="quiz${idx}_false" style="margin-left: 0.5rem;">False</label>
+                            </li>
+                        </ul>`;
+                    } else if (quiz.type === 'short-answer') {
+                        html += `<input type="text" placeholder="Your answer..." style="width: 100%; padding: 0.5rem; margin-top: 0.5rem;">`;
+                    }
+                    html += `</div>`;
+                });
+            }
+            
+            // Summary
+            if (lessonObject.summary) {
+                html += `<h3>Summary</h3>
+                    <div class="info-box">${lessonObject.summary}</div>`;
+            }
+            
+            // Vocabulary (if present)
+            if (lessonObject.vocabulary && lessonObject.vocabulary.length > 0) {
+                html += `<h3>Key Terms</h3><dl>`;
+                lessonObject.vocabulary.forEach(term => {
+                    html += `<dt style="font-weight: bold; margin-top: 1rem;">${term.term}</dt>
+                        <dd style="margin-left: 2rem;">${term.definition}</dd>`;
+                });
+                html += `</dl>`;
+            }
+            
+            container.innerHTML = html;
+            
+            // Update video placeholder
+            if (lessonObject.videoPlaceholder) {
+                updateVideoPlaceholder(lessonObject.videoPlaceholder);
+            }
+            
+            // Update header info
+            if (lessonObject.lessonTitle) {
+                document.getElementById('unitTitle').textContent = lessonObject.lessonTitle;
+            }
+            
+            // Update metadata if available
+            if (lessonObject.estimatedDuration) {
+                const metaElement = document.querySelector('.workbook-meta');
+                if (metaElement) {
+                    const durationSpan = metaElement.querySelector('span:nth-child(3)');
+                    if (durationSpan) {
+                        durationSpan.textContent = `⏱️ ${lessonObject.estimatedDuration} min`;
+                    }
+                }
+            }
+        }
+        
+        function updateVideoPlaceholder(videoInfo) {
+            const videoTitle = document.getElementById('videoTitle');
+            const videoDescription = document.getElementById('videoDescription');
+            
+            if (typeof videoInfo === 'string') {
+                if (videoTitle) videoTitle.textContent = videoInfo;
+                if (videoDescription) videoDescription.innerHTML = `<p><strong>Video:</strong> ${videoInfo}</p>`;
+            } else if (typeof videoInfo === 'object') {
+                if (videoTitle) videoTitle.textContent = videoInfo.title || videoInfo.topic || 'Video Lesson';
+                if (videoInfo.duration && document.getElementById('videoDuration')) {
+                    document.getElementById('videoDuration').textContent = `Duration: ${videoInfo.duration}`;
+                }
+                if (videoDescription) {
+                    videoDescription.innerHTML = `<p><strong>Video:</strong> ${videoInfo.description || videoInfo.title || ''}</p>`;
+                }
+            }
+        }
+        
+        // ============================================================================
+        // AUTHENTICATION & INITIALIZATION
+        // ============================================================================
+        
+        // ============================================================================
+        // AUTHENTICATION & INITIALIZATION
+        // ============================================================================
+        
+        // Check authentication
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (!user.username) {
+            window.location.href = 'login.html';
+        } else {
+            document.getElementById('studentName').textContent = user.name;
+        }
+        
+        // ============================================================================
+        // DEMO: Load sample lesson on page load
+        // ============================================================================
+        
+        // Sample lesson data (following lesson schema)
+        const sampleLesson = {
+            "lessonNumber": 1,
+            "lessonTitle": "Introduction to Quadratic Equations",
+            "objectives": [
+                "Understand the standard form of a quadratic equation",
+                "Identify coefficients a, b, and c in quadratic equations",
+                "Learn the quadratic formula and when to use it",
+                "Understand the discriminant and what it tells us about solutions"
+            ],
+            "explanation": `<h3>What is a Quadratic Equation?</h3>
+                <p>A quadratic equation is a second-order polynomial equation in a single variable x, where a ≠ 0. The general form is:</p>
+                <div class="formula-box"><strong>ax² + bx + c = 0</strong></div>
+                <p>Quadratic equations appear in many real-world applications, from calculating projectile motion to optimizing business profits.</p>
+                
+                <h3>Key Components</h3>
+                <ul>
+                    <li><strong>a</strong> - The coefficient of x² (must not be zero)</li>
+                    <li><strong>b</strong> - The coefficient of x (can be zero)</li>
+                    <li><strong>c</strong> - The constant term (can be zero)</li>
+                </ul>
+                
+                <h3>The Quadratic Formula</h3>
+                <p>The most powerful tool for solving quadratic equations is the quadratic formula:</p>
+                <div class="formula-box"><strong>x = (-b ± √(b² - 4ac)) / 2a</strong></div>
+                <p>This formula works for <em>any</em> quadratic equation, regardless of whether it can be factored easily.</p>`,
+            "guidedExamples": [
+                {
+                    "title": "Solving with the Quadratic Formula",
+                    "problem": "2x² + 5x - 3 = 0",
+                    "steps": [
+                        "Identify a, b, and c: a = 2, b = 5, c = -3",
+                        "Calculate the discriminant: b² - 4ac = 5² - 4(2)(-3) = 25 + 24 = 49",
+                        "Apply the quadratic formula: x = (-5 ± √49) / 4 = (-5 ± 7) / 4",
+                        "Find both solutions: x₁ = (-5 + 7) / 4 = 0.5 and x₂ = (-5 - 7) / 4 = -3"
+                    ],
+                    "solution": "x = 0.5 or x = -3"
+                }
+            ],
+            "practiceProblems": [
+                {"problem": "x² - 7x + 10 = 0"},
+                {"problem": "3x² + 2x - 8 = 0"},
+                {"problem": "x² - 4x + 4 = 0"}
+            ],
+            "quizQuestions": [
+                {
+                    "question": "In the equation 5x² - 3x + 7 = 0, what is the value of coefficient a?",
+                    "type": "multiple-choice",
+                    "options": ["5", "-3", "7", "0"],
+                    "correctAnswer": "A"
+                },
+                {
+                    "question": "The discriminant b² - 4ac determines the number and type of solutions.",
+                    "type": "true-false",
+                    "correctAnswer": "true"
+                }
+            ],
+            "videoPlaceholder": "Solving Quadratic Equations - Step by Step Guide",
+            "summary": "Quadratic equations follow the form ax² + bx + c = 0. The quadratic formula x = (-b ± √(b² - 4ac)) / 2a can solve any quadratic equation. The discriminant (b² - 4ac) tells us about the nature of solutions: positive means two real solutions, zero means one repeated solution, and negative means complex solutions.",
+            "vocabulary": [
+                {
+                    "term": "Quadratic Equation",
+                    "definition": "A polynomial equation of degree 2, in the form ax² + bx + c = 0"
+                },
+                {
+                    "term": "Discriminant",
+                    "definition": "The expression b² - 4ac, which determines the nature of the solutions"
+                }
+            ],
+            "estimatedDuration": 45,
+            "difficulty": "intermediate"
+        };
+        
+        // Render the sample lesson
+        renderLesson(sampleLesson);
+
+        // ============================================================================
+        // CHAT FUNCTIONALITY
+        // ============================================================================
+
+
+        // ============================================================================
+        // CHAT FUNCTIONALITY
+        // ============================================================================
+        
+        // Chat functionality
+        const workbookChat = document.getElementById('workbookChat');
+        const workbookChatInput = document.getElementById('workbookChatInput');
+        const workbookSendBtn = document.getElementById('workbookSendBtn');
+
+        function addWorkbookMessage(text, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'agent'}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = isUser ? 'JD' : 'PH';
+            
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            
+            const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            
+            if (!isUser) {
+                content.innerHTML = `<p><strong>Professor Hawkeinstein</strong></p><p>${text}</p><small style="opacity: 0.7;">${time}</small>`;
+            } else {
+                content.innerHTML = `<p>${text}</p><small style="opacity: 0.8;">${time}</small>`;
+            }
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(content);
+            workbookChat.appendChild(messageDiv);
+            
+            workbookChat.scrollTop = workbookChat.scrollHeight;
+        }
+
+        function sendWorkbookMessage() {
+            const text = workbookChatInput.value.trim();
+            if (!text) return;
+            
+            addWorkbookMessage(text, true);
+            workbookChatInput.value = '';
+            
+            // Simulate contextual response
+            setTimeout(() => {
+                const responses = [
+                    "Great question about the quadratic formula! Let me explain that part in more detail...",
+                    "I see you're working on the discriminant. Remember, it tells us about the nature of the solutions...",
+                    "That's exactly right! You're understanding the concept well. Let's apply it to the example...",
+                    "Looking at the reading material above, notice how we identify a, b, and c first..."
+                ];
+                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+                addWorkbookMessage(randomResponse, false);
+            }, 1500);
+        }
+
+        workbookSendBtn.addEventListener('click', sendWorkbookMessage);
+        workbookChatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendWorkbookMessage();
+        });
+
+        // Media tabs
+        document.querySelectorAll('.media-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                
+                // Update active tab
+                document.querySelectorAll('.media-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // Update active panel
+                document.querySelectorAll('.media-panel').forEach(p => p.classList.remove('active'));
+                document.getElementById(tabName + '-panel').classList.add('active');
+            });
+        });
+
+        // Navigation
+        document.getElementById('prevUnit').addEventListener('click', () => {
+            alert('Loading Unit 3: Linear Equations...');
+            // In production: window.location.href = 'workbook.html?course=1&unit=3';
+        });
+
+        document.getElementById('nextUnit').addEventListener('click', () => {
+            alert('Loading Unit 5: Systems of Equations...');
+            // In production: window.location.href = 'workbook.html?course=1&unit=5';
+        });
+
+        // Track reading progress
+        const readingContent = document.querySelector('.reading-content');
+        let hasScrolledToBottom = false;
+
+        readingContent.addEventListener('scroll', () => {
+            const scrollPercentage = (readingContent.scrollTop / (readingContent.scrollHeight - readingContent.clientHeight)) * 100;
+            
+            if (scrollPercentage > 90 && !hasScrolledToBottom) {
+                hasScrolledToBottom = true;
+                console.log('Student has read through the material');
+                // In production: track progress
+            }
+        });
+    </script>
+</body>
+</html>
