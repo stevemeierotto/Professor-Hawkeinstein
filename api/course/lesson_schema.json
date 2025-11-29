@@ -1,0 +1,329 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Lesson Schema",
+  "description": "Standard schema for all generated lessons in the educational platform",
+  "type": "object",
+  "required": [
+    "lessonNumber",
+    "lessonTitle",
+    "objectives",
+    "explanation",
+    "guidedExamples",
+    "practiceProblems",
+    "quizQuestions",
+    "videoPlaceholder",
+    "summary"
+  ],
+  "properties": {
+    "lessonNumber": {
+      "type": "integer",
+      "description": "Sequential lesson number within the unit",
+      "minimum": 1
+    },
+    "lessonTitle": {
+      "type": "string",
+      "description": "Title of the lesson",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "objectives": {
+      "type": "array",
+      "description": "Learning objectives for this lesson",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "explanation": {
+      "type": "string",
+      "description": "Main lesson content and explanation in markdown format",
+      "minLength": 1
+    },
+    "guidedExamples": {
+      "type": "array",
+      "description": "Step-by-step examples demonstrating concepts",
+      "items": {
+        "type": "object",
+        "required": ["exampleNumber", "title", "problem", "solution", "steps"],
+        "properties": {
+          "exampleNumber": {
+            "type": "integer",
+            "description": "Sequential example number",
+            "minimum": 1
+          },
+          "title": {
+            "type": "string",
+            "description": "Brief title for the example"
+          },
+          "problem": {
+            "type": "string",
+            "description": "The problem or question to solve"
+          },
+          "solution": {
+            "type": "string",
+            "description": "Final answer or solution"
+          },
+          "steps": {
+            "type": "array",
+            "description": "Step-by-step walkthrough",
+            "items": {
+              "type": "object",
+              "required": ["stepNumber", "description"],
+              "properties": {
+                "stepNumber": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Explanation of this step"
+                },
+                "work": {
+                  "type": "string",
+                  "description": "Mathematical work or code for this step"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "explanation": {
+            "type": "string",
+            "description": "Additional explanation or key insights"
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": ["easy", "medium", "hard"],
+            "description": "Difficulty level of this example"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "practiceProblems": {
+      "type": "array",
+      "description": "Problems for students to practice independently",
+      "items": {
+        "type": "object",
+        "required": ["problemNumber", "question", "answer"],
+        "properties": {
+          "problemNumber": {
+            "type": "integer",
+            "description": "Sequential problem number",
+            "minimum": 1
+          },
+          "question": {
+            "type": "string",
+            "description": "The practice problem question"
+          },
+          "answer": {
+            "type": "string",
+            "description": "Correct answer"
+          },
+          "hint": {
+            "type": "string",
+            "description": "Optional hint to help students"
+          },
+          "solution": {
+            "type": "string",
+            "description": "Detailed solution explanation"
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": ["easy", "medium", "hard"],
+            "description": "Difficulty level"
+          },
+          "points": {
+            "type": "integer",
+            "description": "Points awarded for correct answer",
+            "minimum": 0
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "quizQuestions": {
+      "type": "array",
+      "description": "Quiz questions to assess understanding",
+      "items": {
+        "type": "object",
+        "required": ["questionNumber", "questionText", "questionType", "correctAnswer"],
+        "properties": {
+          "questionNumber": {
+            "type": "integer",
+            "description": "Sequential question number",
+            "minimum": 1
+          },
+          "questionText": {
+            "type": "string",
+            "description": "The quiz question"
+          },
+          "questionType": {
+            "type": "string",
+            "enum": ["multiple-choice", "true-false", "short-answer", "fill-in-blank", "matching"],
+            "description": "Type of quiz question"
+          },
+          "options": {
+            "type": "array",
+            "description": "Answer options (for multiple choice, matching, etc.)",
+            "items": {
+              "type": "string"
+            }
+          },
+          "correctAnswer": {
+            "description": "Correct answer (string or array for multiple answers)",
+            "oneOf": [
+              {"type": "string"},
+              {"type": "array", "items": {"type": "string"}}
+            ]
+          },
+          "explanation": {
+            "type": "string",
+            "description": "Explanation of why the answer is correct"
+          },
+          "points": {
+            "type": "integer",
+            "description": "Points for this question",
+            "minimum": 0,
+            "default": 1
+          },
+          "difficulty": {
+            "type": "string",
+            "enum": ["easy", "medium", "hard"]
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "videoPlaceholder": {
+      "type": "string",
+      "description": "URL or path to video content, or placeholder text for video to be created"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Brief summary of key takeaways from the lesson",
+      "minLength": 1
+    },
+    "estimatedDuration": {
+      "type": "integer",
+      "description": "Estimated time to complete lesson in minutes",
+      "minimum": 1
+    },
+    "prerequisites": {
+      "type": "array",
+      "description": "Topics or skills needed before this lesson",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tags": {
+      "type": "array",
+      "description": "Tags for categorization and search",
+      "items": {
+        "type": "string"
+      }
+    },
+    "vocabulary": {
+      "type": "array",
+      "description": "Key vocabulary terms introduced in this lesson",
+      "items": {
+        "type": "object",
+        "required": ["term", "definition"],
+        "properties": {
+          "term": {
+            "type": "string",
+            "description": "Vocabulary term"
+          },
+          "definition": {
+            "type": "string",
+            "description": "Definition of the term"
+          },
+          "example": {
+            "type": "string",
+            "description": "Example usage of the term"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "resources": {
+      "type": "array",
+      "description": "Additional resources and references",
+      "items": {
+        "type": "object",
+        "required": ["title", "url"],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["video", "article", "interactive", "pdf", "website"]
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "difficulty": {
+      "type": "string",
+      "enum": ["beginner", "intermediate", "advanced"],
+      "description": "Overall lesson difficulty level"
+    },
+    "standards": {
+      "type": "array",
+      "description": "Educational standards this lesson addresses",
+      "items": {
+        "type": "object",
+        "required": ["code", "description"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Standard code (e.g., CCSS.MATH.8.EE.A.1)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Full standard description"
+          },
+          "source": {
+            "type": "string",
+            "description": "Standards source (e.g., Common Core, NGSS)"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata for tracking and organization",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "version": {
+          "type": "string",
+          "default": "1.0.0"
+        },
+        "author": {
+          "type": "string"
+        },
+        "reviewStatus": {
+          "type": "string",
+          "enum": ["draft", "review", "approved", "published"]
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

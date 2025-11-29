@@ -1,0 +1,279 @@
+{
+  "lessonNumber": 1,
+  "lessonTitle": "Introduction to Variables and Expressions",
+  "objectives": [
+    "Understand what a variable represents in mathematics",
+    "Learn to write algebraic expressions using variables",
+    "Evaluate expressions by substituting values for variables",
+    "Recognize the difference between expressions and equations"
+  ],
+  "explanation": "## What is a Variable?\n\nA **variable** is a symbol (usually a letter) that represents an unknown or changing value. Think of it as a placeholder for a number we don't know yet.\n\n### Why Use Variables?\n\nVariables allow us to:\n- Write general rules and formulas\n- Solve problems where we don't know all the information\n- Express relationships between quantities\n\n### Algebraic Expressions\n\nAn **algebraic expression** combines variables, numbers, and operations (+, -, ×, ÷). For example:\n- `3x + 5` (three times x, plus five)\n- `2a - 7b` (two times a, minus seven times b)\n- `x² + 4x - 3` (x squared, plus four x, minus three)\n\n### Evaluating Expressions\n\nTo **evaluate** an expression means to find its value by substituting numbers for the variables.\n\nFor example, if `x = 4`, then:\n- `3x + 5 = 3(4) + 5 = 12 + 5 = 17`\n\n### Key Terms\n\n- **Variable**: A letter representing an unknown value\n- **Coefficient**: The number multiplied by a variable (in `3x`, the coefficient is 3)\n- **Constant**: A value that doesn't change (in `3x + 5`, the constant is 5)\n- **Term**: A single part of an expression (in `3x + 5`, there are two terms: `3x` and `5`)",
+  "guidedExamples": [
+    {
+      "exampleNumber": 1,
+      "title": "Evaluating a Simple Expression",
+      "problem": "Evaluate the expression `2x + 7` when `x = 5`",
+      "solution": "17",
+      "steps": [
+        {
+          "stepNumber": 1,
+          "description": "Write down the original expression",
+          "work": "2x + 7"
+        },
+        {
+          "stepNumber": 2,
+          "description": "Substitute the given value (x = 5)",
+          "work": "2(5) + 7"
+        },
+        {
+          "stepNumber": 3,
+          "description": "Multiply first (order of operations)",
+          "work": "10 + 7"
+        },
+        {
+          "stepNumber": 4,
+          "description": "Add to get the final answer",
+          "work": "17"
+        }
+      ],
+      "explanation": "Remember to follow the order of operations (PEMDAS): multiply before adding.",
+      "difficulty": "easy"
+    },
+    {
+      "exampleNumber": 2,
+      "title": "Expression with Multiple Variables",
+      "problem": "Evaluate `3a + 2b - 4` when `a = 6` and `b = 3`",
+      "solution": "20",
+      "steps": [
+        {
+          "stepNumber": 1,
+          "description": "Write the original expression",
+          "work": "3a + 2b - 4"
+        },
+        {
+          "stepNumber": 2,
+          "description": "Substitute both values (a = 6, b = 3)",
+          "work": "3(6) + 2(3) - 4"
+        },
+        {
+          "stepNumber": 3,
+          "description": "Multiply each term",
+          "work": "18 + 6 - 4"
+        },
+        {
+          "stepNumber": 4,
+          "description": "Add and subtract from left to right",
+          "work": "24 - 4 = 20"
+        }
+      ],
+      "explanation": "When you have multiple variables, substitute all values before performing operations.",
+      "difficulty": "medium"
+    },
+    {
+      "exampleNumber": 3,
+      "title": "Expression with Exponents",
+      "problem": "Evaluate `x² + 4x - 5` when `x = 3`",
+      "solution": "16",
+      "steps": [
+        {
+          "stepNumber": 1,
+          "description": "Write the expression",
+          "work": "x² + 4x - 5"
+        },
+        {
+          "stepNumber": 2,
+          "description": "Substitute x = 3",
+          "work": "(3)² + 4(3) - 5"
+        },
+        {
+          "stepNumber": 3,
+          "description": "Evaluate the exponent first",
+          "work": "9 + 4(3) - 5"
+        },
+        {
+          "stepNumber": 4,
+          "description": "Multiply",
+          "work": "9 + 12 - 5"
+        },
+        {
+          "stepNumber": 5,
+          "description": "Add and subtract from left to right",
+          "work": "21 - 5 = 16"
+        }
+      ],
+      "explanation": "Exponents come before multiplication in the order of operations.",
+      "difficulty": "hard"
+    }
+  ],
+  "practiceProblems": [
+    {
+      "problemNumber": 1,
+      "question": "Evaluate `5x - 3` when `x = 4`",
+      "answer": "17",
+      "hint": "Multiply 5 by 4 first, then subtract 3",
+      "solution": "5(4) - 3 = 20 - 3 = 17",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "problemNumber": 2,
+      "question": "Evaluate `7 + 2y` when `y = 8`",
+      "answer": "23",
+      "hint": "Multiply 2 by 8, then add 7",
+      "solution": "7 + 2(8) = 7 + 16 = 23",
+      "difficulty": "easy",
+      "points": 10
+    },
+    {
+      "problemNumber": 3,
+      "question": "Evaluate `4a + 3b` when `a = 5` and `b = 2`",
+      "answer": "26",
+      "hint": "Substitute both variables, multiply each term, then add",
+      "solution": "4(5) + 3(2) = 20 + 6 = 26",
+      "difficulty": "medium",
+      "points": 15
+    },
+    {
+      "problemNumber": 4,
+      "question": "Evaluate `x² - 2x + 1` when `x = 5`",
+      "answer": "16",
+      "hint": "Remember: exponents first, then multiplication, then addition/subtraction",
+      "solution": "(5)² - 2(5) + 1 = 25 - 10 + 1 = 16",
+      "difficulty": "medium",
+      "points": 15
+    },
+    {
+      "problemNumber": 5,
+      "question": "Evaluate `2(3x - 4) + 5` when `x = 6`",
+      "answer": "33",
+      "hint": "Simplify inside the parentheses first, then distribute",
+      "solution": "2(3(6) - 4) + 5 = 2(18 - 4) + 5 = 2(14) + 5 = 28 + 5 = 33",
+      "difficulty": "hard",
+      "points": 20
+    }
+  ],
+  "quizQuestions": [
+    {
+      "questionNumber": 1,
+      "questionText": "What is a variable in algebra?",
+      "questionType": "multiple-choice",
+      "options": [
+        "A number that never changes",
+        "A symbol that represents an unknown value",
+        "The answer to an equation",
+        "A mathematical operation"
+      ],
+      "correctAnswer": "A symbol that represents an unknown value",
+      "explanation": "A variable is a letter or symbol that stands in place of a number we don't know yet.",
+      "points": 1,
+      "difficulty": "easy"
+    },
+    {
+      "questionNumber": 2,
+      "questionText": "In the expression `5x + 3`, what is the coefficient of x?",
+      "questionType": "short-answer",
+      "correctAnswer": "5",
+      "explanation": "The coefficient is the number being multiplied by the variable. In `5x`, the coefficient is 5.",
+      "points": 1,
+      "difficulty": "easy"
+    },
+    {
+      "questionNumber": 3,
+      "questionText": "Evaluate `3y - 7` when `y = 5`",
+      "questionType": "short-answer",
+      "correctAnswer": "8",
+      "explanation": "3(5) - 7 = 15 - 7 = 8",
+      "points": 2,
+      "difficulty": "medium"
+    },
+    {
+      "questionNumber": 4,
+      "questionText": "True or False: In the expression `2x + 4`, the number 4 is called a coefficient.",
+      "questionType": "true-false",
+      "options": ["True", "False"],
+      "correctAnswer": "False",
+      "explanation": "The number 4 is a constant, not a coefficient. A coefficient is multiplied by a variable.",
+      "points": 1,
+      "difficulty": "medium"
+    },
+    {
+      "questionNumber": 5,
+      "questionText": "What is the value of `a² + 2a - 3` when `a = 4`?",
+      "questionType": "multiple-choice",
+      "options": ["19", "21", "25", "29"],
+      "correctAnswer": "21",
+      "explanation": "(4)² + 2(4) - 3 = 16 + 8 - 3 = 21",
+      "points": 2,
+      "difficulty": "hard"
+    }
+  ],
+  "videoPlaceholder": "/media/courses/algebra/unit1/lesson1_intro_variables.mp4",
+  "summary": "In this lesson, we learned that **variables** are symbols (letters) that represent unknown values. We practiced writing and evaluating **algebraic expressions** by substituting numbers for variables. Remember to follow the order of operations (PEMDAS) when evaluating: Parentheses, Exponents, Multiplication/Division, Addition/Subtraction. Key concepts include understanding **coefficients** (numbers multiplied by variables), **constants** (fixed numbers), and **terms** (parts of an expression separated by + or - signs).",
+  "estimatedDuration": 45,
+  "prerequisites": [
+    "Basic arithmetic operations (addition, subtraction, multiplication, division)",
+    "Understanding of order of operations (PEMDAS)"
+  ],
+  "tags": ["algebra", "variables", "expressions", "evaluation", "basics"],
+  "vocabulary": [
+    {
+      "term": "Variable",
+      "definition": "A symbol (usually a letter) that represents an unknown or changing value",
+      "example": "In the expression `x + 5`, x is a variable"
+    },
+    {
+      "term": "Coefficient",
+      "definition": "A number multiplied by a variable",
+      "example": "In `3x`, the coefficient is 3"
+    },
+    {
+      "term": "Constant",
+      "definition": "A value that does not change",
+      "example": "In `2x + 7`, the constant is 7"
+    },
+    {
+      "term": "Algebraic Expression",
+      "definition": "A mathematical phrase containing variables, numbers, and operations",
+      "example": "`3x + 2y - 5` is an algebraic expression"
+    },
+    {
+      "term": "Evaluate",
+      "definition": "To find the value of an expression by substituting numbers for variables",
+      "example": "Evaluate `2x + 1` when `x = 3` gives us 7"
+    }
+  ],
+  "resources": [
+    {
+      "title": "Khan Academy: Introduction to Variables",
+      "url": "https://www.khanacademy.org/math/algebra/x2f8bb11595b61c86:foundation-algebra/x2f8bb11595b61c86:intro-variables",
+      "type": "video",
+      "description": "Additional video explanations and practice problems"
+    },
+    {
+      "title": "IXL: Evaluate Expressions",
+      "url": "https://www.ixl.com/math/algebra-1/evaluate-variable-expressions",
+      "type": "interactive",
+      "description": "Interactive practice with immediate feedback"
+    }
+  ],
+  "difficulty": "beginner",
+  "standards": [
+    {
+      "code": "CCSS.MATH.6.EE.A.2",
+      "description": "Write, read, and evaluate expressions in which letters stand for numbers",
+      "source": "Common Core State Standards"
+    },
+    {
+      "code": "CCSS.MATH.6.EE.A.2.C",
+      "description": "Evaluate expressions at specific values of their variables",
+      "source": "Common Core State Standards"
+    }
+  ],
+  "metadata": {
+    "createdAt": "2025-11-28T00:00:00Z",
+    "updatedAt": "2025-11-28T00:00:00Z",
+    "version": "1.0.0",
+    "author": "Course Design Agent",
+    "reviewStatus": "approved"
+  }
+}
