@@ -1,0 +1,20 @@
+{
+  "llama_server_url": "http://llama-server:8090",
+  "model_name": "llama-2-7b-chat",
+  "server_port": 8080,
+  "models_base_path": "/app/models",
+  "default_model": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+  "database": {
+    "host": "database",
+    "port": 3306,
+    "name": "professorhawkeinstein_platform",
+    "user": "professorhawkeinstein_user",
+    "password": "BT1716lit"
+  },
+  "agent": {
+    "max_context_length": 4096,
+    "temperature": 0.7,
+    "top_k": 40,
+    "top_p": 0.9
+  }
+}

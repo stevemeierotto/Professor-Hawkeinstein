@@ -229,50 +229,11 @@
                     <h1>📚 My Courses</h1>
                     <p style="color: var(--text-light); font-size: 1.1rem; margin-bottom: 2rem;">Select a course to open in the workbook</p>
                     
-                    <div class="courses-grid">
-                        <!-- Algebra I -->
-                        <div class="course-card" style="cursor: pointer;" onclick="window.location.href='workbook.html?course=algebra_1'">
-                            <div class="course-thumbnail">📐</div>
-                            <div class="course-content">
-                                <h3>Algebra I</h3>
-                                <span class="difficulty-badge difficulty-beginner">Grade 9</span>
-                                <p style="font-size: 0.9rem; color: var(--text-light); margin: 1rem 0;">Foundational algebra concepts including linear equations, polynomials, and functions</p>
-                                <div class="course-meta">
-                                    <span>📖 6 Units</span>
-                                    <span style="margin-left: 1rem;">📝 30 Lessons</span>
-                                </div>
-                                <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Open in Workbook →</button>
-                            </div>
-                        </div>
-
-                        <!-- Geometry (Coming Soon) -->
-                        <div class="course-card" style="opacity: 0.6;">
-                            <div class="course-thumbnail">📏</div>
-                            <div class="course-content">
-                                <h3>Geometry</h3>
-                                <span class="difficulty-badge difficulty-intermediate">Grade 10</span>
-                                <p style="font-size: 0.9rem; color: var(--text-light); margin: 1rem 0;">Shapes, angles, proofs, and spatial reasoning</p>
-                                <div class="course-meta">
-                                    <span>📖 6 Units</span>
-                                    <span style="margin-left: 1rem;">📝 30 Lessons</span>
-                                </div>
-                                <button class="btn btn-secondary" style="width: 100%; margin-top: 1rem;" disabled>🔒 Coming Soon</button>
-                            </div>
-                        </div>
-
-                        <!-- Algebra II (Coming Soon) -->
-                        <div class="course-card" style="opacity: 0.6;">
-                            <div class="course-thumbnail">🔢</div>
-                            <div class="course-content">
-                                <h3>Algebra II</h3>
-                                <span class="difficulty-badge difficulty-advanced">Grade 11</span>
-                                <p style="font-size: 0.9rem; color: var(--text-light); margin: 1rem 0;">Advanced algebra topics including quadratics, exponentials, and logarithms</p>
-                                <div class="course-meta">
-                                    <span>📖 6 Units</span>
-                                    <span style="margin-left: 1rem;">📝 30 Lessons</span>
-                                </div>
-                                <button class="btn btn-secondary" style="width: 100%; margin-top: 1rem;" disabled>🔒 Coming Soon</button>
-                            </div>
+                    <div class="courses-grid" id="dynamicCoursesGrid">
+                        <!-- Courses will be loaded dynamically -->
+                        <div style="text-align: center; padding: 3rem; color: var(--text-light); grid-column: 1 / -1;">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">⏳</div>
+                            <p>Loading available courses...</p>
                         </div>
                     </div>
 
@@ -403,6 +364,13 @@
         setInterval(updateAgentStatus, 15000);
 
         // Load available agents from C++ service
+        // Agent names to hide from students (admin/test agents)
+        const hiddenAgentNames = [
+            'Professor Hawkeinstein (Admin Advisor)',
+            'Test Expert',
+            'Summary Agent'
+        ];
+
         async function loadAgents() {
             try {
                 console.log('[Agents] Loading agent list...');
@@ -416,8 +384,11 @@
                 }
                 
                 const data = await response.json();
-                agents = Array.isArray(data) ? data : [];
-                console.log('[Agents] Loaded', agents.length, 'agents:', agents);
+                const allAgents = Array.isArray(data) ? data : [];
+                
+                // Filter out admin/test agents
+                agents = allAgents.filter(agent => !hiddenAgentNames.includes(agent.name));
+                console.log('[Agents] Loaded', agents.length, 'student agents (filtered from', allAgents.length, ')');
                 
                 displayAgentCards();
                 updateChatHeader();
@@ -735,6 +706,7 @@
                     document.getElementById('overview-section').style.display = 'block';
                 } else if (target === 'my-courses') {
                     document.getElementById('my-courses-section').style.display = 'block';
+                    loadAvailableCourses(); // Load courses when section is shown
                 } else {
                     // For other sections (agents, progress, settings), show overview for now
                     document.getElementById('overview-section').style.display = 'block';
@@ -743,6 +715,63 @@
                 }
             });
         });
+
+        // Load available courses from API
+        async function loadAvailableCourses() {
+            const grid = document.getElementById('dynamicCoursesGrid');
+            
+            try {
+                const response = await fetch('api/course/get_available_courses.php');
+                const data = await response.json();
+                
+                if (!data.success || !data.courses || data.courses.length === 0) {
+                    grid.innerHTML = `
+                        <div style="text-align: center; padding: 3rem; color: var(--text-light); grid-column: 1 / -1;">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">📚</div>
+                            <p>No courses available yet. Check back soon!</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                grid.innerHTML = data.courses.map(course => `
+                    <div class="course-card" style="cursor: pointer;" onclick="selectCourse('${course.courseId}')">
+                        <div class="course-thumbnail">${course.icon}</div>
+                        <div class="course-content">
+                            <h3>${course.courseName}</h3>
+                            <span class="difficulty-badge difficulty-beginner">${course.level}</span>
+                            <p style="font-size: 0.9rem; color: var(--text-light); margin: 1rem 0;">
+                                ${course.description || `${course.subject} course at ${course.level} level`}
+                            </p>
+                            <div class="course-meta">
+                                <span>📖 ${course.units} Units</span>
+                                <span style="margin-left: 1rem;">📚 ${course.subject}</span>
+                            </div>
+                            <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                                Open in Workbook →
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Error loading courses:', error);
+                grid.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: var(--danger); grid-column: 1 / -1;">
+                        <p>❌ Failed to load courses. Please try again later.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Select a course and navigate to workbook
+        function selectCourse(courseId) {
+            // Save selected course to session
+            sessionStorage.setItem('selectedCourse', courseId);
+            
+            // Navigate to workbook with course parameter
+            window.location.href = `workbook.html?course=${courseId}`;
+        }
     </script>
 </body>
 </html>

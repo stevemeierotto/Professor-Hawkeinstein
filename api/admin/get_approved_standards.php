@@ -1,0 +1,20 @@
+<?php
+// Get approved standards for a course draft
+require_once '../../config/database.php';
+require_once 'auth_check.php';
+requireAdmin();
+header('Content-Type: application/json');
+
+$draftId = isset($_GET['draftId']) ? intval($_GET['draftId']) : 0;
+
+if (!$draftId) {
+    echo json_encode(['success' => false, 'message' => 'Missing draftId parameter']);
+    exit;
+}
+
+$db = getDb();
+$stmt = $db->prepare("SELECT id, standard_id, standard_code, description FROM approved_standards WHERE draft_id = ? ORDER BY id");
+$stmt->execute([$draftId]);
+$standards = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+echo json_encode(['success' => true, 'standards' => $standards]);

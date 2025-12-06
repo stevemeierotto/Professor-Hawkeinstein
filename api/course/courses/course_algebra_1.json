@@ -1,0 +1,49 @@
+{
+  "courseId": "algebra_1",
+  "courseName": "Algebra I",
+  "subject": "Mathematics",
+  "level": "Grade 9",
+  "description": "Foundational algebra concepts including linear equations, polynomials, and functions",
+  "icon": "📐",
+  "units": [
+    {
+      "unitNumber": 1,
+      "unitTitle": "Introduction to Algebra",
+      "description": "Basic concepts and operations",
+      "lessons": []
+    },
+    {
+      "unitNumber": 2,
+      "unitTitle": "Linear Equations",
+      "description": "Solving and graphing linear equations",
+      "lessons": []
+    },
+    {
+      "unitNumber": 3,
+      "unitTitle": "Systems of Equations",
+      "description": "Solving systems using multiple methods",
+      "lessons": []
+    },
+    {
+      "unitNumber": 4,
+      "unitTitle": "Polynomials",
+      "description": "Operations with polynomials and factoring",
+      "lessons": []
+    },
+    {
+      "unitNumber": 5,
+      "unitTitle": "Quadratic Equations",
+      "description": "Solving quadratics and analyzing parabolas",
+      "lessons": []
+    },
+    {
+      "unitNumber": 6,
+      "unitTitle": "Functions",
+      "description": "Understanding and working with functions",
+      "lessons": []
+    }
+  ],
+  "version": "1.0.0",
+  "createdAt": "2025-11-28T00:00:00Z",
+  "updatedAt": "2025-11-28T00:00:00Z"
+}

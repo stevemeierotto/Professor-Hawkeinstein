@@ -1,0 +1,14 @@
+{
+  "courses": [
+    {
+      "courseId": "algebra_1",
+      "courseName": "Algebra I",
+      "subject": "Mathematics",
+      "level": "Grade 9",
+      "description": "Foundational algebra concepts including linear equations, polynomials, and functions",
+      "icon": "📐",
+      "path": "api/course/courses/course_algebra_1.json",
+      "createdAt": "2025-11-28T00:00:00Z"
+    }
+  ]
+}

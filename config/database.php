@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/../vendor/autoload.php';
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
 /**
  * Database Configuration
  * MariaDB 10.7+ with vector support
@@ -34,7 +37,7 @@ define('DB_PASS', getenv('DB_PASS') ?: 'BT1716lit');
 define('DB_CHARSET', 'utf8mb4');
 
 // C++ Agent Microservice Configuration
-define('AGENT_SERVICE_URL', 'http://localhost:8080');
+define('AGENT_SERVICE_URL', getenv('AGENT_SERVICE_URL') ?: 'http://127.0.0.1:8080');
 define('AGENT_SERVICE_TIMEOUT', 30); // seconds
 
 // Session configuration
@@ -45,10 +48,6 @@ define('SESSION_NAME', 'PROFESSORHAWKEINSTEIN_SESSION');
 // Security
 define('JWT_SECRET', getenv('JWT_SECRET') ?: 'your_jwt_secret_key_here_change_in_production');
 define('PASSWORD_PEPPER', getenv('PASSWORD_PEPPER') ?: 'additional_security_pepper_change_in_production');
-
-// Common Standards Project API
-define('CSP_API_KEY', getenv('CSP_API_KEY') ?: '');
-define('CSP_API_BASE_URL', 'https://api.commonstandardsproject.com/api/v1');
 
 // Biometric settings
 define('FACIAL_RECOGNITION_THRESHOLD', 0.85);
@@ -134,57 +133,37 @@ function sendJSON($data, $statusCode = 200) {
  */
 function verifyToken($token) {
     if (empty($token)) {
+        error_log("[verifyToken] Empty token");
         return false;
     }
-    
-    // Simple JWT verification (use proper library in production like firebase/php-jwt)
-    $parts = explode('.', $token);
-    if (count($parts) !== 3) {
+    try {
+        $decoded = JWT::decode($token, new Key(JWT_SECRET, 'HS256'));
+        $payloadData = (array)$decoded;
+        // Check expiration
+        if (isset($payloadData['exp']) && $payloadData['exp'] < time()) {
+            error_log("[verifyToken] Token expired. Exp: " . $payloadData['exp'] . " Now: " . time());
+            return false;
+        }
+        error_log("[verifyToken] Token valid for user: " . ($payloadData['username'] ?? 'unknown'));
+        return $payloadData;
+    } catch (Exception $e) {
+        error_log("[verifyToken] JWT decode error: " . $e->getMessage());
         return false;
     }
-    
-    list($header, $payload, $signature) = $parts;
-    
-    // Verify signature
-    $validSignature = hash_hmac('sha256', "$header.$payload", JWT_SECRET, true);
-    $validSignature = base64_encode($validSignature);
-    $validSignature = str_replace(['+', '/', '='], ['-', '_', ''], $validSignature);
-    
-    if ($signature !== $validSignature) {
-        return false;
-    }
-    
-    // Decode payload
-    $payloadData = json_decode(base64_decode($payload), true);
-    
-    // Check expiration
-    if (isset($payloadData['exp']) && $payloadData['exp'] < time()) {
-        return false;
-    }
-    
-    return $payloadData;
 }
 
 /**
  * Generate JWT token
  */
 function generateToken($userId, $username, $role) {
-    $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
-    $payload = json_encode([
+    $payload = [
         'userId' => $userId,
         'username' => $username,
         'role' => $role,
         'iat' => time(),
         'exp' => time() + SESSION_LIFETIME
-    ]);
-    
-    $base64UrlHeader = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($header));
-    $base64UrlPayload = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($payload));
-    
-    $signature = hash_hmac('sha256', "$base64UrlHeader.$base64UrlPayload", JWT_SECRET, true);
-    $base64UrlSignature = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($signature));
-    
-    return "$base64UrlHeader.$base64UrlPayload.$base64UrlSignature";
+    ];
+    return JWT::encode($payload, JWT_SECRET, 'HS256');
 }
 
 /**
@@ -223,6 +202,22 @@ function verifyPassword($password, $hash) {
 }
 
 /**
+ * Get admin ID from JWT token in Authorization header
+ */
+function getAdminId() {
+    $headers = getallheaders();
+    $authHeader = $headers['Authorization'] ?? '';
+    if (!empty($authHeader) && preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
+        $token = $matches[1];
+        $userData = verifyToken($token);
+        if ($userData && isset($userData['userId'])) {
+            return $userData['userId'];
+        }
+    }
+    return null;
+}
+
+/**
  * Log activity
  */
 function logActivity($userId, $action, $details = '') {
@@ -240,13 +235,15 @@ function callAgentService($endpoint, $data) {
     
     $jsonData = json_encode($data);
     
+    error_log("[callAgentService] Calling $url with data length: " . strlen($jsonData));
+    
     $ch = curl_init();
     curl_setopt_array($ch, [
         CURLOPT_URL => $url,
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $jsonData,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 60,
+        CURLOPT_TIMEOUT => 180,  // 3 minutes for longer LLM generations
         CURLOPT_BUFFERSIZE => 1024,
         CURLOPT_HTTPHEADER => [
             'Content-Type: application/json',
@@ -260,6 +257,8 @@ function callAgentService($endpoint, $data) {
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
         
+        error_log("[callAgentService] HTTP $httpCode, response length: " . strlen($response) . ", error: $curlError");
+        
         if ($response === false) {
             error_log("Agent service error: Failed to connect to $url - $curlError");
             return ['success' => false, 'message' => 'Agent service unavailable'];
@@ -272,7 +271,7 @@ function callAgentService($endpoint, $data) {
         
         $decodedResponse = json_decode($response, true);
         if ($decodedResponse === null) {
-            error_log("Agent service error: Invalid JSON response - $response");
+            error_log("Agent service error: Invalid JSON response - " . substr($response, 0, 200));
             return ['success' => false, 'message' => 'Invalid response from agent service'];
         }
         

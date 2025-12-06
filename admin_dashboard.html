@@ -87,10 +87,9 @@
     <!-- Navigation -->
     <nav>
         <div class="nav-container">
-            <a href="index.html" class="logo">🎓 Professor Hawkeinstein's Educational Foundation</a>
+            <span class="logo">🎓 Professor Hawkeinstein's Educational Foundation</span>
             <ul class="nav-links">
-                <li><a href="student_dashboard.html">Student View</a></li>
-                <li><a href="#" id="adminName">Admin</a></li>
+                <li><span id="adminName" style="color: var(--text-light);">Root Administrator</span></li>
                 <li><a href="#" id="logoutBtn">Logout</a></li>
             </ul>
         </div>
@@ -139,18 +138,11 @@
                 <p>Create and manage AI teaching agents with specialized knowledge bases and grade-level customization</p>
             </div>
 
-            <!-- Web Scraper -->
-            <div class="admin-card" onclick="window.location.href='admin_scraper.html'">
-                <div class="admin-card-icon">🕷️</div>
-                <h3>Content Scraper</h3>
-                <p>Scrape educational content from trusted sources with automatic metadata capture and source tracking</p>
-            </div>
-
-            <!-- Content Review -->
-            <div class="admin-card" onclick="window.location.href='admin_content_review.html'">
-                <div class="admin-card-icon">✅</div>
-                <h3>Content Review</h3>
-                <p>Review and approve scraped content for accuracy before adding to agent knowledge bases</p>
+            <!-- System Agents -->
+            <div class="admin-card" onclick="window.location.href='admin_system_agents.html'">
+                <div class="admin-card-icon">⚙️</div>
+                <h3>System Agents</h3>
+                <p>Configure AI agents for course creation pipeline: standards, outlines, content, questions, and tests</p>
             </div>
 
             <!-- Agent Management -->

@@ -1,0 +1,34 @@
+# Git
+.git
+.gitignore
+
+# Build artifacts
+cpp_agent/build/
+cpp_agent/bin/
+llama.cpp/
+
+# Documentation
+*.md
+docs/
+
+# Tests
+tests/
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Environment (secrets - will use docker-compose env)
+.env
+
+# Large files (models mounted as volume)
+models/
+
+# Temporary files
+*.tmp
+*.swp
+*~

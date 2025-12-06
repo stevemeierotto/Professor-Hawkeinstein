@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="auth_storage.js"></script>
+    <script src="admin_auth.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Management - Professor Hawkeinstein's Educational Foundation</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .courses-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .page-header {
+            margin-bottom: 2rem;
+        }
+
+        .page-header h1 {
+            margin: 0 0 0.5rem 0;
+        }
+
+        .page-header p {
+            color: var(--text-light);
+            margin: 0;
+        }
+
+        .wizard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .wizard-card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .wizard-card h2 {
+            margin: 0 0 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .wizard-card h2 .icon {
+            font-size: 1.5rem;
+        }
+
+        .wizard-card > p {
+            color: var(--text-light);
+            margin: 0 0 1.5rem 0;
+        }
+
+        .draft-list, .published-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .draft-item, .published-item {
+            background: var(--bg-light);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .draft-item:hover, .published-item:hover {
+            border-color: var(--primary);
+            background: #f8fafc;
+        }
+
+        .draft-info h4, .published-info h4 {
+            margin: 0 0 0.25rem 0;
+            font-size: 1rem;
+        }
+
+        .draft-meta, .published-meta {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .draft-actions, .published-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--bg-light);
+            color: var(--text);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: #dc3545;
+            border: none;
+            padding: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+        .btn-danger:hover {
+            color: #a71d2a;
+        }
+
+        .btn-large {
+            padding: 1rem 2rem;
+            font-size: 1rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-light);
+        }
+
+        .empty-state .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-draft {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-review {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .badge-published {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-light);
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <span class="logo">🎓 Professor Hawkeinstein's Educational Foundation</span>
+            <ul class="nav-links">
+                <li><a href="admin_dashboard.html">← Admin Dashboard</a></li>
+                <li><span id="adminName" style="color: var(--text-light);">Root Administrator</span></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="courses-container">
+        <div class="page-header">
+            <h1>📚 Course Management</h1>
+            <p>Create new courses, continue drafts, or manage published courses</p>
+        </div>
+
+        <div id="alertContainer"></div>
+
+        <div class="wizard-cards">
+            <!-- Card 1: Create New Course -->
+            <div class="wizard-card">
+                <h2><span class="icon">➕</span> Create New Course</h2>
+                <p>Start a new course from scratch. You'll define metadata, review standards, and generate an outline.</p>
+                <button class="btn btn-primary btn-large" onclick="window.location.href='admin_course_wizard.html'">
+                    Start New Course
+                </button>
+            </div>
+
+            <!-- Card 2: Continue Drafts -->
+            <div class="wizard-card">
+                <h2><span class="icon">📝</span> Continue Drafts</h2>
+                <p>Resume work on courses you've started but not yet published.</p>
+                <div id="draftsContainer">
+                    <div class="loading">Loading drafts...</div>
+                </div>
+            </div>
+
+            <!-- Card 3: Published Courses -->
+            <div class="wizard-card">
+                <h2><span class="icon">✅</span> Published Courses</h2>
+                <p>View and manage your published courses.</p>
+                <div id="publishedContainer">
+                    <div class="loading">Loading published courses...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auth check
+        const user = getAdminSession('user');
+        if (!user || !user.username || (user.role !== 'admin' && user.role !== 'root')) {
+            window.location.href = 'admin_login.html';
+        }
+        document.getElementById('adminName').textContent = user.name || user.username;
+
+        // Load drafts
+        async function loadDrafts() {
+            const container = document.getElementById('draftsContainer');
+            try {
+                const res = await fetch('api/admin/list_course_drafts.php', {
+                    headers: {
+                        'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}`
+                    }
+                });
+                const data = await res.json();
+                
+                if (data.success && data.drafts && data.drafts.length > 0) {
+                    container.innerHTML = `<div class="draft-list">
+                        ${data.drafts.map(draft => `
+                            <div class="draft-item" data-id="${draft.draft_id}">
+                                <div class="draft-info">
+                                    <h4>${escapeHtml(draft.course_name)}</h4>
+                                    <div class="draft-meta">
+                                        <span>📖 ${escapeHtml(draft.subject)}</span>
+                                        <span>🎓 ${escapeHtml(draft.grade)}</span>
+                                        <span class="badge badge-${draft.status === 'draft' ? 'draft' : 'review'}">${draft.status}</span>
+                                    </div>
+                                </div>
+                                <div class="draft-actions">
+                                    <button class="btn btn-primary" onclick="continueDraft(${draft.draft_id}, '${draft.status}')">Continue</button>
+                                    <button class="btn btn-danger" onclick="deleteDraft(${draft.draft_id})" title="Delete Draft">✕</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>`;
+                } else {
+                    container.innerHTML = `<div class="empty-state">
+                        <div class="icon">📭</div>
+                        <p>No drafts yet. Start a new course!</p>
+                    </div>`;
+                }
+            } catch (error) {
+                console.error('Error loading drafts:', error);
+                container.innerHTML = `<div class="empty-state">
+                    <div class="icon">⚠️</div>
+                    <p>Error loading drafts</p>
+                </div>`;
+            }
+        }
+
+        // Load published courses (from database)
+        async function loadPublished() {
+            const container = document.getElementById('publishedContainer');
+            try {
+                const res = await fetch('api/admin/list_published_courses.php', {
+                    headers: {
+                        'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}`
+                    }
+                });
+                const data = await res.json();
+                
+                if (data.success && data.courses && data.courses.length > 0) {
+                    container.innerHTML = `<div class="published-list">
+                        ${data.courses.map(course => `
+                            <div class="published-item">
+                                <div class="published-info">
+                                    <h4>${escapeHtml(course.course_name)}</h4>
+                                    <div class="published-meta">
+                                        <span>📖 ${escapeHtml(course.subject_area || 'N/A')}</span>
+                                        <span>⚡ ${escapeHtml(course.difficulty_level || 'N/A')}</span>
+                                        <span class="badge badge-published">Published</span>
+                                    </div>
+                                </div>
+                                <div class="published-actions">
+                                    <button class="btn btn-secondary" onclick="viewCourse(${course.course_id})">View</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>`;
+                } else {
+                    container.innerHTML = `<div class="empty-state">
+                        <div class="icon">📭</div>
+                        <p>No published courses yet</p>
+                    </div>`;
+                }
+            } catch (error) {
+                console.error('Error loading published courses:', error);
+                container.innerHTML = `<div class="empty-state">
+                    <div class="icon">⚠️</div>
+                    <p>Error loading courses</p>
+                </div>`;
+            }
+        }
+
+        // Continue draft based on status
+        function continueDraft(draftId, status) {
+            // Always use unified wizard - it will detect the current step
+            window.location.href = `admin_course_wizard.html?draftId=${draftId}`;
+        }
+
+        // Delete draft
+        async function deleteDraft(draftId) {
+            if (!confirm('Are you sure you want to delete this draft? This cannot be undone.')) return;
+            
+            try {
+                const res = await fetch('api/admin/delete_course.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}`
+                    },
+                    body: JSON.stringify({ draftId })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showAlert('Draft deleted successfully', 'success');
+                    loadDrafts();
+                } else {
+                    showAlert(data.message || 'Failed to delete draft', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting draft:', error);
+                showAlert('Error deleting draft', 'error');
+            }
+        }
+
+        // View published course
+        function viewCourse(courseId) {
+            window.location.href = `course_viewer.html?id=${courseId}`;
+        }
+
+        // Show alert
+        function showAlert(message, type) {
+            const container = document.getElementById('alertContainer');
+            container.innerHTML = `<div class="alert alert-${type}">${escapeHtml(message)}</div>`;
+            setTimeout(() => container.innerHTML = '', 5000);
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize
+        loadDrafts();
+        loadPublished();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Creation Wizard - Professor Hawkeinstein</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="auth_storage.js"></script>
+    <script src="admin_auth.js"></script>
+    <style>
+        .wizard-container {
+            max-width: 1100px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .wizard-header {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .wizard-title {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .wizard-title h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .wizard-steps {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            background: #f3f4f6;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .step:hover {
+            background: #e5e7eb;
+        }
+
+        .step.active {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .step.completed {
+            background: #10b981;
+            color: white;
+        }
+
+        .step.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .step-number {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            background: rgba(255,255,255,0.3);
+        }
+
+        .step.completed .step-number::after {
+            content: '✓';
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 900px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .wizard-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .step-content {
+            display: none;
+        }
+
+        .step-content.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .section-desc {
+            color: #6b7280;
+            margin: 0 0 1.5rem 0;
+        }
+
+        /* Agent Panel */
+        .agent-panel {
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            position: sticky;
+            top: 1rem;
+        }
+
+        .agent-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .agent-avatar {
+            font-size: 2rem;
+        }
+
+        .agent-name {
+            font-weight: 600;
+        }
+
+        .agent-status {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        .agent-message {
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .agent-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .agent-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-align: left;
+            transition: all 0.2s;
+        }
+
+        .agent-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .agent-btn.primary {
+            background: #10b981;
+        }
+
+        .agent-btn.primary:hover {
+            background: #059669;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #4338ca;
+        }
+
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        /* Standards List */
+        .standards-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .standard-item {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .standard-item:last-child {
+            border-bottom: none;
+        }
+
+        .standard-item input[type="checkbox"] {
+            margin-top: 0.25rem;
+        }
+
+        .standard-code {
+            font-weight: 600;
+            color: #4f46e5;
+            font-size: 0.85rem;
+        }
+
+        .standard-desc {
+            font-size: 0.9rem;
+            color: #374151;
+        }
+
+        /* Outline Preview */
+        .outline-preview {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .unit-block {
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .unit-block:last-child {
+            border-bottom: none;
+        }
+
+        .unit-header {
+            background: #f9fafb;
+            padding: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .unit-header:hover {
+            background: #f3f4f6;
+        }
+
+        .unit-lessons {
+            padding: 0;
+            list-style: none;
+            margin: 0;
+        }
+
+        .unit-lessons li {
+            padding: 0.75rem 1rem 0.75rem 2rem;
+            border-top: 1px solid #f3f4f6;
+            font-size: 0.9rem;
+        }
+
+        /* Stats */
+        .stats-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-box {
+            flex: 1;
+            background: #f9fafb;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #4f46e5;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #6b7280;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border: 3px solid #e5e7eb;
+            border-top-color: #4f46e5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Alert */
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <span class="logo">🎓 Professor Hawkeinstein's Educational Foundation</span>
+            <ul class="nav-links">
+                <li><a href="admin_dashboard.html">← Admin Dashboard</a></li>
+                <li><span id="adminName" style="color: var(--text-light);">Root Administrator</span></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="wizard-container">
+        <!-- Header with Steps -->
+        <div class="wizard-header">
+            <div class="wizard-title">
+                <span style="font-size: 2rem;">📚</span>
+                <div>
+                    <h1 id="courseTitle">New Course</h1>
+                    <span id="courseSubtitle" style="color: #6b7280; font-size: 0.9rem;">Creating new course...</span>
+                </div>
+            </div>
+            <div class="wizard-steps">
+                <div class="step active" data-step="1" onclick="goToStep(1)">
+                    <span class="step-number">1</span> Metadata
+                </div>
+                <div class="step disabled" data-step="2" onclick="goToStep(2)">
+                    <span class="step-number">2</span> Standards
+                </div>
+                <div class="step disabled" data-step="3" onclick="goToStep(3)">
+                    <span class="step-number">3</span> Outline
+                </div>
+                <div class="step disabled" data-step="4" onclick="goToStep(4)">
+                    <span class="step-number">4</span> Content
+                </div>
+                <div class="step disabled" data-step="5" onclick="goToStep(5)">
+                    <span class="step-number">5</span> Questions
+                </div>
+                <div class="step disabled" data-step="6" onclick="goToStep(6)">
+                    <span class="step-number">6</span> Review
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="main-content">
+            <!-- Left: Step Content -->
+            <div class="wizard-panel">
+                <div id="alertContainer"></div>
+
+                <!-- STEP 1: Metadata -->
+                <div class="step-content active" data-step="1">
+                    <h2 class="section-title">📝 Course Details</h2>
+                    <p class="section-desc">Enter the basic information for your new course.</p>
+                    
+                    <form id="metadataForm">
+                        <div class="form-group">
+                            <label for="courseName">Course Name *</label>
+                            <input type="text" id="courseName" name="courseName" class="form-control" required placeholder="e.g., 2nd Grade Science">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="subject">Subject *</label>
+                            <select id="subject" name="subject" class="form-control" required>
+                                <option value="">-- Select Subject --</option>
+                                <option value="mathematics">Mathematics</option>
+                                <option value="science">Science</option>
+                                <option value="english">English Language Arts</option>
+                                <option value="social_studies">Social Studies</option>
+                                <option value="history">History</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="grade">Grade Level *</label>
+                            <select id="grade" name="grade" class="form-control" required>
+                                <option value="">-- Select Grade --</option>
+                                <option value="grade_k">Kindergarten</option>
+                                <option value="grade_1">Grade 1</option>
+                                <option value="grade_2">Grade 2</option>
+                                <option value="grade_3">Grade 3</option>
+                                <option value="grade_4">Grade 4</option>
+                                <option value="grade_5">Grade 5</option>
+                                <option value="grade_6">Grade 6</option>
+                                <option value="grade_7">Grade 7</option>
+                                <option value="grade_8">Grade 8</option>
+                                <option value="grade_9">Grade 9</option>
+                                <option value="grade_10">Grade 10</option>
+                                <option value="grade_11">Grade 11</option>
+                                <option value="grade_12">Grade 12</option>
+                            </select>
+                        </div>
+
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-secondary" onclick="window.location.href='admin_courses.html'">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="step1Btn">Create Draft & Continue →</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- STEP 2: Standards -->
+                <div class="step-content" data-step="2">
+                    <h2 class="section-title">📋 Educational Standards</h2>
+                    <p class="section-desc">Fetch and select the standards this course will cover.</p>
+
+                    <div id="standardsContent">
+                        <div class="stats-row">
+                            <div class="stat-box">
+                                <div class="stat-value" id="scrapedCount">0</div>
+                                <div class="stat-label">Available Standards</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value" id="selectedCount">0</div>
+                                <div class="stat-label">Selected</div>
+                            </div>
+                        </div>
+
+                        <div class="btn-group" style="margin-bottom: 1rem;">
+                            <button class="btn btn-secondary" onclick="generateStandards()" id="generateStandardsBtn">🤖 Generate Standards</button>
+                            <button class="btn btn-secondary" onclick="selectAllStandards()">☑️ Select All</button>
+                        </div>
+
+                        <div class="standards-list" id="standardsList">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                                <p>Checking for available standards...</p>
+                            </div>
+                        </div>
+
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-secondary" onclick="goToStep(1)">← Back</button>
+                            <button type="button" class="btn btn-primary" id="step2Btn" onclick="approveStandards()">Approve Selected & Continue →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 3: Outline -->
+                <div class="step-content" data-step="3">
+                    <h2 class="section-title">🗂️ Course Outline</h2>
+                    <p class="section-desc">Review the generated outline based on your standards.</p>
+
+                    <div id="outlineContent">
+                        <div class="stats-row">
+                            <div class="stat-box">
+                                <div class="stat-value" id="unitsCount">0</div>
+                                <div class="stat-label">Units</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value" id="lessonsCount">0</div>
+                                <div class="stat-label">Lessons</div>
+                            </div>
+                        </div>
+
+                        <div class="outline-preview" id="outlinePreview">
+                            <div class="loading">
+                                <p>No outline generated yet.</p>
+                            </div>
+                        </div>
+
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-secondary" onclick="goToStep(2)">← Back</button>
+                            <button type="button" class="btn btn-secondary" onclick="generateOutline()" id="generateBtn">🤖 Generate Outline</button>
+                            <button type="button" class="btn btn-primary" id="step3Btn" onclick="goToStep(4)" disabled>Generate Content →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 4: Content Generation -->
+                <div class="step-content" data-step="4">
+                    <h2 class="section-title">🤖 Generate Lesson Content</h2>
+                    <p class="section-desc">Generate age-appropriate educational content for each lesson using AI.</p>
+
+                    <div id="contentGenerationContent">
+                        <div class="stats-row">
+                            <div class="stat-box">
+                                <div class="stat-value" id="totalLessonsCount">0</div>
+                                <div class="stat-label">Total Lessons</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value" id="lessonsGenerated">0</div>
+                                <div class="stat-label">Generated</div>
+                            </div>
+                        </div>
+
+                        <div class="generate-info" style="margin-bottom: 1rem; padding: 1rem; background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px;">
+                            <p style="margin: 0; color: #166534;">🤖 <strong>AI Generation:</strong> Click "Generate" on each lesson to create content, or use "Generate Unit" to process all lessons in a unit at once.</p>
+                        </div>
+
+                        <div class="outline-with-content" id="outlineWithContent">
+                            <div class="loading">
+                                <p>Loading outline...</p>
+                            </div>
+                        </div>
+
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-secondary" onclick="goToStep(3)">← Back to Outline</button>
+                            <button type="button" class="btn btn-primary" id="step4Btn" onclick="goToStep(5)">Generate Questions →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 5: Question Banks -->
+                <div class="step-content" data-step="5">
+                    <h2 class="section-title">❓ Generate Question Banks</h2>
+                    <p class="section-desc">Generate questions for each lesson (fill-in-blank, multiple choice, short answer).</p>
+                    <p style="margin-bottom: 1rem;">
+                        <a href="admin_question_generator.html" style="color: #2563eb; text-decoration: underline;">
+                            🔬 Open standalone question generator
+                        </a> — test and preview questions one lesson at a time
+                    </p>
+
+                    <div id="questionBanksContent">
+                        <div class="stats-row" style="margin-bottom: 1rem;">
+                            <div class="stat-box">
+                                <div class="stat-value" id="lessonsWithQuestions">0</div>
+                                <div class="stat-label">Lessons with Questions</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value" id="totalQuestionsGenerated">0</div>
+                                <div class="stat-label">Total Questions</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value" id="questionsProgress">0%</div>
+                                <div class="stat-label">Progress</div>
+                            </div>
+                        </div>
+
+                        <div id="questionLessonsList" class="outline-container" style="max-height: 400px; overflow-y: auto;">
+                            <div class="loading"><p>Loading lessons...</p></div>
+                        </div>
+
+                        <div id="questionGenerationProgress" style="display: none; margin: 1rem 0;">
+                            <div class="alert alert-info">
+                                <strong>⏳ Generating questions...</strong>
+                                <span id="currentQuestionType">fill_in_blank</span> for <span id="currentLessonName">Lesson</span>
+                            </div>
+                            <div style="background: #e5e7eb; border-radius: 4px; height: 8px; margin-top: 0.5rem;">
+                                <div id="questionProgressBar" style="background: #10b981; height: 100%; border-radius: 4px; width: 0%; transition: width 0.3s;"></div>
+                            </div>
+                        </div>
+
+                        <div class="btn-group" style="margin-top: 1rem;">
+                            <button type="button" class="btn btn-secondary" onclick="goToStep(4)">← Back to Content</button>
+                            <button type="button" class="btn btn-primary" id="generateAllQuestionsBtn" onclick="generateAllQuestions()">🎯 Generate All Questions</button>
+                            <button type="button" class="btn btn-success" id="step5Btn" onclick="goToStep(6)" disabled>Review & Publish →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 6: Review & Publish -->
+                <div class="step-content" data-step="6">
+                    <h2 class="section-title">✅ Review & Publish</h2>
+                    <p class="section-desc">Review your course and publish when ready.</p>
+
+                    <div id="reviewContent">
+                        <div class="stat-box" style="text-align: left; margin-bottom: 1rem;">
+                            <h3 id="reviewCourseName" style="margin: 0 0 0.5rem 0;">Course Name</h3>
+                            <p style="margin: 0; color: #6b7280;">
+                                <span id="reviewSubject">Subject</span> • <span id="reviewGrade">Grade</span>
+                            </p>
+                        </div>
+
+                        <div class="stats-row">
+                            <div class="stat-box">
+                                <div class="stat-value" id="reviewStandards">0</div>
+                                <div class="stat-label">Standards</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value" id="reviewUnits">0</div>
+                                <div class="stat-label">Units</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value" id="reviewLessons">0</div>
+                                <div class="stat-label">Lessons</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value" id="reviewContent">0</div>
+                                <div class="stat-label">Content Items</div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <strong>Ready to publish?</strong> Once published, this course will be available to students.
+                        </div>
+
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-secondary" onclick="goToStep(5)">← Back to Questions</button>
+                            <button type="button" class="btn btn-success" onclick="publishCourse()" id="publishBtn">🚀 Publish Course</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Agent Panel -->
+            <div class="agent-panel">
+                <div class="agent-header">
+                    <span class="agent-avatar">🤖</span>
+                    <div>
+                        <div class="agent-name">Course Agent</div>
+                        <div class="agent-status" id="agentStatus">Watching...</div>
+                    </div>
+                </div>
+
+                <div class="agent-message" id="agentMessage">
+                    Welcome! I'll help you create your course. Fill out the metadata to get started.
+                </div>
+
+                <div class="agent-actions" id="agentActions">
+                    <!-- Dynamic buttons will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auth check
+        const user = getAdminSession('user');
+        if (!user || !user.username || (user.role !== 'admin' && user.role !== 'root')) {
+            window.location.href = 'admin_login.html';
+        }
+        document.getElementById('adminName').textContent = user.name || user.username;
+
+        // State
+        let currentStep = 1;
+        let draftId = null;
+        let draftData = {};
+        let availableStandards = [];
+        let selectedStandardIds = new Set();
+        let generatedOutline = null;
+
+        // Check for existing draftId in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const existingDraftId = urlParams.get('draftId');
+        if (existingDraftId) {
+            draftId = parseInt(existingDraftId);
+            loadExistingDraft();
+        }
+
+        // Load existing draft
+        async function loadExistingDraft() {
+            try {
+                // Get agent status for this draft
+                const res = await fetch(`api/admin/course_agent.php?action=status&draftId=${draftId}`, {
+                    headers: { 'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}` }
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    draftData = data.draft;
+                    document.getElementById('courseTitle').textContent = draftData.name;
+                    document.getElementById('courseSubtitle').textContent = `${draftData.subject} • ${draftData.grade}`;
+                    
+                    // Determine which step to show
+                    const agentStep = data.workflow.currentStep;
+                    
+                    // Mark completed steps
+                    for (let i = 1; i < agentStep; i++) {
+                        markStepCompleted(i);
+                    }
+                    
+                    // Go to current step (max 5 now)
+                    goToStep(Math.min(agentStep, 5));
+                    
+                    // Update agent message
+                    updateAgent(data.workflow.nextAction, data.workflow.canAutoExecute);
+                }
+            } catch (error) {
+                console.error('Failed to load draft:', error);
+            }
+        }
+
+        // Step Navigation
+        function goToStep(step) {
+            if (step > 1 && !draftId) {
+                showAlert('Please create the draft first.', 'error');
+                return;
+            }
+
+            // Hide all step content
+            document.querySelectorAll('.step-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.wizard-steps .step').forEach(el => el.classList.remove('active'));
+
+            // Show target step
+            document.querySelector(`.step-content[data-step="${step}"]`).classList.add('active');
+            document.querySelector(`.wizard-steps .step[data-step="${step}"]`).classList.add('active');
+
+            currentStep = step;
+
+            // Load step data
+            if (step === 2) loadStandards();
+            if (step === 3) loadOutline();
+            if (step === 4) loadContentGeneration();
+            if (step === 5) loadQuestionBanks();
+            if (step === 6) loadReview();
+        }
+
+        function markStepCompleted(step) {
+            const stepEl = document.querySelector(`.wizard-steps .step[data-step="${step}"]`);
+            stepEl.classList.remove('disabled', 'active');
+            stepEl.classList.add('completed');
+        }
+
+        function enableStep(step) {
+            document.querySelector(`.wizard-steps .step[data-step="${step}"]`).classList.remove('disabled');
+        }
+
+        // Agent UI
+        function updateAgent(message, canAuto = false) {
+            document.getElementById('agentMessage').textContent = message;
+            document.getElementById('agentStatus').textContent = canAuto ? 'Ready to help' : 'Watching...';
+            
+            const actionsEl = document.getElementById('agentActions');
+            actionsEl.innerHTML = '';
+            
+            if (canAuto && draftId) {
+                const btn = document.createElement('button');
+                btn.className = 'agent-btn primary';
+                btn.textContent = '⚡ Auto-execute next step';
+                btn.onclick = autoExecuteNext;
+                actionsEl.appendChild(btn);
+            }
+        }
+
+        async function autoExecuteNext() {
+            document.getElementById('agentStatus').textContent = 'Working...';
+            
+            try {
+                const res = await fetch(`api/admin/course_agent.php?action=next&draftId=${draftId}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}` }
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showAlert(data.message, 'success');
+                    
+                    // Refresh current step data
+                    if (data.nextStep === 4) {
+                        markStepCompleted(3);
+                        enableStep(4);
+                        goToStep(4);  // Go to content scraping
+                    } else if (data.nextStep === 5) {
+                        markStepCompleted(4);
+                        enableStep(5);
+                        goToStep(5);  // Go to review
+                    } else {
+                        // Reload current step
+                        if (currentStep === 2) loadStandards();
+                        if (currentStep === 3) loadOutline();
+                        if (currentStep === 4) loadContentGeneration();
+                    }
+                    
+                    updateAgent(data.nextAction || 'Step completed!', false);
+                } else {
+                    showAlert(data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Agent execution failed: ' + error.message, 'error');
+            }
+        }
+
+        // STEP 1: Create Draft
+        document.getElementById('metadataForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('step1Btn');
+            btn.disabled = true;
+            btn.textContent = 'Creating...';
+
+            const formData = Object.fromEntries(new FormData(e.target));
+
+            try {
+                const res = await fetch('api/admin/create_course_draft.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}`
+                    },
+                    body: JSON.stringify(formData)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    draftId = data.draftId;
+                    draftData = formData;
+                    
+                    // Update URL without reload
+                    history.pushState({}, '', `?draftId=${draftId}`);
+                    
+                    // Update header
+                    document.getElementById('courseTitle').textContent = formData.courseName;
+                    document.getElementById('courseSubtitle').textContent = `${formData.subject} • ${formData.grade}`;
+                    
+                    markStepCompleted(1);
+                    enableStep(2);
+                    goToStep(2);
+                    
+                    updateAgent('Draft created! Now let\'s generate the standards. Click "Generate Standards" to use the AI agent.', true);
+                } else {
+                    showAlert(data.message || 'Failed to create draft', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Create Draft & Continue →';
+        };
+
+        // STEP 2: Standards
+        async function loadStandards() {
+            const listEl = document.getElementById('standardsList');
+            listEl.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading standards...</p></div>';
+
+            try {
+                // First check for approved standards
+                const approvedRes = await fetch(`api/admin/get_approved_standards.php?draftId=${draftId}`, {
+                    headers: { 'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}` }
+                });
+                const approvedData = await approvedRes.json();
+
+                if (approvedData.success && approvedData.standards && approvedData.standards.length > 0) {
+                    // Already have approved standards
+                    availableStandards = approvedData.standards;
+                    selectedStandardIds = new Set(approvedData.standards.map(s => s.id || s.standard_id));
+                    renderStandards();
+                    updateAgent('Standards already approved! You can proceed to generate the outline.', false);
+                    markStepCompleted(2);
+                    enableStep(3);
+                    document.getElementById('step2Btn').textContent = 'Continue to Outline →';
+                    return;
+                }
+
+                // No approved standards yet - prompt user to generate them
+                listEl.innerHTML = '<p style="padding: 1rem; color: #6b7280;">No standards yet. Click "Generate Standards" to use the AI agent.</p>';
+                updateAgent('Click "Generate Standards" to have the Standards Analyzer Agent create standards for this course.', true);
+            } catch (error) {
+                listEl.innerHTML = '<p style="padding: 1rem; color: #dc2626;">Error loading standards: ' + error.message + '</p>';
+            }
+        }
+
+        function renderStandards() {
+            const listEl = document.getElementById('standardsList');
+            document.getElementById('scrapedCount').textContent = availableStandards.length;
+            
+            if (availableStandards.length === 0) {
+                listEl.innerHTML = '<p style="padding: 1rem; color: #6b7280;">No standards available.</p>';
+                return;
+            }
+
+            listEl.innerHTML = availableStandards.map((std, i) => {
+                const id = std.id || std.standard_id || i;
+                const code = std.code || std.statementNotation || std.standard_code || '';
+                const desc = std.description || std.statementLabel || std.title || '';
+                const checked = selectedStandardIds.has(id) ? 'checked' : '';
+                
+                return `
+                    <div class="standard-item">
+                        <input type="checkbox" id="std_${i}" data-id="${id}" ${checked} onchange="toggleStandard('${id}')">
+                        <label for="std_${i}">
+                            ${code ? `<span class="standard-code">${escapeHtml(code)}</span><br>` : ''}
+                            <span class="standard-desc">${escapeHtml(desc)}</span>
+                        </label>
+                    </div>
+                `;
+            }).join('');
+
+            updateSelectedCount();
+        }
+
+        function toggleStandard(id) {
+            if (selectedStandardIds.has(id)) {
+                selectedStandardIds.delete(id);
+            } else {
+                selectedStandardIds.add(id);
+            }
+            updateSelectedCount();
+        }
+
+        function selectAllStandards() {
+            availableStandards.forEach((std, i) => {
+                const id = std.id || std.standard_id || i;
+                selectedStandardIds.add(id);
+            });
+            renderStandards();
+        }
+
+        function updateSelectedCount() {
+            document.getElementById('selectedCount').textContent = selectedStandardIds.size;
+        }
+
+        async function generateStandards() {
+            const btn = document.getElementById('generateStandardsBtn');
+            const listEl = document.getElementById('standardsList');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner" style="display:inline-block;width:16px;height:16px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin 1s linear infinite;margin-right:8px;"></span> Generating...';
+            listEl.innerHTML = '<div class="loading"><div class="spinner"></div><p>Standards Analyzer Agent is generating standards...</p></div>';
+            
+            updateAgent('The Standards Analyzer Agent is creating educational standards for your course. This may take a moment...', false);
+
+            try {
+                const res = await fetch('api/admin/generate_standards.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}`
+                    },
+                    body: JSON.stringify({
+                        subject: draftData.subject,
+                        grade: draftData.grade,
+                        state: 'United States'
+                    })
+                });
+                const data = await res.json();
+
+                if (data.success && data.standards && data.standards.length > 0) {
+                    availableStandards = data.standards;
+                    selectedStandardIds = new Set(data.standards.map(s => s.id));
+                    renderStandards();
+                    showAlert(`Generated ${data.count} standards!`, 'success');
+                    updateAgent(`Generated ${data.count} standards using the Standards Analyzer Agent. Review and select the ones you want to include.`, true);
+                } else {
+                    listEl.innerHTML = '<p style="padding: 1rem; color: #dc2626;">Failed to generate standards: ' + (data.message || 'Unknown error') + '</p>';
+                    showAlert(data.message || 'Failed to generate standards', 'error');
+                }
+            } catch (error) {
+                listEl.innerHTML = '<p style="padding: 1rem; color: #dc2626;">Error: ' + error.message + '</p>';
+                showAlert('Error generating standards: ' + error.message, 'error');
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '🤖 Generate Standards';
+        }
+
+        async function approveStandards() {
+            if (selectedStandardIds.size === 0) {
+                showAlert('Please select at least one standard.', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('step2Btn');
+            btn.disabled = true;
+            btn.textContent = 'Approving...';
+
+            // Build standards array
+            const standardsToApprove = availableStandards
+                .filter((std, i) => selectedStandardIds.has(std.id || std.standard_id || i))
+                .map(std => ({
+                    standard_id: std.id || std.standard_id || null,
+                    standard_code: std.code || std.statementNotation || std.standard_code || '',
+                    description: std.description || std.statementLabel || std.title || ''
+                }));
+
+            try {
+                const res = await fetch('api/admin/approve_standards.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}`
+                    },
+                    body: JSON.stringify({ draftId, standards: standardsToApprove })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showAlert(`Approved ${standardsToApprove.length} standards!`, 'success');
+                    markStepCompleted(2);
+                    enableStep(3);
+                    goToStep(3);
+                    updateAgent('Standards approved! Now let\'s generate the course outline.', true);
+                } else {
+                    showAlert(data.message || 'Failed to approve', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Approve Selected & Continue →';
+        }
+
+        // STEP 3: Outline
+        async function loadOutline() {
+            try {
+                const res = await fetch(`api/admin/get_draft_outline.php?draftId=${draftId}`, {
+                    headers: { 'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}` }
+                });
+                const data = await res.json();
+
+                if (data.success && data.outline) {
+                    generatedOutline = typeof data.outline === 'string' ? JSON.parse(data.outline) : data.outline;
+                    renderOutline();
+                    document.getElementById('step3Btn').disabled = false;
+                    document.getElementById('generateBtn').textContent = '🔄 Regenerate';
+                    updateAgent('Outline ready! Review it and proceed to publish when satisfied.', false);
+                } else {
+                    document.getElementById('outlinePreview').innerHTML = '<div class="loading"><p>No outline yet. Click "Generate Outline".</p></div>';
+                    updateAgent('Ready to generate the outline. Click the button or let me do it automatically.', true);
+                }
+            } catch (error) {
+                document.getElementById('outlinePreview').innerHTML = '<p style="padding: 1rem; color: #dc2626;">Error: ' + error.message + '</p>';
+            }
+        }
+
+        function renderOutline() {
+            if (!generatedOutline || generatedOutline.length === 0) {
+                document.getElementById('outlinePreview').innerHTML = '<div class="loading"><p>No outline data.</p></div>';
+                return;
+            }
+
+            let totalLessons = 0;
+            const html = generatedOutline.map((unit, i) => {
+                const lessons = unit.lessons || [];
+                totalLessons += lessons.length;
+                
+                return `
+                    <div class="unit-block">
+                        <div class="unit-header" onclick="this.nextElementSibling.classList.toggle('collapsed')">
+                            <span>${escapeHtml(unit.title)}</span>
+                            <span style="color: #6b7280;">${lessons.length} lessons</span>
+                        </div>
+                        <ul class="unit-lessons">
+                            ${lessons.map(l => `<li>${escapeHtml(l.title || l.description || 'Lesson')}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('outlinePreview').innerHTML = html;
+            document.getElementById('unitsCount').textContent = generatedOutline.length;
+            document.getElementById('lessonsCount').textContent = totalLessons;
+        }
+
+        async function generateOutline() {
+            const btn = document.getElementById('generateBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Generating...';
+
+            try {
+                const res = await fetch('api/admin/generate_draft_outline.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}`
+                    },
+                    body: JSON.stringify({ draftId })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showAlert('Outline generated!', 'success');
+                    loadOutline();
+                    enableStep(4);
+                } else {
+                    showAlert(data.message || 'Failed to generate', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            }
+
+            btn.disabled = false;
+            btn.textContent = '🔄 Regenerate';
+        }
+
+        // STEP 4: Content Generation
+        let lessonContentMap = {};  // Track which lessons have content
+
+        async function loadContentGeneration() {
+            // First load the outline if not already loaded
+            if (!generatedOutline) {
+                await loadOutline();
+            }
+
+            // Get existing generated content for this draft
+            try {
+                const res = await fetch(`api/admin/get_lesson_content.php?draftId=${draftId}`, {
+                    headers: { 'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}` }
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    lessonContentMap = data.lessonContent || {};
+                }
+            } catch (error) {
+                console.error('Error loading lesson content:', error);
+            }
+
+            renderOutlineWithContent();
+        }
+
+        function renderOutlineWithContent() {
+            if (!generatedOutline || generatedOutline.length === 0) {
+                document.getElementById('outlineWithContent').innerHTML = '<p style="padding: 1rem; color: #6b7280;">No outline available. Go back and generate one.</p>';
+                return;
+            }
+
+            let totalLessons = 0;
+            let lessonsWithContent = 0;
+
+            const html = generatedOutline.map((unit, unitIndex) => {
+                const lessons = unit.lessons || [];
+                totalLessons += lessons.length;
+
+                const lessonHtml = lessons.map((lesson, lessonIndex) => {
+                    const key = `u${unitIndex}_l${lessonIndex}`;
+                    const hasContent = lessonContentMap[key];
+                    const isApproved = hasContent?.approved;
+                    if (hasContent) lessonsWithContent++;
+                    
+                    const lessonTitle = lesson.title || lesson.description || 'Lesson ' + (lessonIndex + 1);
+                    
+                    let contentInfo;
+                    if (isApproved) {
+                        contentInfo = `<span style="color: #059669;">✅ Approved</span>`;
+                    } else if (hasContent) {
+                        contentInfo = `<span style="color: #f59e0b;">⏳ Needs Review</span>`;
+                    } else {
+                        contentInfo = `<span style="color: #9ca3af;">Not generated</span>`;
+                    }
+
+                    const reviewLink = hasContent 
+                        ? `<a href="#" onclick="reviewLesson(${unitIndex}, ${lessonIndex}); return false;" style="font-size: 0.8rem; color: #4f46e5; margin-right: 0.5rem;">👁️ Review</a>`
+                        : '';
+
+                    return `
+                        <div class="lesson-row" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; border-bottom: 1px solid #f3f4f6; ${isApproved ? 'background: #f0fdf4;' : ''}">
+                            <div style="flex: 1;">
+                                <span style="font-size: 0.9rem;">${escapeHtml(lessonTitle)}</span>
+                                <div style="font-size: 0.8rem; margin-top: 0.25rem;">${contentInfo}</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                ${reviewLink}
+                                <button class="btn btn-sm ${hasContent ? 'btn-secondary' : 'btn-primary'}" 
+                                        onclick="generateLesson(${unitIndex}, ${lessonIndex}, '${escapeHtml(lessonTitle).replace(/'/g, "\\'")}', '${escapeHtml(lesson.description || lessonTitle).replace(/'/g, "\\'")}')"> 
+                                    ${hasContent ? '🔄 Regenerate' : '🤖 Generate'}
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');                return `
+                    <div class="unit-block" style="border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 1rem;">
+                        <div style="background: #f9fafb; padding: 1rem; font-weight: 600; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                            <span>${escapeHtml(unit.title)} <span style="color: #6b7280; font-weight: normal;">(${lessons.length} lessons)</span></span>
+                            <button class="btn btn-sm btn-secondary" onclick="generateUnit(${unitIndex})" id="generateUnitBtn${unitIndex}">
+                                🤖 Generate Unit
+                            </button>
+                        </div>
+                        ${lessonHtml}
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('outlineWithContent').innerHTML = html;
+            document.getElementById('totalLessonsCount').textContent = totalLessons;
+            document.getElementById('lessonsGenerated').textContent = lessonsWithContent;
+        }
+
+        async function generateLesson(unitIndex, lessonIndex, lessonTitle, lessonDescription = '') {
+            showAlert(`🤖 Generating content for: ${lessonTitle}...`, 'info');
+            
+            // Use full description for LLM generation, fall back to title if not provided
+            const searchQuery = lessonDescription || lessonTitle;
+
+            try {
+                const res = await fetch('api/admin/scrape_lesson_content.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}`
+                    },
+                    body: JSON.stringify({
+                        draftId,
+                        unitIndex,
+                        lessonIndex,
+                        lessonTitle,
+                        source: 'generate',
+                        searchQuery: searchQuery
+                    })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showAlert(`✓ Generated: ${data.title}`, 'success');
+                    // Update local map and re-render
+                    const key = `u${unitIndex}_l${lessonIndex}`;
+                    lessonContentMap[key] = { contentCount: 1, titles: [data.title], contentId: data.contentId };
+                    renderOutlineWithContent();
+                } else {
+                    showAlert(data.message || 'Generation failed', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        function reviewLesson(unitIndex, lessonIndex) {
+            const key = `u${unitIndex}_l${lessonIndex}`;
+            const content = lessonContentMap[key];
+            if (!content) {
+                showAlert('No content to review. Generate it first.', 'error');
+                return;
+            }
+            
+            // Get lesson title from outline
+            const lesson = generatedOutline[unitIndex]?.lessons?.[lessonIndex];
+            const lessonTitle = lesson?.title || lesson?.description || 'Lesson';
+            
+            // Open modal for review
+            const modal = document.createElement('div');
+            modal.id = 'reviewModal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
+            modal.innerHTML = `
+                <div style="background:white;border-radius:12px;max-width:800px;width:90%;max-height:85vh;display:flex;flex-direction:column;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;border-bottom:1px solid #e5e7eb;">
+                        <h3 style="margin:0;">📖 Review: ${escapeHtml(lessonTitle)}</h3>
+                        <button onclick="document.getElementById('reviewModal').remove()" style="background:none;border:none;font-size:1.5rem;cursor:pointer;">×</button>
+                    </div>
+                    <div id="reviewModalContent" style="flex:1;overflow:auto;padding:1.5rem;color:#374151;">
+                        <p>Loading...</p>
+                    </div>
+                    <div style="padding:1rem 1.5rem;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;gap:1rem;">
+                        <button class="btn btn-secondary" onclick="regenerateFromReview(${unitIndex}, ${lessonIndex}, '${escapeHtml(lessonTitle).replace(/'/g, "\\'")}')">
+                            🔄 Regenerate
+                        </button>
+                        <div style="display:flex;gap:0.5rem;">
+                            <button class="btn btn-secondary" onclick="document.getElementById('reviewModal').remove()">Close</button>
+                            <button class="btn btn-primary" onclick="approveLesson(${unitIndex}, ${lessonIndex})" id="approveBtn">
+                                ✅ Approve
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+            
+            // Fetch full content
+            fetchLessonContent(unitIndex, lessonIndex);
+        }
+        
+        async function regenerateFromReview(unitIndex, lessonIndex, lessonTitle) {
+            // Close modal and regenerate
+            document.getElementById('reviewModal')?.remove();
+            await generateLesson(unitIndex, lessonIndex, lessonTitle);
+            // Reopen review after generation completes
+            setTimeout(() => reviewLesson(unitIndex, lessonIndex), 500);
+        }
+        
+        async function approveLesson(unitIndex, lessonIndex) {
+            const key = `u${unitIndex}_l${lessonIndex}`;
+            
+            try {
+                // Save approval to database
+                const res = await fetch('api/admin/approve_lesson_content.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}`
+                    },
+                    body: JSON.stringify({
+                        draftId: draftId,
+                        unitIndex: unitIndex,
+                        lessonIndex: lessonIndex,
+                        approved: true
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    // Mark as approved in local state
+                    if (lessonContentMap[key]) {
+                        lessonContentMap[key].approved = true;
+                    }
+                    showAlert('✅ Lesson content approved!', 'success');
+                } else {
+                    showAlert('Failed to approve: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Error approving content: ' + error.message, 'error');
+            }
+            
+            document.getElementById('reviewModal')?.remove();
+            renderOutlineWithContent();
+        }
+
+        async function fetchLessonContent(unitIndex, lessonIndex) {
+            try {
+                const res = await fetch(`api/admin/get_lesson_content.php?draftId=${draftId}&unitIndex=${unitIndex}&lessonIndex=${lessonIndex}`, {
+                    headers: { 'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}` }
+                });
+                const data = await res.json();
+                
+                const modalContent = document.getElementById('reviewModalContent');
+                if (data.success && data.content && data.content.length > 0) {
+                    // Display all content items for this lesson
+                    const contentHtml = data.content.map((item, idx) => `
+                        <div style="background:#f9fafb;padding:1rem;border-radius:8px;margin-bottom:1rem;">
+                            <div style="font-weight:600;margin-bottom:0.5rem;">${escapeHtml(item.title || 'Generated Content')}</div>
+                            <div style="font-size:0.8rem;color:#6b7280;">Generated: ${item.scraped_at || 'Unknown'}</div>
+                        </div>
+                        <div style="white-space:pre-wrap;line-height:1.6;padding:0 0.5rem;">${escapeHtml(item.content_text || 'No content available')}</div>
+                        ${idx < data.content.length - 1 ? '<hr style="margin:1.5rem 0;border-color:#e5e7eb;">' : ''}
+                    `).join('');
+                    modalContent.innerHTML = contentHtml;
+                } else {
+                    modalContent.innerHTML = '<p style="color:#dc2626;">No content found for this lesson. Try generating it first.</p>';
+                }
+            } catch (error) {
+                document.getElementById('reviewModalContent').innerHTML = '<p style="color:#dc2626;">Error loading content.</p>';
+            }
+        }
+
+        async function generateAllLessons() {
+            if (!generatedOutline) {
+                showAlert('No outline to generate content for', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('generateAllBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Generating...';
+
+            const source = 'generate'; // Always use LLM generation
+
+            let scraped = 0;
+            let failed = 0;
+
+            for (let unitIndex = 0; unitIndex < generatedOutline.length; unitIndex++) {
+                const unit = generatedOutline[unitIndex];
+                const lessons = unit.lessons || [];
+
+                for (let lessonIndex = 0; lessonIndex < lessons.length; lessonIndex++) {
+                    const lesson = lessons[lessonIndex];
+                    const lessonTitle = lesson.title || lesson.description || 'Lesson';
+                    const lessonDescription = lesson.description || lessonTitle;
+                    const key = `u${unitIndex}_l${lessonIndex}`;
+
+                    // Skip if already has content
+                    if (lessonContentMap[key]) {
+                        continue;
+                    }
+
+                    try {
+                        const res = await fetch('api/admin/scrape_lesson_content.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}`
+                            },
+                            body: JSON.stringify({
+                                draftId,
+                                unitIndex,
+                                lessonIndex,
+                                lessonTitle,
+                                source,
+                                searchQuery: lessonDescription
+                            })
+                        });
+                        const data = await res.json();
+
+                        if (data.success) {
+                            scraped++;
+                            lessonContentMap[key] = { contentCount: 1, titles: [data.title] };
+                            renderOutlineWithContent();
+                        } else {
+                            failed++;
+                        }
+                    } catch (error) {
+                        failed++;
+                    }
+
+                    // Small delay to avoid hammering the API
+                    await new Promise(r => setTimeout(r, 500));
+                }
+            }
+
+            btn.disabled = false;
+            btn.textContent = '🤖 Generate All Lessons';
+            showAlert(`Generation complete: ${scraped} succeeded, ${failed} failed`, scraped > 0 ? 'success' : 'error');
+        }
+
+        async function generateUnit(unitIndex) {
+            if (!generatedOutline || !generatedOutline[unitIndex]) {
+                showAlert('Invalid unit', 'error');
+                return;
+            }
+
+            const btn = document.getElementById(`generateUnitBtn${unitIndex}`);
+            btn.disabled = true;
+            btn.textContent = '⏳ Generating...';
+
+            const source = 'generate'; // Always use LLM generation
+
+            const unit = generatedOutline[unitIndex];
+            const lessons = unit.lessons || [];
+            let scraped = 0;
+            let failed = 0;
+            let skipped = 0;
+
+            showAlert(`Generating ${lessons.length} lessons from ${unit.title}...`, 'info');
+
+            for (let lessonIndex = 0; lessonIndex < lessons.length; lessonIndex++) {
+                const lesson = lessons[lessonIndex];
+                const lessonTitle = lesson.title || lesson.description || 'Lesson';
+                const lessonDescription = lesson.description || lessonTitle;
+                const key = `u${unitIndex}_l${lessonIndex}`;
+
+                // Skip if already has content
+                if (lessonContentMap[key]) {
+                    skipped++;
+                    continue;
+                }
+
+                try {
+                    const res = await fetch('api/admin/scrape_lesson_content.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}`
+                        },
+                        body: JSON.stringify({
+                            draftId,
+                            unitIndex,
+                            lessonIndex,
+                            lessonTitle,
+                            source,
+                            searchQuery: lessonDescription
+                        })
+                    });
+                    const data = await res.json();
+
+                    if (data.success) {
+                        scraped++;
+                        lessonContentMap[key] = { contentCount: 1, titles: [data.title] };
+                        renderOutlineWithContent();
+                    } else {
+                        failed++;
+                    }
+                } catch (error) {
+                    failed++;
+                }
+
+                // Small delay to avoid hammering the API
+                await new Promise(r => setTimeout(r, 500));
+            }
+
+            btn.disabled = false;
+            btn.textContent = '🤖 Generate Unit';
+            showAlert(`Unit ${unitIndex + 1}: ${scraped} generated, ${skipped} skipped, ${failed} failed`, scraped > 0 ? 'success' : 'info');
+        }
+
+        // STEP 5: Questions
+        let questionBanksData = {};
+
+        async function loadQuestionBanks() {
+            const container = document.getElementById('questionLessonsList');
+            
+            // Load outline if not already loaded (like step 4 does)
+            if (!generatedOutline) {
+                await loadOutline();
+            }
+            
+            if (!draftId || !generatedOutline) {
+                container.innerHTML = '<p class="error">No outline available. Complete step 3 first.</p>';
+                return;
+            }
+
+            try {
+                // Get question bank summary
+                const response = await fetch(`api/admin/generate_lesson_questions.php?draftId=${draftId}`, {
+                    headers: { 'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}` }
+                });
+                const data = await response.json();
+                
+                if (data.success && data.lessonSummary) {
+                    data.lessonSummary.forEach(s => {
+                        questionBanksData[`${s.unit_index}_${s.lesson_index}`] = s;
+                    });
+                }
+
+                renderQuestionLessonsList();
+                updateQuestionStats();
+            } catch (error) {
+                console.error('Error loading question banks:', error);
+                container.innerHTML = '<p class="error">Failed to load question data.</p>';
+            }
+        }
+
+        function renderQuestionLessonsList() {
+            const container = document.getElementById('questionLessonsList');
+            let html = '';
+
+            generatedOutline.forEach((unit, unitIndex) => {
+                html += `<div class="unit-item" style="margin-bottom: 1rem;">
+                    <div style="background: #f3f4f6; padding: 0.75rem; border-radius: 4px; margin-bottom: 0.5rem;">
+                        <strong>Unit ${unitIndex}: ${unit.title}</strong>
+                    </div>
+                    <div style="padding-left: 1rem;">`;
+
+                unit.lessons.forEach((lesson, lessonIndex) => {
+                    const key = `${unitIndex}_${lessonIndex}`;
+                    const qData = questionBanksData[key];
+                    const hasQuestions = qData && qData.total_questions > 0;
+                    const status = hasQuestions ? '✅' : '⏳';
+                    const count = qData ? qData.total_questions : 0;
+
+                    html += `<div class="lesson-item" style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; border-bottom: 1px solid #e5e7eb;">
+                        <span>${status} ${lesson.title}</span>
+                        <div>
+                            <span style="color: #6b7280; margin-right: 0.5rem;">${count} questions</span>
+                            <button class="btn btn-small" onclick="generateLessonQuestions(${unitIndex}, ${lessonIndex})" 
+                                ${hasQuestions ? 'style="background: #e5e7eb;"' : ''}>
+                                ${hasQuestions ? '🔄 Regenerate' : '🎯 Generate'}
+                            </button>
+                        </div>
+                    </div>`;
+                });
+
+                html += `</div></div>`;
+            });
+
+            container.innerHTML = html || '<p>No lessons found.</p>';
+        }
+
+        function updateQuestionStats() {
+            let lessonsWithQuestions = 0;
+            let totalQuestions = 0;
+            let totalLessons = 0;
+
+            generatedOutline.forEach((unit, unitIndex) => {
+                const lessons = unit.lessons || [];
+                lessons.forEach((lesson, lessonIndex) => {
+                    totalLessons++;
+                    const key = `${unitIndex}_${lessonIndex}`;
+                    const qData = questionBanksData[key];
+                    if (qData && qData.total_questions > 0) {
+                        lessonsWithQuestions++;
+                        totalQuestions += parseInt(qData.total_questions);
+                    }
+                });
+            });
+
+            document.getElementById('lessonsWithQuestions').textContent = lessonsWithQuestions;
+            document.getElementById('totalQuestionsGenerated').textContent = totalQuestions;
+            const progress = totalLessons > 0 ? Math.round((lessonsWithQuestions / totalLessons) * 100) : 0;
+            document.getElementById('questionsProgress').textContent = progress + '%';
+
+            // Enable Review button if some questions exist
+            if (lessonsWithQuestions > 0) {
+                document.getElementById('step5Btn').disabled = false;
+            }
+        }
+
+        async function generateLessonQuestions(unitIndex, lessonIndex) {
+            const progressDiv = document.getElementById('questionGenerationProgress');
+            const progressBar = document.getElementById('questionProgressBar');
+            progressDiv.style.display = 'block';
+            
+            const lesson = generatedOutline[unitIndex]?.lessons?.[lessonIndex];
+            document.getElementById('currentLessonName').textContent = lesson?.title || `Lesson ${lessonIndex + 1}`;
+
+            const types = ['fill_in_blank', 'multiple_choice', 'short_essay'];
+            let completed = 0;
+
+            for (const type of types) {
+                document.getElementById('currentQuestionType').textContent = type.replace('_', ' ');
+                progressBar.style.width = `${(completed / types.length) * 100}%`;
+
+                try {
+                    const response = await fetch('api/admin/generate_lesson_questions.php', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}`
+                        },
+                        body: JSON.stringify({
+                            draftId: draftId,
+                            unitIndex: unitIndex,
+                            lessonIndex: lessonIndex,
+                            questionType: type
+                        })
+                    });
+                    const data = await response.json();
+                    completed++;
+                } catch (error) {
+                    console.error(`Error generating ${type}:`, error);
+                    completed++;
+                }
+            }
+
+            progressBar.style.width = '100%';
+            progressDiv.style.display = 'none';
+
+            // Refresh the list
+            await loadQuestionBanks();
+            showAlert(`Questions generated for ${lesson?.title || 'lesson'}`, 'success');
+        }
+
+        async function generateAllQuestions() {
+            const btn = document.getElementById('generateAllQuestionsBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Generating...';
+
+            const progressDiv = document.getElementById('questionGenerationProgress');
+            const progressBar = document.getElementById('questionProgressBar');
+            progressDiv.style.display = 'block';
+
+            let totalOps = 0;
+            let completedOps = 0;
+
+            // Count total operations
+            generatedOutline.forEach((unit, unitIndex) => {
+                const lessons = unit.lessons || [];
+                lessons.forEach((lesson, lessonIndex) => {
+                    const key = `${unitIndex}_${lessonIndex}`;
+                    if (!questionBanksData[key] || questionBanksData[key].total_questions === 0) {
+                        totalOps += 3; // 3 question types per lesson
+                    }
+                });
+            });
+
+            if (totalOps === 0) {
+                showAlert('All lessons already have questions!', 'info');
+                btn.disabled = false;
+                btn.textContent = '🎯 Generate All Questions';
+                progressDiv.style.display = 'none';
+                return;
+            }
+
+            for (let unitIndex = 0; unitIndex < generatedOutline.length; unitIndex++) {
+                const unit = generatedOutline[unitIndex];
+                for (let lessonIndex = 0; lessonIndex < unit.lessons.length; lessonIndex++) {
+                    const key = `${unitIndex}_${lessonIndex}`;
+                    if (questionBanksData[key] && questionBanksData[key].total_questions > 0) {
+                        continue; // Skip lessons with questions
+                    }
+
+                    const lesson = unit.lessons[lessonIndex];
+                    document.getElementById('currentLessonName').textContent = lesson.title;
+
+                    const types = ['fill_in_blank', 'multiple_choice', 'short_essay'];
+                    for (const type of types) {
+                        document.getElementById('currentQuestionType').textContent = type.replace('_', ' ');
+                        progressBar.style.width = `${(completedOps / totalOps) * 100}%`;
+
+                        try {
+                            const response = await fetch('api/admin/generate_lesson_questions.php', {
+                                method: 'POST',
+                                headers: { 
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}`
+                                },
+                                body: JSON.stringify({
+                                    draftId: draftId,
+                                    unitIndex: unitIndex,
+                                    lessonIndex: lessonIndex,
+                                    questionType: type
+                                })
+                            });
+                            await response.json();
+                        } catch (error) {
+                            console.error(`Error generating ${type}:`, error);
+                        }
+                        completedOps++;
+                    }
+                }
+            }
+
+            progressBar.style.width = '100%';
+            progressDiv.style.display = 'none';
+
+            btn.disabled = false;
+            btn.textContent = '🎯 Generate All Questions';
+
+            await loadQuestionBanks();
+            showAlert('Question generation complete!', 'success');
+        }
+
+        // STEP 6: Review
+        function loadReview() {
+            document.getElementById('reviewCourseName').textContent = draftData.name || draftData.courseName || 'Course';
+            document.getElementById('reviewSubject').textContent = draftData.subject || '';
+            document.getElementById('reviewGrade').textContent = draftData.grade || '';
+            document.getElementById('reviewStandards').textContent = selectedStandardIds.size || document.getElementById('selectedCount').textContent;
+            document.getElementById('reviewUnits').textContent = document.getElementById('unitsCount').textContent;
+            document.getElementById('reviewLessons').textContent = document.getElementById('lessonsCount').textContent;
+            document.getElementById('reviewContent').textContent = document.getElementById('lessonsGenerated').textContent;
+        }
+
+        async function publishCourse() {
+            const btn = document.getElementById('publishBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Publishing...';
+
+            try {
+                const res = await fetch('api/admin/publish_course.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}`
+                    },
+                    body: JSON.stringify({ draftId })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showAlert('🎉 Course published successfully!', 'success');
+                    updateAgent('Course published! Students can now access it.', false);
+                    
+                    // Redirect after delay
+                    setTimeout(() => {
+                        window.location.href = 'admin_courses.html';
+                    }, 2000);
+                } else {
+                    showAlert(data.message || 'Failed to publish', 'error');
+                    btn.disabled = false;
+                    btn.textContent = '🚀 Publish Course';
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+                btn.disabled = false;
+                btn.textContent = '🚀 Publish Course';
+            }
+        }
+
+        // Helpers
+        function showAlert(message, type = 'info') {
+            const container = document.getElementById('alertContainer');
+            container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => container.innerHTML = '', 5000);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

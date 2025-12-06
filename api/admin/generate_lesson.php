@@ -242,7 +242,7 @@ function callCourseDesignAgent($prompt) {
     }
     
     // Call agent_service via HTTP
-    $agentServiceUrl = AGENT_SERVICE_URL ?? 'http://localhost:8080';
+    $agentServiceUrl = AGENT_SERVICE_URL;
     
     $payload = json_encode([
         'userId' => 1, // Admin user

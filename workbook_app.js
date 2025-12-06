@@ -35,9 +35,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         await selectCourse(courseId);
         await selectUnit(parseInt(unitNumber));
         await selectLesson(parseInt(lessonNumber));
+    } else if (courseId) {
+        // Course specified but no unit/lesson - show units for this course
+        await selectCourse(courseId);
     } else {
-        // Show course selection by default
-        await showCourseView();
+        // No course specified - check session storage for last selected course
+        const savedCourse = sessionStorage.getItem('selectedCourse');
+        if (savedCourse) {
+            // Restore last selected course
+            await selectCourse(savedCourse);
+        } else {
+            // Show course selection
+            await showCourseView();
+        }
     }
     
     // Setup event listeners
@@ -57,36 +67,31 @@ function loadStudentInfo() {
 // ==========================================
 
 async function scanAvailableCourses() {
-    // For now, return a hardcoded list of available courses
-    // This can be expanded to dynamically scan the api/course/courses/ directory
-    return [
-        {
-            id: 'algebra_1',
-            name: 'Algebra I',
-            subject: 'Mathematics',
-            level: 'Grade 9',
-            icon: '📐',
-            description: 'Foundational algebra concepts including linear equations, polynomials, and functions'
-        },
-        {
-            id: 'geometry',
-            name: 'Geometry',
-            subject: 'Mathematics',
-            level: 'Grade 10',
-            icon: '📏',
-            description: 'Shapes, angles, proofs, and spatial reasoning',
-            disabled: true
-        },
-        {
-            id: 'algebra_2',
-            name: 'Algebra II',
-            subject: 'Mathematics',
-            level: 'Grade 11',
-            icon: '🔢',
-            description: 'Advanced algebra topics including quadratics, exponentials, and logarithms',
-            disabled: true
+    try {
+        // Fetch available courses from API
+        const response = await fetch('api/course/get_available_courses.php');
+        const data = await response.json();
+        
+        if (data.success && data.courses) {
+            // Transform API response to workbook format
+            return data.courses.map(course => ({
+                id: course.courseId,
+                name: course.courseName,
+                subject: course.subject,
+                level: course.level,
+                icon: course.icon || '📚',
+                description: course.description || `${course.subject} course at ${course.level} level`,
+                disabled: !course.available
+            }));
+        } else {
+            console.warn('No courses found in API response');
+            return [];
         }
-    ];
+    } catch (error) {
+        console.error('Error fetching courses:', error);
+        // Fallback to empty array if API fails
+        return [];
+    }
 }
 
 // ==========================================
@@ -207,12 +212,20 @@ async function showUnitView(courseId) {
     // Load course data
     try {
         const courseData = await loadCourse(courseId);
+        
+        // Ensure courses are loaded for breadcrumb
+        if (!AppState.courses || AppState.courses.length === 0) {
+            AppState.courses = await scanAvailableCourses();
+        }
         const course = AppState.courses.find(c => c.id === courseId);
+        
+        // Fallback to courseData if course not found in AppState
+        const courseName = course ? course.name : (courseData.courseName || courseId);
         
         // Update breadcrumb
         updateBreadcrumb([
             { label: '📚 Workbook', action: () => showCourseView() },
-            { label: course.name, action: null }
+            { label: courseName, action: null }
         ]);
         
         // Update view mode buttons

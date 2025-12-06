@@ -13,6 +13,7 @@ AgentManager::AgentManager(Config& config) : config(config) {
     std::cout << "Loading model from: " << modelPath << std::endl;
     
     llamaClient = std::make_unique<LlamaCppClient>(
+        config.llamaServerUrl,
         modelPath,
         config.maxContextLength,
         config.temperature

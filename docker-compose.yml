@@ -1,0 +1,93 @@
+services:
+  # MariaDB Database
+  database:
+    image: mariadb:10.11
+    container_name: phef-database
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-RootPass123}
+      MYSQL_DATABASE: professorhawkeinstein_platform
+      MYSQL_USER: professorhawkeinstein_user
+      MYSQL_PASSWORD: ${DB_PASSWORD:-BT1716lit}
+    volumes:
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./migrations:/docker-entrypoint-initdb.d/migrations
+      - db_data:/var/lib/mysql
+    ports:
+      - "3307:3306"  # Use 3307 on host to avoid conflict with local MariaDB
+    networks:
+      - phef-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Llama.cpp Server (LLM inference)
+  llama-server:
+    build: ./llama-server
+    container_name: phef-llama
+    volumes:
+      - ./models:/app/models:ro
+    ports:
+      - "8090:8090"
+    networks:
+      - phef-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s  # Give model time to load
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+
+  # C++ Agent Service
+  agent-service:
+    build: ./cpp_agent
+    container_name: phef-agent
+    depends_on:
+      database:
+        condition: service_healthy
+      llama-server:
+        condition: service_healthy
+    environment:
+      DB_HOST: database
+      DB_USER: professorhawkeinstein_user
+      DB_PASSWORD: ${DB_PASSWORD:-BT1716lit}
+      DB_NAME: professorhawkeinstein_platform
+      LLAMA_SERVER_URL: http://llama-server:8090
+    ports:
+      - "8080:8080"
+    networks:
+      - phef-network
+
+  # PHP API (Apache)
+  api:
+    build: .
+    container_name: phef-api
+    depends_on:
+      database:
+        condition: service_healthy
+      agent-service:
+        condition: service_started
+    environment:
+      DB_HOST: database
+      DB_USER: professorhawkeinstein_user
+      DB_PASS: ${DB_PASSWORD:-BT1716lit}
+      DB_NAME: professorhawkeinstein_platform
+      AGENT_SERVICE_URL: http://agent-service:8080
+    volumes:
+      - .:/var/www/html  # Mount source for development
+    ports:
+      - "8081:80"  # Use 8081 on host to avoid conflict with local Apache
+    networks:
+      - phef-network
+
+volumes:
+  db_data:
+
+networks:
+  phef-network:
+    driver: bridge

@@ -22,10 +22,12 @@ int main(int argc, char* argv[]) {
     std::cout << "Professor Hawkeinstein's Educational Foundation - Agent Service" << std::endl;
     std::cout << "================================================================" << std::endl;
     
-    // Load configuration
+    // Load configuration - try Docker path first, then local path
     Config config;
-    if (!config.load("/home/steve/Professor_Hawkeinstein/cpp_agent/config.json")) {
-        std::cerr << "Warning: Could not load config, using defaults" << std::endl;
+    if (!config.load("/app/config.json")) {
+        if (!config.load("/home/steve/Professor_Hawkeinstein/cpp_agent/config.json")) {
+            std::cerr << "Warning: Could not load config, using defaults" << std::endl;
+        }
     }
     
     std::cout << "llama-server URL: http://localhost:8090" << std::endl;

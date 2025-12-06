@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Bank Generator</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f3f4f6; padding: 2rem; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { margin-bottom: 1rem; color: #1f2937; }
+        .card { background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #374151; }
+        select, input, textarea { width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; }
+        textarea { min-height: 80px; font-family: inherit; }
+        .btn { padding: 0.5rem 1rem; border: none; border-radius: 6px; font-size: 0.875rem; cursor: pointer; margin-right: 0.25rem; }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-success { background: #10b981; color: white; }
+        .btn-secondary { background: #6b7280; color: white; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn:hover:not(:disabled) { opacity: 0.9; }
+        .grid { display: grid; grid-template-columns: 350px 1fr; gap: 1rem; }
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+        .log { background: #1f2937; color: #10b981; padding: 1rem; border-radius: 8px; font-family: monospace; font-size: 0.8rem; height: 180px; overflow-y: auto; white-space: pre-wrap; }
+        
+        /* Bank stats */
+        .bank-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 1rem; }
+        .bank-stat { background: #f9fafb; padding: 1rem; border-radius: 8px; text-align: center; border: 2px solid #e5e7eb; }
+        .bank-stat.fill_in_blank { border-color: #10b981; }
+        .bank-stat.multiple_choice { border-color: #8b5cf6; }
+        .bank-stat.short_essay { border-color: #f59e0b; }
+        .bank-stat .count { font-size: 1.75rem; font-weight: 700; }
+        .bank-stat.fill_in_blank .count { color: #10b981; }
+        .bank-stat.multiple_choice .count { color: #8b5cf6; }
+        .bank-stat.short_essay .count { color: #f59e0b; }
+        .bank-stat .target { font-size: 0.75rem; color: #6b7280; }
+        .bank-stat .progress { height: 4px; background: #e5e7eb; border-radius: 2px; margin-top: 0.5rem; }
+        .bank-stat .progress-fill { height: 100%; border-radius: 2px; }
+        .bank-stat.fill_in_blank .progress-fill { background: #10b981; }
+        .bank-stat.multiple_choice .progress-fill { background: #8b5cf6; }
+        .bank-stat.short_essay .progress-fill { background: #f59e0b; }
+        
+        /* Question cards */
+        .question-card { background: #f9fafb; padding: 1rem; border-radius: 8px; margin-bottom: 0.75rem; border-left: 4px solid #e5e7eb; position: relative; }
+        .question-card.fill_in_blank { border-left-color: #10b981; }
+        .question-card.multiple_choice { border-left-color: #8b5cf6; }
+        .question-card.short_essay { border-left-color: #f59e0b; }
+        .question-card .q-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
+        .question-card .q-num { font-weight: 600; color: #374151; }
+        .question-card .q-actions { display: flex; gap: 0.25rem; }
+        .question-card .q-text { margin-bottom: 0.5rem; }
+        .question-card .q-answer { color: #059669; font-size: 0.875rem; }
+        .question-card .q-options { margin: 0.5rem 0; padding-left: 1rem; font-size: 0.875rem; }
+        .question-card .q-options li { margin: 0.25rem 0; }
+        .question-card .q-options li.correct { color: #059669; font-weight: 600; }
+        
+        /* Tabs */
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+        .tab { padding: 0.75rem 1.25rem; border-radius: 8px; cursor: pointer; font-weight: 500; color: #6b7280; background: #f3f4f6; }
+        .tab:hover { background: #e5e7eb; }
+        .tab.active { color: white; }
+        .tab.active.fill_in_blank { background: #10b981; }
+        .tab.active.multiple_choice { background: #8b5cf6; }
+        .tab.active.short_essay { background: #f59e0b; }
+        
+        /* Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; padding: 1.5rem; border-radius: 12px; width: 90%; max-width: 500px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; }
+        
+        /* Spinner animation */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-right: 4px;
+        }
+        .btn.generating {
+            background: #6b7280 !important;
+            pointer-events: none;
+        }
+        
+        nav { background: white; padding: 1rem 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .nav-container { display: flex; justify-content: space-between; align-items: center; max-width: 1400px; margin: 0 auto; }
+        .logo { font-size: 1.25rem; font-weight: bold; color: #1e40af; }
+        .nav-links { display: flex; gap: 1.5rem; align-items: center; list-style: none; margin: 0; padding: 0; }
+        .nav-links a { color: #333; text-decoration: none; }
+        .nav-links a:hover { color: #1e40af; }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <span class="logo">🎓 Professor Hawkeinstein's Educational Foundation</span>
+            <ul class="nav-links">
+                <li><a href="admin_dashboard.html">← Admin Dashboard</a></li>
+                <li><span id="adminName" style="color: var(--text-light);">Root Administrator</span></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h1>🎯 Question Bank Generator</h1>
+            <a href="admin_course_wizard.html" class="btn btn-secondary" style="text-decoration: none;">← Back to Wizard</a>
+        </div>
+        
+        <div class="grid">
+            <!-- Left Panel: Selection & Log -->
+            <div>
+                <div class="card">
+                    <h2 style="margin-bottom: 1rem;">📚 Select Lesson</h2>
+                    
+                    <div class="form-group">
+                        <label>Unit</label>
+                        <select id="unitSelect">
+                            <option value="">Loading units...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Lesson</label>
+                        <select id="lessonSelect">
+                            <option value="">Select a unit first</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Lesson Content</label>
+                        <div id="lessonPreview" style="background:#f3f4f6;padding:1rem;border-radius:8px;max-height:120px;overflow-y:auto;font-size:0.8rem;color:#6b7280;">
+                            Select a lesson to see content
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2 style="margin-bottom: 1rem;">📋 Generation Log</h2>
+                    <div class="log" id="log">Ready to generate questions...\n</div>
+                </div>
+            </div>
+            
+            <!-- Right Panel: Banks & Questions -->
+            <div>
+                <!-- Bank Stats -->
+                <div class="card">
+                    <h2 style="margin-bottom: 1rem;">🗃️ Question Banks (Target: 25 each)</h2>
+                    
+                    <div class="bank-stats">
+                        <div class="bank-stat fill_in_blank">
+                            <div class="count" id="fillCount">0</div>
+                            <div class="target">/ 25 Fill-in-Blank</div>
+                            <div class="progress"><div class="progress-fill" id="fillProgress" style="width:0%"></div></div>
+                            <button class="btn btn-success btn-sm" onclick="generateBank('fill_in_blank')" id="btnFill">➕ Generate</button>
+                            <button class="btn btn-primary btn-sm" onclick="fillBankTo25('fill_in_blank')" id="btnFillTo25">🚀 Fill to 25</button>
+                        </div>
+                        <div class="bank-stat multiple_choice">
+                            <div class="count" id="mcCount">0</div>
+                            <div class="target">/ 25 Multiple Choice</div>
+                            <div class="progress"><div class="progress-fill" id="mcProgress" style="width:0%"></div></div>
+                            <button class="btn btn-success btn-sm" onclick="generateBank('multiple_choice')" id="btnMC">➕ Generate</button>
+                            <button class="btn btn-primary btn-sm" onclick="fillBankTo25('multiple_choice')" id="btnMCTo25">🚀 Fill to 25</button>
+                        </div>
+                        <div class="bank-stat short_essay">
+                            <div class="count" id="essayCount">0</div>
+                            <div class="target">/ 25 Short Answer</div>
+                            <div class="progress"><div class="progress-fill" id="essayProgress" style="width:0%"></div></div>
+                            <button class="btn btn-success btn-sm" onclick="generateBank('short_essay')" id="btnEssay">➕ Generate</button>
+                            <button class="btn btn-primary btn-sm" onclick="fillBankTo25('short_essay')" id="btnEssayTo25">🚀 Fill to 25</button>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <button class="btn btn-primary" onclick="generateAllBanks()" id="btnAll">🚀 Fill All Banks to 25</button>
+                    </div>
+                </div>
+                
+                <!-- Questions List -->
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h2 style="margin: 0;">👁️ Questions</h2>
+                        <button class="btn btn-danger btn-sm" onclick="deleteAllInBank()" id="btnDeleteAll">🗑️ Delete All in Bank</button>
+                    </div>
+                    
+                    <div class="tabs">
+                        <div class="tab fill_in_blank active" onclick="showTab('fill_in_blank')">📝 Fill-in-Blank (<span id="tabFillCount">0</span>)</div>
+                        <div class="tab multiple_choice" onclick="showTab('multiple_choice')">🔘 Multiple Choice (<span id="tabMcCount">0</span>)</div>
+                        <div class="tab short_essay" onclick="showTab('short_essay')">✏️ Short Answer (<span id="tabEssayCount">0</span>)</div>
+                    </div>
+                    
+                    <div id="questionsList" style="max-height: 500px; overflow-y: auto;">
+                        <p style="color:#6b7280; text-align:center; padding:2rem;">Select a lesson to view questions</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="editModalTitle">Edit Question</h3>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Question</label>
+                <textarea id="editQuestion"></textarea>
+            </div>
+            <div class="form-group" id="editAnswerGroup">
+                <label>Answer</label>
+                <input type="text" id="editAnswer" />
+            </div>
+            <div class="form-group" id="editOptionsGroup" style="display:none;">
+                <label>Options (one per line)</label>
+                <textarea id="editOptions"></textarea>
+                <label style="margin-top:0.5rem;">Correct Answer</label>
+                <input type="text" id="editCorrectAnswer" />
+            </div>
+            <div style="text-align: right; margin-top: 1rem;">
+                <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveQuestion()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin_auth.js"></script>
+    <script src="auth_storage.js"></script>
+    <script>
+        const DRAFT_ID = 3;  // Hardcoded - only one active draft
+        const TARGET = 25;
+        
+        let token = getAdminSession('token');
+        let outlineData = null;
+        let questionBanks = { fill_in_blank: [], multiple_choice: [], short_essay: [] };
+        let currentTab = 'fill_in_blank';
+        let editingQuestion = null;
+        
+        // Check auth
+        if (!checkAdminAuth()) {}
+        
+        // Log helper
+        function log(msg) {
+            const el = document.getElementById('log');
+            const ts = new Date().toLocaleTimeString();
+            el.textContent += `[${ts}] ${msg}\n`;
+            el.scrollTop = el.scrollHeight;
+        }
+        
+        // Load outline
+        async function loadOutline() {
+            log('Loading course outline...');
+            try {
+                const res = await fetch(`api/admin/get_draft_outline.php?draftId=${DRAFT_ID}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success && data.outline) {
+                    outlineData = typeof data.outline === 'string' ? JSON.parse(data.outline) : data.outline;
+                    log(`✓ Loaded ${outlineData.length} units`);
+                    populateUnits();
+                } else {
+                    log(`✗ ${data.message || 'No outline'}`);
+                }
+            } catch (e) {
+                log(`✗ Error: ${e.message}`);
+            }
+        }
+        
+        function populateUnits() {
+            const sel = document.getElementById('unitSelect');
+            sel.innerHTML = '<option value="">Select a unit...</option>';
+            outlineData.forEach((u, i) => {
+                sel.innerHTML += `<option value="${i}">Unit ${i+1}: ${u.title}</option>`;
+            });
+        }
+        
+        document.getElementById('unitSelect').addEventListener('change', function() {
+            const idx = parseInt(this.value);
+            const sel = document.getElementById('lessonSelect');
+            sel.innerHTML = '<option value="">Select a lesson...</option>';
+            if (isNaN(idx)) return;
+            const unit = outlineData[idx];
+            (unit.lessons || []).forEach((l, i) => {
+                sel.innerHTML += `<option value="${i}">Lesson ${i+1}: ${l.title}</option>`;
+            });
+        });
+        
+        document.getElementById('lessonSelect').addEventListener('change', async function() {
+            const unitIdx = parseInt(document.getElementById('unitSelect').value);
+            const lessonIdx = parseInt(this.value);
+            if (isNaN(unitIdx) || isNaN(lessonIdx)) return;
+            
+            // Load content preview
+            try {
+                const res = await fetch(`api/admin/get_lesson_content.php?draftId=${DRAFT_ID}&unitIndex=${unitIdx}&lessonIndex=${lessonIdx}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                const preview = document.getElementById('lessonPreview');
+                if (data.success && data.content && data.content.length > 0) {
+                    const c = data.content[0];
+                    preview.innerHTML = `<strong>${c.title}</strong><br>${(c.content_text || '').substring(0, 300)}...`;
+                } else {
+                    preview.textContent = 'No content found. Generate content first.';
+                }
+            } catch (e) {
+                document.getElementById('lessonPreview').textContent = 'Error loading content';
+            }
+            
+            await loadExistingQuestions();
+        });
+        
+        async function loadExistingQuestions() {
+            const unitIdx = document.getElementById('unitSelect').value;
+            const lessonIdx = document.getElementById('lessonSelect').value;
+            if (!unitIdx || lessonIdx === '') return;
+            
+            questionBanks = { fill_in_blank: [], multiple_choice: [], short_essay: [] };
+            log(`Loading questions for U${unitIdx} L${lessonIdx}...`);
+            
+            try {
+                const res = await fetch(`api/admin/generate_lesson_questions.php?draftId=${DRAFT_ID}&unitIndex=${unitIdx}&lessonIndex=${lessonIdx}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success && data.questionBanks) {
+                    data.questionBanks.forEach(b => {
+                        if (b.questions && questionBanks[b.question_type]) {
+                            questionBanks[b.question_type] = b.questions;
+                        }
+                    });
+                    const total = Object.values(questionBanks).reduce((s, a) => s + a.length, 0);
+                    log(`✓ Loaded ${total} questions`);
+                }
+            } catch (e) {
+                log(`Note: ${e.message}`);
+            }
+            updateUI();
+        }
+        
+        function updateUI() {
+            const fc = questionBanks.fill_in_blank.length;
+            const mc = questionBanks.multiple_choice.length;
+            const ec = questionBanks.short_essay.length;
+            
+            document.getElementById('fillCount').textContent = fc;
+            document.getElementById('mcCount').textContent = mc;
+            document.getElementById('essayCount').textContent = ec;
+            document.getElementById('tabFillCount').textContent = fc;
+            document.getElementById('tabMcCount').textContent = mc;
+            document.getElementById('tabEssayCount').textContent = ec;
+            
+            document.getElementById('fillProgress').style.width = `${Math.min(100, fc/TARGET*100)}%`;
+            document.getElementById('mcProgress').style.width = `${Math.min(100, mc/TARGET*100)}%`;
+            document.getElementById('essayProgress').style.width = `${Math.min(100, ec/TARGET*100)}%`;
+            
+            showTab(currentTab);
+        }
+        
+        function showTab(type) {
+            currentTab = type;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.tab.${type}`).classList.add('active');
+            
+            const container = document.getElementById('questionsList');
+            const questions = questionBanks[type];
+            
+            if (!questions || questions.length === 0) {
+                container.innerHTML = '<p style="color:#6b7280;text-align:center;padding:2rem;">No questions yet. Click Generate to add some!</p>';
+                return;
+            }
+            
+            let html = '';
+            questions.forEach((q, i) => {
+                html += `<div class="question-card ${type}">
+                    <div class="q-header">
+                        <span class="q-num">#${i+1}</span>
+                        <div class="q-actions">
+                            <button class="btn btn-primary btn-sm" onclick="editQuestion('${type}', ${i})">✏️ Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteQuestion('${type}', ${i})">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="q-text">${escapeHtml(q.question)}</div>`;
+                
+                if (type === 'multiple_choice' && q.options) {
+                    html += '<ul class="q-options">';
+                    q.options.forEach((opt, j) => {
+                        const letter = String.fromCharCode(65 + j);
+                        const isCorrect = opt === q.correct_answer;
+                        html += `<li class="${isCorrect ? 'correct' : ''}">${letter}) ${escapeHtml(opt)} ${isCorrect ? '✓' : ''}</li>`;
+                    });
+                    html += '</ul>';
+                } else {
+                    html += `<div class="q-answer">Answer: ${escapeHtml(q.correct_answer || q.suggested_answer || q.answer || '')}</div>`;
+                }
+                html += '</div>';
+            });
+            container.innerHTML = html;
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Edit question
+        function editQuestion(type, index) {
+            const q = questionBanks[type][index];
+            editingQuestion = { type, index };
+            
+            document.getElementById('editModalTitle').textContent = `Edit ${type.replace('_', ' ')} Question #${index + 1}`;
+            document.getElementById('editQuestion').value = q.question;
+            
+            if (type === 'multiple_choice') {
+                document.getElementById('editAnswerGroup').style.display = 'none';
+                document.getElementById('editOptionsGroup').style.display = 'block';
+                document.getElementById('editOptions').value = (q.options || []).join('\n');
+                document.getElementById('editCorrectAnswer').value = q.correct_answer || '';
+            } else {
+                document.getElementById('editAnswerGroup').style.display = 'block';
+                document.getElementById('editOptionsGroup').style.display = 'none';
+                document.getElementById('editAnswer').value = q.correct_answer || q.suggested_answer || q.answer || '';
+            }
+            
+            document.getElementById('editModal').classList.add('active');
+        }
+        
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+            editingQuestion = null;
+        }
+        
+        async function saveQuestion() {
+            if (!editingQuestion) return;
+            const { type, index } = editingQuestion;
+            const q = questionBanks[type][index];
+            
+            q.question = document.getElementById('editQuestion').value;
+            
+            if (type === 'multiple_choice') {
+                q.options = document.getElementById('editOptions').value.split('\n').filter(o => o.trim());
+                q.correct_answer = document.getElementById('editCorrectAnswer').value;
+            } else {
+                q.correct_answer = document.getElementById('editAnswer').value;
+            }
+            
+            await saveAllQuestions(type);
+            closeEditModal();
+            updateUI();
+            log(`✓ Updated ${type} question #${index + 1}`);
+        }
+        
+        // Delete question
+        async function deleteQuestion(type, index) {
+            if (!confirm(`Delete question #${index + 1}?`)) return;
+            
+            questionBanks[type].splice(index, 1);
+            await saveAllQuestions(type);
+            updateUI();
+            log(`✓ Deleted ${type} question #${index + 1}`);
+        }
+        
+        // Delete all questions in current bank
+        async function deleteAllInBank() {
+            const type = currentTab;
+            const count = questionBanks[type].length;
+            
+            if (count === 0) {
+                alert('No questions to delete in this bank.');
+                return;
+            }
+            
+            const typeName = type.replace('_', ' ');
+            if (!confirm(`Delete ALL ${count} ${typeName} questions?`)) return;
+            
+            questionBanks[type] = [];
+            await saveAllQuestions(type);
+            updateUI();
+            log(`✓ Deleted all ${count} ${typeName} questions`);
+        }
+        
+        // Save all questions of a type to DB
+        async function saveAllQuestions(type) {
+            const unitIdx = document.getElementById('unitSelect').value;
+            const lessonIdx = document.getElementById('lessonSelect').value;
+            
+            try {
+                await fetch('api/admin/save_lesson_questions.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({
+                        draftId: DRAFT_ID,
+                        unitIndex: parseInt(unitIdx),
+                        lessonIndex: parseInt(lessonIdx),
+                        questionType: type,
+                        questions: questionBanks[type]
+                    })
+                });
+            } catch (e) {
+                log(`✗ Save error: ${e.message}`);
+            }
+        }
+        
+        // Generate questions for a bank (single batch)
+        async function generateBank(type, count = 1) {
+            const unitIdx = document.getElementById('unitSelect').value;
+            const lessonIdx = document.getElementById('lessonSelect').value;
+            if (!unitIdx || lessonIdx === '') {
+                alert('Select a unit and lesson first');
+                return;
+            }
+            
+            const btn = document.getElementById('btn' + (type === 'fill_in_blank' ? 'Fill' : type === 'multiple_choice' ? 'MC' : 'Essay'));
+            btn.disabled = true;
+            btn.classList.add('generating');
+            btn.innerHTML = '<span class="spinner"></span>Generating...';
+            
+            const current = questionBanks[type].length;
+            log(`Generating ${count} ${type} (currently have ${current})...`);
+            
+            try {
+                const res = await fetch('api/admin/generate_lesson_questions.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({
+                        draftId: DRAFT_ID,
+                        unitIndex: parseInt(unitIdx),
+                        lessonIndex: parseInt(lessonIdx),
+                        questionType: type,
+                        appendMode: true,
+                        questionCount: count
+                    })
+                });
+                const data = await res.json();
+                if (data.success && data.results && data.results[type]) {
+                    const r = data.results[type];
+                    if (r.success) {
+                        log(`✓ Generated ${r.newQuestions || r.questionCount} ${type} questions`);
+                        await loadExistingQuestions();
+                    } else {
+                        log(`✗ ${r.message}`);
+                    }
+                } else {
+                    log(`✗ ${data.message || 'Error'}`);
+                }
+            } catch (e) {
+                log(`✗ ${e.message}`);
+            }
+            
+            btn.disabled = false;
+            btn.classList.remove('generating');
+            btn.innerHTML = '➕ Generate';
+        }
+        
+        // Fill a specific bank to 25 questions
+        async function fillBankTo25(type) {
+            const unitIdx = document.getElementById('unitSelect').value;
+            const lessonIdx = document.getElementById('lessonSelect').value;
+            if (!unitIdx || lessonIdx === '') {
+                alert('Select a unit and lesson first');
+                return;
+            }
+            
+            const btnId = 'btn' + (type === 'fill_in_blank' ? 'Fill' : type === 'multiple_choice' ? 'MC' : 'Essay') + 'To25';
+            const btn = document.getElementById(btnId);
+            btn.disabled = true;
+            btn.classList.add('generating');
+            btn.innerHTML = '<span class="spinner"></span>Filling...';
+            
+            let iterations = 0;
+            while (questionBanks[type].length < TARGET && iterations < 8) {
+                await generateBank(type, 5);  // Generate 5 at a time for Fill to 25
+                iterations++;
+                if (questionBanks[type].length < TARGET) {
+                    await new Promise(r => setTimeout(r, 500));
+                }
+            }
+            
+            btn.disabled = false;
+            btn.classList.remove('generating');
+            btn.innerHTML = '🚀 Fill to 25';
+            
+            if (questionBanks[type].length >= TARGET) {
+                log(`✓ ${type} bank complete!`);
+            } else {
+                log(`⚠ ${type} bank at ${questionBanks[type].length}/${TARGET} after ${iterations} iterations`);
+            }
+        }
+        
+        async function generateAllBanks() {
+            const btn = document.getElementById('btnAll');
+            btn.disabled = true;
+            btn.classList.add('generating');
+            btn.innerHTML = '<span class="spinner"></span>Working...';
+            
+            for (const type of ['fill_in_blank', 'multiple_choice', 'short_essay']) {
+                await fillBankTo25(type);
+            }
+            
+            btn.disabled = false;
+            btn.classList.remove('generating');
+            btn.innerHTML = '🚀 Fill All Banks to 25';
+            log('✓ All banks complete!');
+        }
+        
+        // Init
+        loadOutline();
+    </script>
+</body>
+</html>

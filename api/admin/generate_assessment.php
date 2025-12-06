@@ -511,7 +511,7 @@ function buildAssessmentPrompt($type, $title, $subject, $level, $objectives, $vo
  * Call Course Design Agent service
  */
 function callCourseDesignAgent($message, $timeout = 120) {
-    $agentServiceUrl = 'http://localhost:8080/agent/chat';
+    $agentServiceUrl = AGENT_SERVICE_URL . '/agent/chat';
     
     $payload = [
         'userId' => 1,

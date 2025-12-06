@@ -23,7 +23,7 @@
 
 class LlamaCppClient {
 public:
-    LlamaCppClient(const std::string& modelPath, int contextLength = 2048, float temperature = 0.7f);
+    LlamaCppClient(const std::string& serverUrl, const std::string& modelPath, int contextLength = 2048, float temperature = 0.7f);
     ~LlamaCppClient();
     std::string generate(const std::string& prompt);
 
