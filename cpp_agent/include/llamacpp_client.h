@@ -25,7 +25,7 @@ class LlamaCppClient {
 public:
     LlamaCppClient(const std::string& serverUrl, const std::string& modelPath, int contextLength = 2048, float temperature = 0.7f);
     ~LlamaCppClient();
-    std::string generate(const std::string& prompt);
+    std::string generate(const std::string& prompt, int maxTokens = -1, float temperature = -1.0f);
 
 private:
     std::string serverUrl_;
@@ -34,5 +34,5 @@ private:
     CURL* curl_;
     
     static size_t writeCallback(void* contents, size_t size, size_t nmemb, std::string* userp);
-    std::string makeRequest(const std::string& prompt);
+    std::string makeRequest(const std::string& prompt, int maxTokens = -1, float temperature = -1.0f);
 };

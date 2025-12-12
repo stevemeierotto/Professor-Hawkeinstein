@@ -41,7 +41,7 @@ void Database::disconnect() {
 
 Agent Database::getAgent(int agentId) {
     std::ostringstream query;
-    query << "SELECT agent_id, agent_name, avatar_emoji, specialization, system_prompt, model_name, personality_config "
+    query << "SELECT agent_id, agent_name, avatar_emoji, specialization, system_prompt, model_name, temperature, max_tokens "
           << "FROM agents WHERE agent_id = " << agentId;
     
     if (mysql_query(connection, query.str().c_str())) {
@@ -69,7 +69,11 @@ Agent Database::getAgent(int agentId) {
         agent.modelName = row[5] && strlen(row[5]) > 0 ? row[5] : "qwen2.5-1.5b-instruct-q4_k_m.gguf";
         std::cout << "[Database] Loaded agent " << agent.name << " with model: " << agent.modelName << std::endl;
         
-        // TODO: Parse parameters JSON if needed
+        // Load temperature and max_tokens from database
+        agent.parameters["temperature"] = row[6] ? row[6] : "0.7";
+        agent.parameters["max_tokens"] = row[7] ? row[7] : "512";
+        std::cout << "[Database] Agent parameters: temperature=" << agent.parameters["temperature"] 
+                  << ", max_tokens=" << agent.parameters["max_tokens"] << std::endl;
     } else {
         mysql_free_result(result);
         throw std::runtime_error("Agent not found");
@@ -82,7 +86,7 @@ Agent Database::getAgent(int agentId) {
 std::vector<Agent> Database::getAllAgents() {
     std::vector<Agent> agents;
     
-    const char* query = "SELECT agent_id, agent_name, avatar_emoji, specialization, system_prompt, model_name, personality_config FROM agents WHERE is_active = 1 AND visible_to_students = 1";
+    const char* query = "SELECT agent_id, agent_name, avatar_emoji, specialization, system_prompt, model_name, temperature, max_tokens FROM agents WHERE is_active = 1 AND visible_to_students = 1";
     
     if (mysql_query(connection, query)) {
         throw std::runtime_error("Failed to query agents: " + std::string(mysql_error(connection)));
@@ -105,6 +109,10 @@ std::vector<Agent> Database::getAllAgents() {
         // Model name from DB with fallback to default
         agent.modelName = row[5] && strlen(row[5]) > 0 ? row[5] : "qwen2.5-1.5b-instruct-q4_k_m.gguf";
         std::cout << "[Database] Agent " << agent.name << " uses model: " << agent.modelName << std::endl;
+        
+        // Load temperature and max_tokens
+        agent.parameters["temperature"] = row[6] ? row[6] : "0.7";
+        agent.parameters["max_tokens"] = row[7] ? row[7] : "512";
         
         agents.push_back(agent);
     }

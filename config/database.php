@@ -243,7 +243,7 @@ function callAgentService($endpoint, $data) {
         CURLOPT_POST => true,
         CURLOPT_POSTFIELDS => $jsonData,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 180,  // 3 minutes for longer LLM generations
+        CURLOPT_TIMEOUT => 600,  // 10 minutes for longer LLM generations (lesson content, etc)
         CURLOPT_BUFFERSIZE => 1024,
         CURLOPT_HTTPHEADER => [
             'Content-Type: application/json',

@@ -615,48 +615,25 @@
                 <!-- STEP 5: Question Banks -->
                 <div class="step-content" data-step="5">
                     <h2 class="section-title">❓ Generate Question Banks</h2>
-                    <p class="section-desc">Generate questions for each lesson (fill-in-blank, multiple choice, short answer).</p>
-                    <p style="margin-bottom: 1rem;">
-                        <a href="admin_question_generator.html" style="color: #2563eb; text-decoration: underline;">
-                            🔬 Open standalone question generator
-                        </a> — test and preview questions one lesson at a time
-                    </p>
-
+                    <p class="section-desc">Use the standalone question generator to create questions for each lesson.</p>
+                    
                     <div id="questionBanksContent">
-                        <div class="stats-row" style="margin-bottom: 1rem;">
-                            <div class="stat-box">
-                                <div class="stat-value" id="lessonsWithQuestions">0</div>
-                                <div class="stat-label">Lessons with Questions</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-value" id="totalQuestionsGenerated">0</div>
-                                <div class="stat-label">Total Questions</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-value" id="questionsProgress">0%</div>
-                                <div class="stat-label">Progress</div>
-                            </div>
+                        <div class="card" style="text-align: center; padding: 3rem;">
+                            <p style="font-size: 1.1rem; margin-bottom: 2rem; color: #6b7280;">
+                                Click the button below to open the full-featured question generator in a new tab.
+                            </p>
+                            <a href="admin_question_generator.html?draftId=9" target="_blank" class="btn btn-primary" style="text-decoration: none; font-size: 1.1rem; padding: 1rem 2rem;">
+                                🔬 Open Question Generator →
+                            </a>
+                            <p style="margin-top: 1.5rem; font-size: 0.9rem; color: #9ca3af;">
+                                Generate 25 questions of each type (fill-in-blank, multiple choice, short answer) for all lessons.
+                            </p>
                         </div>
+                    </div>
 
-                        <div id="questionLessonsList" class="outline-container" style="max-height: 400px; overflow-y: auto;">
-                            <div class="loading"><p>Loading lessons...</p></div>
-                        </div>
-
-                        <div id="questionGenerationProgress" style="display: none; margin: 1rem 0;">
-                            <div class="alert alert-info">
-                                <strong>⏳ Generating questions...</strong>
-                                <span id="currentQuestionType">fill_in_blank</span> for <span id="currentLessonName">Lesson</span>
-                            </div>
-                            <div style="background: #e5e7eb; border-radius: 4px; height: 8px; margin-top: 0.5rem;">
-                                <div id="questionProgressBar" style="background: #10b981; height: 100%; border-radius: 4px; width: 0%; transition: width 0.3s;"></div>
-                            </div>
-                        </div>
-
-                        <div class="btn-group" style="margin-top: 1rem;">
-                            <button type="button" class="btn btn-secondary" onclick="goToStep(4)">← Back to Content</button>
-                            <button type="button" class="btn btn-primary" id="generateAllQuestionsBtn" onclick="generateAllQuestions()">🎯 Generate All Questions</button>
-                            <button type="button" class="btn btn-success" id="step5Btn" onclick="goToStep(6)" disabled>Review & Publish →</button>
-                        </div>
+                    <div class="btn-group" style="margin-top: 1rem;">
+                        <button type="button" class="btn btn-secondary" onclick="goToStep(4)">← Back to Content</button>
+                        <button type="button" class="btn btn-success" id="step5Btn" onclick="goToStep(6)">Review & Publish →</button>
                     </div>
                 </div>
 
@@ -1566,37 +1543,12 @@
         let questionBanksData = {};
 
         async function loadQuestionBanks() {
-            const container = document.getElementById('questionLessonsList');
-            
-            // Load outline if not already loaded (like step 4 does)
-            if (!generatedOutline) {
-                await loadOutline();
-            }
-            
-            if (!draftId || !generatedOutline) {
-                container.innerHTML = '<p class="error">No outline available. Complete step 3 first.</p>';
+            // Redirect directly to question generator with draft ID
+            if (!draftId) {
+                showAlert('No draft ID available', 'error');
                 return;
             }
-
-            try {
-                // Get question bank summary
-                const response = await fetch(`api/admin/generate_lesson_questions.php?draftId=${draftId}`, {
-                    headers: { 'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}` }
-                });
-                const data = await response.json();
-                
-                if (data.success && data.lessonSummary) {
-                    data.lessonSummary.forEach(s => {
-                        questionBanksData[`${s.unit_index}_${s.lesson_index}`] = s;
-                    });
-                }
-
-                renderQuestionLessonsList();
-                updateQuestionStats();
-            } catch (error) {
-                console.error('Error loading question banks:', error);
-                container.innerHTML = '<p class="error">Failed to load question data.</p>';
-            }
+            window.location.href = `admin_question_generator.html?draftId=${draftId}`;
         }
 
         function renderQuestionLessonsList() {

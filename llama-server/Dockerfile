@@ -31,4 +31,4 @@ EXPOSE 8090
 # Default command - can be overridden in docker-compose
 CMD ["./llama-server", "--host", "0.0.0.0", "--port", "8090", \
      "--model", "/app/models/qwen2.5-1.5b-instruct-q4_k_m.gguf", \
-     "--threads", "4", "--ctx-size", "4096", "--parallel", "2", "--cont-batching"]
+     "--threads", "4", "--ctx-size", "8192", "--parallel", "2", "--cont-batching"]

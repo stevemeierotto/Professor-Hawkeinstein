@@ -135,12 +135,15 @@ async function loadLesson(courseId, unitNumber, lessonNumber) {
             throw new Error(`Lesson ${lessonNumber} not found in Unit ${unitNumber}`);
         }
         
-        // Check if lesson is generated (not just an outline)
-        if (lesson.status === 'outline' || !lesson.explanation || lesson.explanation === '') {
+        // Fetch actual lesson content from database (convert to 0-based indexing)
+        const response = await fetch(`api/course/get_lesson_content.php?courseId=${courseId}&unitIndex=${unitNumber - 1}&lessonIndex=${lessonNumber - 1}`);
+        const contentData = await response.json();
+        
+        if (!contentData.success || !contentData.hasContent) {
             throw new Error('Lesson content not yet generated');
         }
         
-        // Enrich lesson with course metadata
+        // Enrich lesson with course metadata and actual content
         return {
             ...lesson,
             courseName: courseData.courseName || 'Unknown Course',
@@ -148,6 +151,11 @@ async function loadLesson(courseId, unitNumber, lessonNumber) {
             level: courseData.level || 'Unknown',
             unitTitle: unit.unitTitle || `Unit ${unitNumber}`,
             unitNumber: unitNumber,
+            // Add fetched content
+            explanation: contentData.content.text,
+            contentHtml: contentData.content.html,
+            questions: contentData.questions,
+            questionCounts: contentData.questionCounts,
             courseId: courseId
         };
     } catch (error) {
@@ -234,17 +242,11 @@ async function showUnitView(courseId) {
         document.getElementById('viewUnits').classList.add('active');
         document.getElementById('viewLessons').style.display = 'none';
         
-        // Count lessons per unit
-        const units = courseData.units.map(unit => {
-            const generatedCount = unit.lessons.filter(l => 
-                l.status !== 'outline' && l.explanation && l.explanation !== ''
-            ).length;
-            return {
-                ...unit,
-                totalLessons: unit.lessons.length,
-                generatedLessons: generatedCount
-            };
-        });
+        // Show all units
+        const units = courseData.units.map(unit => ({
+            ...unit,
+            totalLessons: unit.lessons.length
+        }));
         
         const navContent = document.getElementById('navContent');
         navContent.innerHTML = `
@@ -256,7 +258,7 @@ async function showUnitView(courseId) {
                         <div class="nav-card-title">Unit ${unit.unitNumber}</div>
                         <div class="nav-card-meta">${unit.unitTitle}</div>
                         <p style="font-size: 0.85rem; margin-top: 0.5rem; color: var(--text-light);">
-                            ${unit.generatedLessons} of ${unit.totalLessons} lessons available
+                            ${unit.totalLessons} lesson${unit.totalLessons !== 1 ? 's' : ''}
                         </p>
                     </div>
                 `).join('')}
@@ -292,14 +294,12 @@ async function showLessonView(unitNumber) {
         <h2 style="margin-bottom: 1rem;">${unit.unitTitle}</h2>
         <div class="nav-grid">
             ${unit.lessons.map(lesson => {
-                const isAvailable = lesson.status !== 'outline' && lesson.explanation && lesson.explanation !== '';
+                // Always show lessons as available - content check happens on click
                 return `
-                    <div class="nav-card ${!isAvailable ? 'disabled' : ''}" 
-                         onclick="${isAvailable ? `selectLesson(${lesson.lessonNumber})` : ''}">
-                        <div class="nav-card-icon">${isAvailable ? '📄' : '🔒'}</div>
+                    <div class="nav-card" onclick="selectLesson(${lesson.lessonNumber})">
+                        <div class="nav-card-icon">📄</div>
                         <div class="nav-card-title">Lesson ${lesson.lessonNumber}</div>
                         <div class="nav-card-meta">${lesson.lessonTitle}</div>
-                        ${!isAvailable ? '<p style="font-size: 0.85rem; color: var(--primary); font-weight: 600; margin-top: 0.5rem;">Coming Soon</p>' : ''}
                     </div>
                 `;
             }).join('')}
@@ -373,17 +373,29 @@ function renderLesson(lesson) {
             <strong>🔒 Session Monitored:</strong> Your learning session is being monitored for academic integrity.
         </div>
         
+        ${lesson.objectives && lesson.objectives.length > 0 ? `
         <section style="margin: 2rem 0;">
             <h2>📋 Learning Objectives</h2>
             <ul>
                 ${lesson.objectives.map(obj => `<li>${obj}</li>`).join('')}
             </ul>
         </section>
+        ` : ''}
         
         <section style="margin: 2rem 0;">
-            <h2>📖 Explanation</h2>
-            <div class="lesson-text">
-                ${lesson.explanation}
+            <h2>📖 Lesson Content</h2>
+            <div class="lesson-text" style="line-height: 1.8; font-size: 1.05rem;">
+                ${lesson.contentHtml || lesson.explanation.replace(/\n/g, '<br>')}
+            </div>
+        </section>
+        
+        <!-- Placeholder for Visuals/Diagrams -->
+        <section style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 12px; border: 2px dashed #6c63ff;">
+            <h2 style="text-align: center; margin-bottom: 1rem;">🎨 Visual Learning Section</h2>
+            <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px;">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">📊📈🔬</div>
+                <p style="color: var(--text-light); font-size: 1.1rem;">Diagrams, charts, and interactive visualizations will appear here</p>
+                <p style="color: var(--text-light); font-size: 0.9rem; margin-top: 0.5rem;">Coming soon: Concept maps, labeled diagrams, and animations</p>
             </div>
         </section>
         
@@ -451,30 +463,117 @@ function renderLesson(lesson) {
     
     document.getElementById('lessonContent').innerHTML = contentHtml;
     
-    // Update video tab
-    document.getElementById('videoTitle').textContent = lesson.lessonTitle;
-    document.getElementById('videoDuration').textContent = 
-        lesson.duration ? `Duration: ${lesson.duration}` : '';
-    
-    // Update notes tab
-    document.getElementById('lessonSummary').innerHTML = lesson.summary || 
-        '<p style="color: var(--text-light);">No summary available for this lesson.</p>';
-    
-    // Update practice tab (quiz questions)
-    if (lesson.quiz && lesson.quiz.length > 0) {
-        document.getElementById('practiceQuestions').innerHTML = lesson.quiz.map((q, idx) => `
-            <div class="example-box" style="margin-bottom: 1rem;">
-                <p><strong>Question ${idx + 1}:</strong> ${q.question}</p>
-                ${q.options ? `
-                    <ul style="list-style: none; padding-left: 0;">
-                        ${q.options.map(opt => `<li style="padding: 0.25rem 0;">⚪ ${opt}</li>`).join('')}
-                    </ul>
-                ` : ''}
+    // Update video tab with placeholder
+    document.getElementById('videoPlaceholder').innerHTML = `
+        <div style="text-align: center;">
+            <p style="font-size: 4rem; margin-bottom: 1rem;">🎥</p>
+            <h3 style="margin-bottom: 1rem;">${lesson.lessonTitle}</h3>
+            <p style="font-size: 1rem; color: var(--text-light); margin-bottom: 1rem;">Video lesson will be available here</p>
+            <div style="background: rgba(108, 99, 255, 0.1); padding: 1rem; border-radius: 8px; margin-top: 1.5rem;">
+                <p style="font-size: 0.9rem; color: var(--primary); font-weight: 600;">📹 Coming Soon</p>
+                <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 0.5rem;">
+                    Animated explanations, demonstrations, and visual walkthroughs
+                </p>
             </div>
-        `).join('');
+        </div>
+    `;
+    
+    // Update notes tab with auto-generated summary from first 500 chars
+    const summaryText = lesson.explanation ? 
+        lesson.explanation.substring(0, 500).replace(/\n/g, '<br>') + '...' :
+        'Summary not available';
+    document.getElementById('lessonSummary').innerHTML = `
+        <div style="line-height: 1.6;">
+            ${summaryText}
+        </div>
+        <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-light);">
+            💡 <em>Tip: Review the full content in the reading section above</em>
+        </p>
+    `;
+    
+    // Update practice tab with actual questions from database
+    if (lesson.questions && lesson.questionCounts && lesson.questionCounts.total > 0) {
+        let practiceHtml = '<h3 style="margin-bottom: 1.5rem;">Practice with these questions:</h3>';
+        
+        // Multiple Choice Questions
+        if (lesson.questions.multiple_choice && lesson.questions.multiple_choice.length > 0) {
+            practiceHtml += '<h4 style="margin-top: 2rem; color: var(--primary);">📝 Multiple Choice</h4>';
+            lesson.questions.multiple_choice.forEach((q, idx) => {
+                const questionText = q.question || q.question_text || 'Question text missing';
+                const answer = q.correct_answer || q.answer || 'Answer missing';
+                practiceHtml += `
+                    <div class="example-box" style="margin: 1rem 0;">
+                        <p><strong>Question ${idx + 1}:</strong> ${questionText}</p>
+                        ${q.choices || q.options ? `
+                            <ul style="list-style: none; padding-left: 1rem; margin: 1rem 0;">
+                                ${(q.choices || q.options).map((opt, i) => `
+                                    <li style="padding: 0.5rem; margin: 0.25rem 0; background: var(--bg-light); border-radius: 4px; cursor: pointer;">
+                                        ${String.fromCharCode(65 + i)}. ${opt}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        ` : ''}
+                        <details style="margin-top: 1rem;">
+                            <summary style="cursor: pointer; color: var(--primary); font-weight: 600;">Show Answer</summary>
+                            <p style="margin-top: 0.5rem; padding: 1rem; background: var(--success-light); border-radius: 4px;">
+                                <strong>✓ Answer:</strong> ${answer}
+                                ${q.explanation ? `<br><strong>Explanation:</strong> ${q.explanation}` : ''}
+                            </p>
+                        </details>
+                    </div>
+                `;
+            });
+        }
+        
+        // Fill in the Blank Questions
+        if (lesson.questions.fill_in_blank && lesson.questions.fill_in_blank.length > 0) {
+            practiceHtml += '<h4 style="margin-top: 2rem; color: var(--primary);">✏️ Fill in the Blank</h4>';
+            lesson.questions.fill_in_blank.forEach((q, idx) => {
+                const questionText = q.question || q.question_text || 'Question text missing';
+                const answer = q.correct_answer || q.answer || 'Answer missing';
+                practiceHtml += `
+                    <div class="example-box" style="margin: 1rem 0;">
+                        <p><strong>Question ${idx + 1}:</strong> ${questionText}</p>
+                        <details style="margin-top: 1rem;">
+                            <summary style="cursor: pointer; color: var(--primary); font-weight: 600;">Show Answer</summary>
+                            <p style="margin-top: 0.5rem; padding: 1rem; background: var(--success-light); border-radius: 4px;">
+                                <strong>✓ Answer:</strong> ${answer}
+                            </p>
+                        </details>
+                    </div>
+                `;
+            });
+        }
+        
+        // Short Essay Questions
+        if (lesson.questions.short_essay && lesson.questions.short_essay.length > 0) {
+            practiceHtml += '<h4 style="margin-top: 2rem; color: var(--primary);">📄 Short Essay</h4>';
+            lesson.questions.short_essay.forEach((q, idx) => {
+                const questionText = q.question || q.question_text || 'Question text missing';
+                const answer = q.sample_answer || q.answer || 'Sample answer missing';
+                practiceHtml += `
+                    <div class="example-box" style="margin: 1rem 0;">
+                        <p><strong>Question ${idx + 1}:</strong> ${questionText}</p>
+                        <details style="margin-top: 1rem;">
+                            <summary style="cursor: pointer; color: var(--primary); font-weight: 600;">Show Sample Answer</summary>
+                            <p style="margin-top: 0.5rem; padding: 1rem; background: var(--success-light); border-radius: 4px;">
+                                ${answer}
+                            </p>
+                        </details>
+                    </div>
+                `;
+            });
+        }
+        
+        document.getElementById('practiceQuestions').innerHTML = practiceHtml;
     } else {
-        document.getElementById('practiceQuestions').innerHTML = 
-            '<p style="color: var(--text-light);">No practice questions available for this lesson.</p>';
+        document.getElementById('practiceQuestions').innerHTML = `
+            <div style="text-align: center; padding: 3rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">📝</div>
+                <p style="color: var(--text-light);">Practice questions for this lesson are being prepared.</p>
+                <p style="color: var(--text-light); font-size: 0.9rem; margin-top: 0.5rem;">Check back soon!</p>
+            </div>
+        `;
     }
 }
 
@@ -498,22 +597,16 @@ function updateLessonNavigation() {
     const unit = courseData.units.find(u => u.unitNumber === AppState.selectedUnit);
     const currentLesson = AppState.selectedLesson;
     
-    // Find previous lesson
+    // Find previous lesson (always available if exists)
     let prevLesson = null;
     if (currentLesson > 1) {
-        const prev = unit.lessons.find(l => l.lessonNumber === currentLesson - 1);
-        if (prev && prev.status !== 'outline' && prev.explanation) {
-            prevLesson = currentLesson - 1;
-        }
+        prevLesson = currentLesson - 1;
     }
     
-    // Find next lesson
+    // Find next lesson (always available if exists)
     let nextLesson = null;
     if (currentLesson < unit.lessons.length) {
-        const next = unit.lessons.find(l => l.lessonNumber === currentLesson + 1);
-        if (next && next.status !== 'outline' && next.explanation) {
-            nextLesson = currentLesson + 1;
-        }
+        nextLesson = currentLesson + 1;
     }
     
     // Update buttons

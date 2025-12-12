@@ -89,10 +89,15 @@ std::string AgentManager::processMessage(int userId, int agentId, const std::str
         // Build prompt with system prompt + context + user message
         std::string prompt = buildPrompt(agent, message, context);
         
-        std::cout << "Querying llama.cpp with model: " << agent.modelName << std::endl;
+        // Extract temperature and max_tokens from agent parameters
+        int maxTokens = agent.parameters.count("max_tokens") ? std::stoi(agent.parameters["max_tokens"]) : 512;
+        float temperature = agent.parameters.count("temperature") ? std::stof(agent.parameters["temperature"]) : 0.7f;
         
-        // Query llama.cpp
-        std::string response = llamaClient->generate(prompt);
+        std::cout << "Querying llama.cpp with model: " << agent.modelName 
+                  << " (max_tokens=" << maxTokens << ", temp=" << temperature << ")" << std::endl;
+        
+        // Query llama.cpp with agent-specific parameters
+        std::string response = llamaClient->generate(prompt, maxTokens, temperature);
         
         // Store conversation in memory
         storeMemory(userId, agentId, message, response);
@@ -122,18 +127,20 @@ std::string AgentManager::processMessageWithContext(int userId, int agentId, con
         // Build prompt with system prompt + RAG context + user message
         std::string prompt = buildPrompt(agent, message, context);
         
-        std::cout << "Querying llama.cpp with model: " << agent.modelName << std::endl;
+        // Extract temperature and max_tokens from agent parameters
+        int maxTokens = agent.parameters.count("max_tokens") ? std::stoi(agent.parameters["max_tokens"]) : 512;
+        float temperature = agent.parameters.count("temperature") ? std::stof(agent.parameters["temperature"]) : 0.7f;
         
-        // Query llama.cpp
-        std::string response = llamaClient->generate(prompt);
+        std::cout << "Querying llama.cpp with model: " << agent.modelName 
+                  << " (max_tokens=" << maxTokens << ", temp=" << temperature << ")" << std::endl;
+        
+        // Query llama.cpp with agent-specific parameters
+        std::string response = llamaClient->generate(prompt, maxTokens, temperature);
         
         // Store conversation in memory
         storeMemory(userId, agentId, message, response);
         
         std::cout << "Response generated successfully with RAG context" << std::endl;
-        return response;
-        
-        std::cout << "Response generated successfully" << std::endl;
         return response;
         
     } catch (const std::exception& e) {

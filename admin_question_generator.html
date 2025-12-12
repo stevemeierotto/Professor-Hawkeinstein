@@ -157,34 +157,34 @@
             <div>
                 <!-- Bank Stats -->
                 <div class="card">
-                    <h2 style="margin-bottom: 1rem;">🗃️ Question Banks (Target: 25 each)</h2>
+                    <h2 style="margin-bottom: 1rem;">🗃️ Question Banks (Target: 10 each)</h2>
                     
                     <div class="bank-stats">
                         <div class="bank-stat fill_in_blank">
                             <div class="count" id="fillCount">0</div>
-                            <div class="target">/ 25 Fill-in-Blank</div>
+                            <div class="target">/ 10 Fill-in-Blank</div>
                             <div class="progress"><div class="progress-fill" id="fillProgress" style="width:0%"></div></div>
-                            <button class="btn btn-success btn-sm" onclick="generateBank('fill_in_blank')" id="btnFill">➕ Generate</button>
-                            <button class="btn btn-primary btn-sm" onclick="fillBankTo25('fill_in_blank')" id="btnFillTo25">🚀 Fill to 25</button>
+                            <button class="btn btn-success btn-sm" onclick="generateBank('fill_in_blank', 5)" id="btnFill">➕ Generate 5</button>
+                            <button class="btn btn-primary btn-sm" onclick="fillBankTo25('fill_in_blank')" id="btnFillTo25">🚀 Fill to 10</button>
                         </div>
                         <div class="bank-stat multiple_choice">
                             <div class="count" id="mcCount">0</div>
-                            <div class="target">/ 25 Multiple Choice</div>
+                            <div class="target">/ 10 Multiple Choice</div>
                             <div class="progress"><div class="progress-fill" id="mcProgress" style="width:0%"></div></div>
-                            <button class="btn btn-success btn-sm" onclick="generateBank('multiple_choice')" id="btnMC">➕ Generate</button>
-                            <button class="btn btn-primary btn-sm" onclick="fillBankTo25('multiple_choice')" id="btnMCTo25">🚀 Fill to 25</button>
+                            <button class="btn btn-success btn-sm" onclick="generateBank('multiple_choice', 5)" id="btnMC">➕ Generate 5</button>
+                            <button class="btn btn-primary btn-sm" onclick="fillBankTo25('multiple_choice')" id="btnMCTo25">🚀 Fill to 10</button>
                         </div>
                         <div class="bank-stat short_essay">
                             <div class="count" id="essayCount">0</div>
-                            <div class="target">/ 25 Short Answer</div>
+                            <div class="target">/ 10 Short Answer</div>
                             <div class="progress"><div class="progress-fill" id="essayProgress" style="width:0%"></div></div>
-                            <button class="btn btn-success btn-sm" onclick="generateBank('short_essay')" id="btnEssay">➕ Generate</button>
-                            <button class="btn btn-primary btn-sm" onclick="fillBankTo25('short_essay')" id="btnEssayTo25">🚀 Fill to 25</button>
+                            <button class="btn btn-success btn-sm" onclick="generateBank('short_essay', 5)" id="btnEssay">➕ Generate 5</button>
+                            <button class="btn btn-primary btn-sm" onclick="fillBankTo25('short_essay')" id="btnEssayTo25">🚀 Fill to 10</button>
                         </div>
                     </div>
                     
                     <div style="text-align: center;">
-                        <button class="btn btn-primary" onclick="generateAllBanks()" id="btnAll">🚀 Fill All Banks to 25</button>
+                        <button class="btn btn-primary" onclick="generateAllBanks()" id="btnAll">🚀 Fill All Banks to 10</button>
                     </div>
                 </div>
                 
@@ -240,8 +240,10 @@
     <script src="admin_auth.js"></script>
     <script src="auth_storage.js"></script>
     <script>
-        const DRAFT_ID = 3;  // Hardcoded - only one active draft
-        const TARGET = 25;
+        // Get draft ID from URL parameter or default to 9
+        const urlParams = new URLSearchParams(window.location.search);
+        const DRAFT_ID = parseInt(urlParams.get('draftId')) || 9;
+        const TARGET = 10;
         
         let token = getAdminSession('token');
         let outlineData = null;
@@ -594,7 +596,7 @@
             
             btn.disabled = false;
             btn.classList.remove('generating');
-            btn.innerHTML = '🚀 Fill to 25';
+            btn.innerHTML = '🚀 Fill to 10';
             
             if (questionBanks[type].length >= TARGET) {
                 log(`✓ ${type} bank complete!`);
@@ -615,7 +617,7 @@
             
             btn.disabled = false;
             btn.classList.remove('generating');
-            btn.innerHTML = '🚀 Fill All Banks to 25';
+            btn.innerHTML = '🚀 Fill All Banks to 10';
             log('✓ All banks complete!');
         }
         

@@ -91,7 +91,7 @@ function getSystemAgentOrDefault($purpose) {
         'questions' => [
             'agent_id' => 1,
             'agent_name' => 'Question Generator (Default)',
-            'system_prompt' => 'You are an educational assessment expert. Create clear, fair questions that test understanding at various difficulty levels.',
+            'system_prompt' => '',
             'temperature' => 0.5,
             'max_tokens' => 1024,
             'purpose' => 'questions'

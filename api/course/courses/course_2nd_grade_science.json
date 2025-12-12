@@ -1,0 +1,76 @@
+{
+  "courseId": "2nd_grade_science",
+  "courseName": "2nd Grade Science",
+  "subject": "Science",
+  "level": "Grade 2",
+  "description": "Foundational science concepts including living organisms, plant growth, Earth systems, and environmental awareness",
+  "icon": "🔬",
+  "units": [
+    {
+      "unitNumber": 1,
+      "unitTitle": "Life Science & Earth Systems",
+      "lessons": [
+        {
+          "lessonNumber": 1,
+          "lessonTitle": "Recognizing and Describing Basic Living Organisms",
+          "standardCode": "S1"
+        },
+        {
+          "lessonNumber": 2,
+          "lessonTitle": "Classifying Organisms by Characteristics",
+          "standardCode": "S2"
+        },
+        {
+          "lessonNumber": 3,
+          "lessonTitle": "Photosynthesis and Plant Growth",
+          "standardCode": "S3"
+        },
+        {
+          "lessonNumber": 4,
+          "lessonTitle": "Observing Changes in Materials",
+          "standardCode": "S4"
+        },
+        {
+          "lessonNumber": 5,
+          "lessonTitle": "Earth's Systems and Weather Patterns",
+          "standardCode": "S5"
+        },
+        {
+          "lessonNumber": 6,
+          "lessonTitle": "Renewable and Non-Renewable Resources",
+          "standardCode": "S6"
+        },
+        {
+          "lessonNumber": 7,
+          "lessonTitle": "Human Activities and Environmental Impact",
+          "standardCode": "S7"
+        },
+        {
+          "lessonNumber": 8,
+          "lessonTitle": "Energy Transfer in Ecosystems",
+          "standardCode": "S8"
+        },
+        {
+          "lessonNumber": 9,
+          "lessonTitle": "Effects of Materials on Plant Growth",
+          "standardCode": "S9"
+        },
+        {
+          "lessonNumber": 10,
+          "lessonTitle": "Human Impact on Earth's Systems",
+          "standardCode": "S10"
+        },
+        {
+          "lessonNumber": 11,
+          "lessonTitle": "Classifying Organisms by Habitat",
+          "standardCode": "S11"
+        },
+        {
+          "lessonNumber": 12,
+          "lessonTitle": "Sunlight and Energy Transfer in Plants",
+          "standardCode": "S12"
+        }
+      ]
+    }
+  ]
+}

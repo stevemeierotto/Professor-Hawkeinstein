@@ -29,17 +29,9 @@
                 <ul class="sidebar-menu">
                     <li><a href="#overview" class="active">📊 Overview</a></li>
                     <li><a href="#my-courses">📚 My Courses</a></li>
-                    <li><a href="#agents">🤖 AI Agents</a></li>
                     <li><a href="#progress">📈 Progress</a></li>
                     <li><a href="#settings">⚙️ Settings</a></li>
                 </ul>
-
-                <hr style="margin: 2rem 0;">
-
-                <h4>Select Your Agent</h4>
-                <div id="agentsList" style="margin-top: 1rem;">
-                    <p style="text-align: center; color: var(--text-light); font-size: 0.9rem;">Loading agents...</p>
-                </div>
             </aside>
 
             <!-- Main Content -->
@@ -131,68 +123,10 @@
                 <!-- Active Courses -->
                 <section style="margin-top: 3rem;">
                     <h2>📚 Your Active Courses</h2>
-                    <div class="courses-grid">
-                        <div class="course-card">
-                            <div class="course-thumbnail">📐</div>
-                            <div class="course-content">
-                                <h3>Algebra Fundamentals</h3>
-                                <span class="difficulty-badge difficulty-beginner">Beginner</span>
-                                <div class="progress-bar-container">
-                                    <div class="progress-bar-label">
-                                        <span>Progress</span>
-                                        <span><strong>75%</strong></span>
-                                    </div>
-                                    <div class="progress-bar">
-                                        <div class="progress-bar-fill" style="width: 75%;"></div>
-                                    </div>
-                                </div>
-                                <div class="course-meta">
-                                    <span>🕐 15h completed</span>
-                                </div>
-                                <a href="course_viewer.html?id=1" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Continue Learning</a>
-                            </div>
-                        </div>
-
-                        <div class="course-card">
-                            <div class="course-thumbnail">🔬</div>
-                            <div class="course-content">
-                                <h3>Introduction to Physics</h3>
-                                <span class="difficulty-badge difficulty-beginner">Beginner</span>
-                                <div class="progress-bar-container">
-                                    <div class="progress-bar-label">
-                                        <span>Progress</span>
-                                        <span><strong>45%</strong></span>
-                                    </div>
-                                    <div class="progress-bar">
-                                        <div class="progress-bar-fill" style="width: 45%;"></div>
-                                    </div>
-                                </div>
-                                <div class="course-meta">
-                                    <span>🕐 13.5h completed</span>
-                                </div>
-                                <a href="course_viewer.html?id=3" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Continue Learning</a>
-                            </div>
-                        </div>
-
-                        <div class="course-card">
-                            <div class="course-thumbnail">✍️</div>
-                            <div class="course-content">
-                                <h3>Creative Writing Workshop</h3>
-                                <span class="difficulty-badge difficulty-intermediate">Intermediate</span>
-                                <div class="progress-bar-container">
-                                    <div class="progress-bar-label">
-                                        <span>Progress</span>
-                                        <span><strong>30%</strong></span>
-                                    </div>
-                                    <div class="progress-bar">
-                                        <div class="progress-bar-fill" style="width: 30%;"></div>
-                                    </div>
-                                </div>
-                                <div class="course-meta">
-                                    <span>🕐 7.5h completed</span>
-                                </div>
-                                <a href="course_viewer.html?id=4" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Continue Learning</a>
-                            </div>
+                    <div class="courses-grid" id="overviewCoursesGrid">
+                        <div style="text-align: center; padding: 3rem; color: var(--text-light); grid-column: 1 / -1;">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">📚</div>
+                            <p>Loading your courses...</p>
                         </div>
                     </div>
                 </section>
@@ -363,20 +297,13 @@
         // Poll agent status every 15 seconds
         setInterval(updateAgentStatus, 15000);
 
-        // Load available agents from C++ service
-        // Agent names to hide from students (admin/test agents)
-        const hiddenAgentNames = [
-            'Professor Hawkeinstein (Admin Advisor)',
-            'Test Expert',
-            'Summary Agent'
-        ];
-
+        // Load student advisor only
         async function loadAgents() {
             try {
-                console.log('[Agents] Loading agent list...');
-                const response = await fetch('http://localhost:8080/agent/list', {
+                console.log('[Agents] Loading student advisor...');
+                const response = await fetch('api/student/get_advisor.php', {
                     method: 'GET',
-                    signal: AbortSignal.timeout(5000)
+                    headers: { 'Content-Type': 'application/json' }
                 });
                 
                 if (!response.ok) {
@@ -384,18 +311,30 @@
                 }
                 
                 const data = await response.json();
-                const allAgents = Array.isArray(data) ? data : [];
                 
-                // Filter out admin/test agents
-                agents = allAgents.filter(agent => !hiddenAgentNames.includes(agent.name));
-                console.log('[Agents] Loaded', agents.length, 'student agents (filtered from', allAgents.length, ')');
+                if (data.success && data.advisor) {
+                    // Student has an advisor - show only this one agent
+                    agents = [{
+                        id: data.advisor.advisor_type_id,
+                        name: data.advisor.agent_name,
+                        avatarEmoji: '🎓', // Default avatar
+                        description: 'Your Personal Academic Advisor'
+                    }];
+                    console.log('[Agents] Loaded student advisor:', data.advisor.agent_name);
+                } else {
+                    // No advisor assigned yet
+                    agents = [];
+                    console.log('[Agents] No advisor assigned to student');
+                }
                 
-                displayAgentCards();
+                // Set the first (and only) agent as active
+                if (agents.length > 0) {
+                    activeAgentId = agents[0].id;
+                }
+                
                 updateChatHeader();
             } catch (error) {
-                console.error('[Agents] Failed to load:', error);
-                document.getElementById('agentsList').innerHTML = 
-                    '<p style="text-align: center; color: #dc3545; font-size: 0.85rem;">Unable to load agents</p>';
+                console.error('[Agents] Failed to load advisor:', error);
             }
         }
 
@@ -485,8 +424,60 @@
             if (desc) desc.textContent = (agent.description || 'AI Assistant') + ' • Online';
         }
 
-        // Load agents on page load
+        // Load overview courses
+        async function loadOverviewCourses() {
+            const grid = document.getElementById('overviewCoursesGrid');
+            
+            try {
+                const response = await fetch('api/course/get_available_courses.php');
+                const data = await response.json();
+                
+                if (!data.success || !data.courses || data.courses.length === 0) {
+                    grid.innerHTML = `
+                        <div style="text-align: center; padding: 3rem; color: var(--text-light); grid-column: 1 / -1;">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">📚</div>
+                            <p>No courses available yet. Check back soon!</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                grid.innerHTML = data.courses.map(course => `
+                    <div class="course-card">
+                        <div class="course-thumbnail">${course.icon}</div>
+                        <div class="course-content">
+                            <h3>${course.courseName}</h3>
+                            <span class="difficulty-badge difficulty-beginner">${course.level}</span>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-label">
+                                    <span>Progress</span>
+                                    <span><strong>0%</strong></span>
+                                </div>
+                                <div class="progress-bar">
+                                    <div class="progress-bar-fill" style="width: 0%;"></div>
+                                </div>
+                            </div>
+                            <div class="course-meta">
+                                <span>📖 ${course.units} Unit${course.units !== 1 ? 's' : ''}</span>
+                            </div>
+                            <a href="workbook.html?course=${course.courseId}" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Start Learning</a>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Error loading overview courses:', error);
+                grid.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: var(--danger); grid-column: 1 / -1;">
+                        <p>❌ Failed to load courses. Please try again later.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Load agents and courses on page load
         loadAgents();
+        loadOverviewCourses();
 
         // Chat functionality
         const chatMessages = document.getElementById('chatMessages');

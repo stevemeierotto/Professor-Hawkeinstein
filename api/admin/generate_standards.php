@@ -48,9 +48,23 @@ $subject = trim($input['subject']);
 $grade = trim($input['grade']);
 
 try {
-    // Build natural language prompt that the LLM can understand
-    // (The agent's system prompt specifies JSON input, but small LLMs need clearer instructions)
-    $prompt = "Generate educational standards for {$grade} {$subject}. Format as JSON array with id, statement, and skills for each standard.";
+    // Build detailed prompt - small LLMs need explicit instructions
+    $prompt = <<<PROMPT
+Create 8-12 educational standards for {$grade} {$subject}.
+
+Each standard must include:
+- A unique ID (like S1, S2, S3...)
+- A clear statement of what students should learn
+- 2-3 specific skills
+
+Return ONLY a JSON array like this:
+[
+  {"id": "S1", "statement": "Students will understand...", "skills": ["skill 1", "skill 2"]},
+  {"id": "S2", "statement": "Students will be able to...", "skills": ["skill 1", "skill 2"]}
+]
+
+Generate the standards now:
+PROMPT;
 
     // Call the Standards Analyzer system agent
     $agentResponse = callSystemAgent('standards', $prompt);

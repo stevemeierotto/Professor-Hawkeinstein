@@ -286,6 +286,7 @@ function generateQuestions($type, $lessonTitle, $lessonText, $gradeNum, $count =
     // Parse the response into structured questions
     $rawResponse = $response['response'];
     error_log("[Question Generation] Raw LLM response for $type: " . substr($rawResponse, 0, 500));
+    error_log("[Question Generation] Full response length: " . strlen($rawResponse) . " chars");
     
     $questions = parseQuestionsFromResponse($type, $rawResponse);
     
@@ -326,7 +327,7 @@ function deduplicateQuestions($questions) {
     $unique = [];
     
     foreach ($questions as $q) {
-        // Normalize question text for comparison
+        // Normalize question text for comparison (remove all non-alphanumeric)
         $normalized = strtolower(preg_replace('/[^a-z0-9]/', '', $q['question']));
         
         // Skip if question is too short (likely malformed)
@@ -334,16 +335,18 @@ function deduplicateQuestions($questions) {
             continue;
         }
         
-        // Skip if we've seen something very similar (first 30 chars match)
-        $prefix = substr($normalized, 0, 30);
-        if (isset($seen[$prefix])) {
+        // Only skip EXACT duplicates (full text match)
+        // Don't use prefix matching - questions about same topic should be allowed
+        if (isset($seen[$normalized])) {
+            error_log("[Dedup] Skipping exact duplicate: " . substr($q['question'], 0, 60));
             continue;
         }
         
-        $seen[$prefix] = true;
+        $seen[$normalized] = true;
         $unique[] = $q;
     }
     
+    error_log("[Dedup] Input: " . count($questions) . " questions, Output: " . count($unique) . " unique");
     return $unique;
 }
 
@@ -352,6 +355,7 @@ function deduplicateQuestions($questions) {
  */
 function createFillInBlankPrompt($lessonTitle, $lessonText, $gradeNum, $age, $count = 1) {
     $plural = $count > 1 ? 's' : '';
+    $diversityNote = $count > 1 ? "\nMake each question about a DIFFERENT concept from the lesson - do NOT ask similar questions." : '';
     return <<<PROMPT
 You are writing questions for a $age year old (Grade $gradeNum). Use simple words they know.
 
@@ -361,13 +365,15 @@ $lessonText
 ---
 
 Create $count fill-in-the-blank question$plural using ONLY facts from the lesson above.
-Put _____ where a word is missing. Give the answer on the next line.
+Put _____ (5 underscores) where a word is missing. Give the answer on the next line.$diversityNote
+
+IMPORTANT: Start your response IMMEDIATELY with "1." - do NOT add any introduction or explanation first.
 
 Example format:
-The _____ is the largest planet in our solar system.
+1. The _____ is the largest planet in our solar system.
 A1: Jupiter
 
-Now write $count different question$plural based on the lesson:
+Now write $count different question$plural based on the lesson (start with "1."):
 PROMPT;
 }
 
@@ -376,6 +382,7 @@ PROMPT;
  */
 function createMultipleChoicePrompt($lessonTitle, $lessonText, $gradeNum, $age, $count = 1) {
     $plural = $count > 1 ? 's' : '';
+    $diversityNote = $count > 1 ? "\nMake each question about a DIFFERENT concept from the lesson - do NOT ask similar questions." : '';
     return <<<PROMPT
 You are writing questions for a $age year old (Grade $gradeNum). Use simple words.
 
@@ -385,6 +392,9 @@ $lessonText
 ---
 
 Create $count multiple choice question$plural using ONLY facts from the lesson above.
+Each question MUST end with a question mark.$diversityNote
+
+IMPORTANT: Start your response IMMEDIATELY with "Q1:" - do NOT add any introduction or explanation first.
 
 Example format:
 Q1: What color is the sky on a clear day?
@@ -394,7 +404,7 @@ C) Green
 D) Yellow
 ANSWER: B
 
-Now write $count different question$plural based on the lesson:
+Now write $count different question$plural based on the lesson (start with "Q1:"):
 PROMPT;
 }
 
@@ -402,17 +412,21 @@ PROMPT;
  * Create prompt for short essay questions
  */
 function createShortEssayPrompt($lessonTitle, $lessonText, $gradeNum, $age, $count = 1) {
+    $plural = $count > 1 ? 's' : '';
+    $diversityNote = $count > 1 ? "\nMake each question about a DIFFERENT concept from the lesson - do NOT ask similar questions." : '';
+    $exampleNote = $count > 1 ? "\n\nQUESTION: What is photosynthesis?\nANSWER: Photosynthesis is how plants make food from sunlight.\n\nQUESTION: Why do animals need food?\nANSWER: Animals need food to get energy to live and grow." : "\n\nQUESTION: [your question here]\nANSWER: [1-2 sentence answer]";
+    
     return <<<PROMPT
-You are a teacher. Write a question for a $age year old (Grade $gradeNum).
+You are a teacher. Write $count question-answer pair$plural for a $age year old (Grade $gradeNum).
 
 LESSON:
 $lessonText
 
-OUTPUT FORMAT (you must use this exact format):
-QUESTION: [your question here]
-ANSWER: [1-2 sentence answer]
+IMPORTANT: Each pair MUST have both QUESTION: and ANSWER: parts.$diversityNote
 
-Write ONE question about the lesson. Start your response with "QUESTION:" now:
+Example format:$exampleNote
+
+Write $count complete question-answer pair$plural. Start with "QUESTION:" now:
 PROMPT;
 }
 
@@ -421,6 +435,11 @@ PROMPT;
  */
 function parseQuestionsFromResponse($type, $response) {
     $questions = [];
+    
+    // Clean up the response - remove code block markers
+    $response = preg_replace('/```(json|markdown|text)?/i', '', $response);
+    $response = trim($response);
+    
     $lines = explode("\n", $response);
     
     switch ($type) {
@@ -431,6 +450,8 @@ function parseQuestionsFromResponse($type, $response) {
                 $line = trim($line);
                 // Remove markdown formatting
                 $line = preg_replace('/\*\*([^*]+)\*\*/', '$1', $line);
+                // Skip empty lines and code block markers
+                if (empty($line) || preg_match('/^```/', $line)) continue;
                 
                 // Match "Q1:", "1.", "1:" or "1)" for question - must contain underscore(s) for fill-in-blank
                 if (preg_match('/(?:Q)?(\d+)[:.)\s]\s*(.+)/i', $line, $m) && strlen($m[2]) > 10) {
@@ -464,10 +485,13 @@ function parseQuestionsFromResponse($type, $response) {
                     if (preg_match('/^(?:A\d*|Answer)[:.]\s*(.+)$/i', $line, $m)) {
                         $answer = trim($m[1]);
                         $answer = preg_replace('/\*\*([^*]+)\*\*/', '$1', $answer);
+                        // Remove code block markers from answer
+                        $answer = preg_replace('/```(json|markdown|text)?/i', '', $answer);
+                        $answer = trim($answer);
                         $currentQ['correct_answer'] = $answer;
                     }
                     // Also try: if line is short (1-2 words), it might be the answer
-                    elseif (strlen($line) > 0 && strlen($line) < 30 && !preg_match('/^\d/', $line)) {
+                    elseif (strlen($line) > 0 && strlen($line) < 30 && !preg_match('/^\d/', $line) && !preg_match('/^```/', $line)) {
                         $currentQ['correct_answer'] = $line;
                     }
                 }
@@ -482,22 +506,43 @@ function parseQuestionsFromResponse($type, $response) {
             $currentQ = null;
             $options = [];
             $qNum = 0;
+            $lineNum = 0;
             foreach ($lines as $line) {
+                $lineNum++;
                 $line = trim($line);
-                // Match "Q1:", "1.", "1:" for question
+                if (empty($line)) continue; // Skip empty lines
+                
+                // Debug: log first 10 lines
+                if ($lineNum <= 10) {
+                    error_log("[Parser MC] Line $lineNum: " . substr($line, 0, 100));
+                }
+                
+                // Match "Q1:", "1.", "1)", "1:" for question
                 // Skip template-like text containing brackets
-                if (preg_match('/^(?:Q)?(\d+)[:.)\s]\s*(.+)/i', $line, $m) && strlen($m[2]) > 10 && strpos($m[2], '?') !== false && strpos($m[2], '[') === false) {
-                    if ($currentQ && !empty($currentQ['options'])) $questions[] = $currentQ;
-                    $qNum = intval($m[1]);
-                    $currentQ = [
-                        'id' => 'mc_' . $qNum,
-                        'question' => trim($m[2]),
-                        'options' => [],
-                        'correct_answer' => '',
-                        'explanation' => '',
-                        'difficulty' => $qNum <= 2 ? 'easy' : ($qNum <= 4 ? 'medium' : 'hard')
-                    ];
-                    $options = [];
+                if (preg_match('/^(?:Q)?(\d+)[:.)\s]\s*(.+)/i', $line, $m)) {
+                    $questionText = trim($m[2]);
+                    $hasQuestionMark = strpos($questionText, '?') !== false;
+                    $hasBracket = strpos($questionText, '[') !== false;
+                    $longEnough = strlen($questionText) > 10;
+                    
+                    if ($lineNum <= 10) {
+                        error_log("[Parser MC] Matched Q pattern: text='$questionText', hasQ=$hasQuestionMark, len=" . strlen($questionText) . ", bracket=$hasBracket");
+                    }
+                    
+                    if ($longEnough && $hasQuestionMark && !$hasBracket) {
+                        if ($currentQ && !empty($currentQ['options'])) $questions[] = $currentQ;
+                        $qNum = intval($m[1]);
+                        $currentQ = [
+                            'id' => 'mc_' . $qNum,
+                            'question' => $questionText,
+                            'options' => [],
+                            'correct_answer' => '',
+                            'explanation' => '',
+                            'difficulty' => $qNum <= 2 ? 'easy' : ($qNum <= 4 ? 'medium' : 'hard')
+                        ];
+                        $options = [];
+                        error_log("[Parser MC] Created question $qNum: $questionText");
+                    }
                 } elseif (preg_match('/^([A-D])\)\s*(.+)$/i', $line, $m) && $currentQ) {
                     // Skip template-like options
                     $optText = trim($m[2]);
@@ -516,40 +561,49 @@ function parseQuestionsFromResponse($type, $response) {
             break;
             
         case 'short_essay':
-            // Simple parser for single question format:
+            // Parse multiple question format:
             // QUESTION: [question text]
             // ANSWER: [answer text]
-            // (may be on same line or separate lines)
-            $questionText = '';
-            $answerText = '';
+            // QUESTION: [next question]
+            // ANSWER: [next answer]
             
-            // Look for QUESTION: - stop at ANSWER: or end
-            if (preg_match('/QUESTION:\s*(.+?)(?=\s*ANSWER:|$)/is', $response, $qm)) {
-                $questionText = trim($qm[1]);
-                // Remove brackets and markdown formatting
+            // Split response into question-answer pairs
+            // Use preg_match_all to find all QUESTION/ANSWER pairs
+            preg_match_all('/QUESTION:\s*(.+?)(?=\s*ANSWER:|$)/is', $response, $qMatches);
+            preg_match_all('/ANSWER:\s*(.+?)(?=\s*QUESTION:|$)/is', $response, $aMatches);
+            
+            $qCount = count($qMatches[1]);
+            $aCount = count($aMatches[1]);
+            
+            // Process matched pairs
+            for ($i = 0; $i < min($qCount, $aCount); $i++) {
+                $questionText = trim($qMatches[1][$i]);
+                $answerText = trim($aMatches[1][$i]);
+                
+                // Remove brackets, markdown formatting, emojis
                 $questionText = preg_replace('/^\[|\]$/', '', $questionText);
-                $questionText = preg_replace('/\*\*/', '', $questionText);  // Remove **bold**
+                $questionText = preg_replace('/\*\*/', '', $questionText);
+                $questionText = preg_replace('/[\x{1F300}-\x{1F9FF}]/u', '', $questionText); // Remove emojis
                 $questionText = trim($questionText);
-            }
-            
-            // Look for ANSWER: - stop at end or double newline
-            if (preg_match('/ANSWER:\s*(.+?)(?=\n\n|$)/is', $response, $am)) {
-                $answerText = trim($am[1]);
-                // Remove brackets and markdown formatting
+                
                 $answerText = preg_replace('/^\[|\]$/', '', $answerText);
-                $answerText = preg_replace('/\*\*/', '', $answerText);  // Remove **bold**
+                $answerText = preg_replace('/\*\*/', '', $answerText);
+                $answerText = preg_replace('/[\x{1F300}-\x{1F9FF}]/u', '', $answerText); // Remove emojis
                 $answerText = trim($answerText);
+                
                 // Limit answer length to first 2 sentences max
                 if (strlen($answerText) > 300) {
                     preg_match('/^(.+?[.!?])(?:\s+.+?[.!?])?/s', $answerText, $sm);
                     $answerText = isset($sm[0]) ? trim($sm[0]) : substr($answerText, 0, 300);
                 }
-            }
-            
-            // If we found both, create the question
-            if (!empty($questionText) && !empty($answerText)) {
+                
+                // Skip if either is too short
+                if (strlen($questionText) < 10 || strlen($answerText) < 10) {
+                    continue;
+                }
+                
                 $questions[] = [
-                    'id' => 'essay_1',
+                    'id' => 'essay_' . ($i + 1),
                     'question' => $questionText,
                     'suggested_answer' => $answerText,
                     'rubric' => ['keywords' => []],
