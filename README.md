@@ -4,13 +4,14 @@ A complete AI-powered educational platform featuring automated course generation
 
 ## 🚀 Current Status (December 2025)
 
-**Production Ready** - Fully functional system with:
+**Alpha Release** - Core features functional, not production-ready:
 - ✅ Automated course generation from educational standards (5-agent pipeline)
 - ✅ 12-lesson "2nd Grade Science" course published with full content
 - ✅ Student advisors with persistent memory and conversation history
-- ✅ Interactive workbook with lessons, questions, and visual placeholders
+- ✅ Interactive workbook with lessons and practice questions
 - ✅ Admin dashboard for course creation and question generation
 - ✅ Dockerized deployment (MariaDB, PHP API, C++ Agent Service, llama-server)
+- ⚠️ **Not Ready:** Lesson quizzes, unit tests, video content, security hardening
 
 ## Technology Stack
 
