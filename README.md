@@ -22,6 +22,7 @@ A complete AI-powered educational platform featuring automated course generation
 - **LLM**: llama-server on port 8090 (Docker: `phef-llama`) running Qwen 2.5 1.5B
 - **API Layer**: PHP on port 8081 (Docker: `phef-api`)
 - **Memory Management**: Prompt cache clearing script for long-running sessions
+- **Security**: Username/password authentication (biometric features removed for liability)
 
 ## Architecture Overview
 

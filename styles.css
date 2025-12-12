@@ -237,42 +237,7 @@ nav {
     border-color: var(--primary-color);
 }
 
-/* Biometric Section */
-.biometric-section {
-    background: var(--bg-light);
-    padding: 2rem;
-    border-radius: var(--radius);
-    margin: 2rem 0;
-    text-align: center;
-}
 
-.biometric-preview {
-    width: 320px;
-    height: 240px;
-    background: #000;
-    border-radius: var(--radius);
-    margin: 1rem auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-}
-
-.biometric-status {
-    display: flex;
-    gap: 1rem;
-    justify-content: center;
-    margin-top: 1rem;
-}
-
-.status-indicator {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: var(--radius);
-    background: var(--bg-white);
-}
 
 .status-indicator.active {
     background: var(--secondary-color);

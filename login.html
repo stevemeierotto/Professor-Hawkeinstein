@@ -57,40 +57,6 @@
             <a href="#" style="color: var(--primary-color); text-decoration: none;">Forgot password?</a>
         </div>
 
-        <hr style="margin: 2rem 0; border: none; border-top: 2px solid var(--border-color);">
-
-        <!-- Biometric Authentication Section -->
-        <div class="biometric-section">
-            <h3 class="text-center">🔒 Biometric Authentication</h3>
-            <p class="text-center" style="font-size: 0.9rem; color: var(--text-light);">
-                Secure your session with facial recognition and voice authentication
-            </p>
-
-            <!-- Biometric Preview (Placeholder for camera feed) -->
-            <div class="biometric-preview" id="biometricPreview">
-                <div style="text-align: center;">
-                    <p style="font-size: 3rem; margin-bottom: 0.5rem;">📷</p>
-                    <p>Camera Access Required</p>
-                    <button id="enableBiometricBtn" class="btn btn-secondary mt-2">Enable Camera & Microphone</button>
-                </div>
-            </div>
-
-            <!-- Biometric Status Indicators -->
-            <div class="biometric-status">
-                <div class="status-indicator" id="faceStatus">
-                    <span>😐</span>
-                    <span>Face: Not Detected</span>
-                </div>
-                <div class="status-indicator" id="voiceStatus">
-                    <span>🔇</span>
-                    <span>Voice: Not Detected</span>
-                </div>
-            </div>
-
-            <div class="alert alert-warning mt-3">
-                <strong>Anti-Cheating Notice:</strong> Biometric authentication helps ensure academic integrity. Your session will be monitored during assessments.
-            </div>
-        </div>
     </div>
 
     <script>
@@ -178,80 +144,7 @@
             */
         });
 
-        // Biometric Authentication Handler
-        let mediaStream = null;
-        let biometricEnabled = false;
 
-        document.getElementById('enableBiometricBtn').addEventListener('click', async function() {
-            try {
-                // Request camera and microphone access
-                mediaStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: true, 
-                    audio: true 
-                });
-
-                // Display video stream
-                const preview = document.getElementById('biometricPreview');
-                const video = document.createElement('video');
-                video.srcObject = mediaStream;
-                video.autoplay = true;
-                video.style.width = '100%';
-                video.style.height = '100%';
-                video.style.objectFit = 'cover';
-                
-                preview.innerHTML = '';
-                preview.appendChild(video);
-
-                biometricEnabled = true;
-
-                // Simulate biometric detection (replace with actual OpenCV/face_recognition)
-                setTimeout(() => {
-                    document.getElementById('faceStatus').classList.add('active');
-                    document.getElementById('faceStatus').innerHTML = '<span>😊</span><span>Face: Verified</span>';
-                }, 2000);
-
-                setTimeout(() => {
-                    document.getElementById('voiceStatus').classList.add('active');
-                    document.getElementById('voiceStatus').innerHTML = '<span>🎤</span><span>Voice: Verified</span>';
-                }, 3500);
-
-                /* Production: Send video frames to PHP backend which forwards to C++ microservice
-                setInterval(async () => {
-                    if (!biometricEnabled) return;
-                    
-                    const canvas = document.createElement('canvas');
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    canvas.getContext('2d').drawImage(video, 0, 0);
-                    
-                    const frameData = canvas.toDataURL('image/jpeg', 0.8);
-                    
-                    const response = await fetch('/api/biometric/verify.php', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
-                            frame: frameData,
-                            userId: localStorage.getItem('userId')
-                        })
-                    });
-                    
-                    const result = await response.json();
-                    updateBiometricStatus(result);
-                }, 2000); // Check every 2 seconds
-                */
-
-            } catch (error) {
-                console.error('Error accessing media devices:', error);
-                alert('Unable to access camera/microphone. Please check permissions.');
-            }
-        });
-
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', () => {
-            if (mediaStream) {
-                mediaStream.getTracks().forEach(track => track.stop());
-            }
-        });
     </script>
 </body>
 </html>
