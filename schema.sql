@@ -30,8 +30,8 @@ CREATE TABLE users (
     full_name VARCHAR(100) NOT NULL,
     role ENUM('student', 'admin', 'root') DEFAULT 'student',
     created_by INT NULL,  -- For admins created by root
-    facial_signature BLOB NULL,  -- Facial recognition data
-    voice_signature BLOB NULL,   -- Voice authentication data
+    facial_signature BLOB NULL,  -- Removed for liability (legacy column)
+    voice_signature BLOB NULL,   -- Removed for liability (legacy column)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL,
     is_active BOOLEAN DEFAULT TRUE,

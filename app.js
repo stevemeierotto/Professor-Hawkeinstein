@@ -1,5 +1,5 @@
 // AI-Powered Educational Platform - Frontend JavaScript Utilities
-// Common functions for API calls, biometric access, and UI interactions
+// Common functions for API calls and UI interactions
 
 const API_BASE_URL = '/api';
 
@@ -83,114 +83,9 @@ const Auth = {
 };
 
 // ============================================
-// Biometric Authentication
+// Biometric Authentication - REMOVED
+// Biometric features have been removed for liability reasons
 // ============================================
-
-const Biometric = {
-    mediaStream: null,
-    isActive: false,
-    videoElement: null,
-    canvasElement: null,
-
-    /**
-     * Initialize camera and microphone access
-     */
-    async initialize(videoElementId) {
-        try {
-            this.mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: { width: 640, height: 480 },
-                audio: true
-            });
-
-            this.videoElement = document.getElementById(videoElementId) || document.createElement('video');
-            this.videoElement.srcObject = this.mediaStream;
-            this.videoElement.autoplay = true;
-            
-            this.canvasElement = document.createElement('canvas');
-            this.isActive = true;
-
-            return { success: true };
-        } catch (error) {
-            console.error('Biometric initialization error:', error);
-            return { success: false, error: error.message };
-        }
-    },
-
-    /**
-     * Capture current frame for facial recognition
-     */
-    captureFrame() {
-        if (!this.videoElement || !this.isActive) return null;
-
-        this.canvasElement.width = this.videoElement.videoWidth;
-        this.canvasElement.height = this.videoElement.videoHeight;
-        
-        const ctx = this.canvasElement.getContext('2d');
-        ctx.drawImage(this.videoElement, 0, 0);
-        
-        return this.canvasElement.toDataURL('image/jpeg', 0.8);
-    },
-
-    /**
-     * Verify facial recognition with backend
-     */
-    async verifyFace(userId) {
-        const frame = this.captureFrame();
-        if (!frame) return { verified: false };
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/biometric/verify-face.php`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('sessionToken')}`
-                },
-                body: JSON.stringify({ userId, frame })
-            });
-
-            return await response.json();
-        } catch (error) {
-            console.error('Face verification error:', error);
-            return { verified: false, error: error.message };
-        }
-    },
-
-    /**
-     * Start continuous monitoring for anti-cheating
-     */
-    startMonitoring(userId, interval = 5000) {
-        if (!this.isActive) return;
-
-        this.monitoringInterval = setInterval(async () => {
-            const faceResult = await this.verifyFace(userId);
-            
-            if (!faceResult.verified) {
-                console.warn('Face verification failed - possible cheating attempt');
-                this.onCheatingDetected && this.onCheatingDetected('face_not_verified');
-            }
-        }, interval);
-    },
-
-    /**
-     * Stop monitoring and cleanup
-     */
-    stop() {
-        if (this.monitoringInterval) {
-            clearInterval(this.monitoringInterval);
-        }
-
-        if (this.mediaStream) {
-            this.mediaStream.getTracks().forEach(track => track.stop());
-        }
-
-        this.isActive = false;
-    },
-
-    /**
-     * Callback for cheating detection
-     */
-    onCheatingDetected: null
-};
 
 // ============================================
 // AI Agent Communication
@@ -472,7 +367,7 @@ const UI = {
 // ============================================
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { Auth, Biometric, Agent, Progress, Course, UI };
+    module.exports = { Auth, Agent, Progress, Course, UI };
 }
 
 // ============================================

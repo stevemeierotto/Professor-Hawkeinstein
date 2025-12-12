@@ -253,8 +253,7 @@ The C++ agent microservice needs to be implemented with the following components
 
 **Endpoints to implement:**
 - `POST /api/chat` - Process agent chat requests
-- `POST /api/biometric/verify-face` - Facial recognition
-- `POST /api/biometric/verify-voice` - Voice authentication
+**Note:** Biometric API endpoints have been removed for liability reasons.
 - `POST /api/rag/query` - RAG retrieval
 - `POST /api/embedding/generate` - Generate embeddings
 
@@ -358,9 +357,7 @@ sudo chmod -R 775 /var/www/Professor_Hawkeinstein/media
   - Adaptive difficulty based on performance
   - Real-time progress dashboards
 
-- **Biometric Security**
-  - Facial recognition during sessions
-  - Voice authentication
+**Note:** Biometric security features have been removed for liability reasons.
   - Continuous monitoring
   - Cheating detection alerts
 
@@ -522,7 +519,7 @@ For questions about this implementation, refer to the inline documentation in ea
 - `docs/ADVISOR_INSTANCE_API.md` - Student advisor system API
 - `docs/ASSESSMENT_GENERATION_API.md` - Quiz and test generation
 - `docs/WORKBOOK_GUIDE.md` - Interactive workbook system
-- `docs/FACIAL_RECOGNITION_GUIDE.md` - Biometric authentication
+
 - `docs/RAG_ENGINE_README.md` - RAG implementation details
 - `docs/FILE_SYNC_GUIDE.md` - Deployment automation
 - `docs/ERROR_HANDLING_GUIDE.md` - Error handling patterns

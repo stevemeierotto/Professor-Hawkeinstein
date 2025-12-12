@@ -54,10 +54,9 @@
 
             <!-- Main Content Area -->
             <main class="main-content">
-                <!-- Biometric Monitoring Alert -->
-                <div class="alert alert-warning">
-                    <strong>🔒 Session Monitored:</strong> Facial recognition active. Your session is being monitored for academic integrity.
-                    <span class="status-indicator active">Face: Verified ✓</span>
+                <!-- Session Active Alert -->
+                <div class="alert alert-info">
+                    <strong>🔒 Session Active:</strong> Your learning progress is being tracked for this lesson.
                 </div>
 
                 <!-- Lesson Header -->
@@ -307,10 +306,9 @@
             alert('Loading next lesson...');
         });
 
-        // Simulate biometric monitoring (would be continuous in production)
+        // Track session time
         setInterval(() => {
-            // In production, this would capture frames and send to PHP/C++ for verification
-            console.log('Biometric check: Active');
+            console.log('Session tracking: Active');
         }, 5000);
     </script>
 </body>

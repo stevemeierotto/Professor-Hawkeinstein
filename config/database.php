@@ -49,8 +49,7 @@ define('SESSION_NAME', 'PROFESSORHAWKEINSTEIN_SESSION');
 define('JWT_SECRET', getenv('JWT_SECRET') ?: 'your_jwt_secret_key_here_change_in_production');
 define('PASSWORD_PEPPER', getenv('PASSWORD_PEPPER') ?: 'additional_security_pepper_change_in_production');
 
-// Biometric settings
-define('FACIAL_RECOGNITION_THRESHOLD', 0.85);
+// Biometric settings removed for liability reasons
 define('VOICE_RECOGNITION_THRESHOLD', 0.80);
 define('CHEATING_FLAG_LIMIT', 3); // Number of failed verifications before alert
 

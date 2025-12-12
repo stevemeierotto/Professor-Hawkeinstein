@@ -30,7 +30,6 @@ try {
     $email = trim($input['email'] ?? '');
     $username = trim($input['username'] ?? '');
     $password = $input['password'] ?? '';
-    $facialDescriptor = $input['facialDescriptor'] ?? [];
 
     // Validation rules
     if (strlen($fullName) < 2 || strlen($fullName) > 100) {
@@ -53,10 +52,6 @@ try {
         throw new Exception('Password must contain uppercase, lowercase, and numbers');
     }
 
-    if (empty($facialDescriptor) || !is_array($facialDescriptor)) {
-        throw new Exception('Facial recognition data is required');
-    }
-
     // Check if username already exists
     $stmt = $db->prepare('SELECT user_id FROM users WHERE username = ?');
     $stmt->execute([$username]);
@@ -74,13 +69,10 @@ try {
     // Hash password
     $passwordHash = password_hash($password, PASSWORD_BCRYPT);
 
-    // Serialize facial descriptor (array of floats)
-    $facialSignature = serialize($facialDescriptor);
-
-    // Insert user
+    // Insert user (no biometric data)
     $stmt = $db->prepare(
-        'INSERT INTO users (username, email, password_hash, full_name, facial_signature, role) 
-         VALUES (?, ?, ?, ?, ?, ?)'
+        'INSERT INTO users (username, email, password_hash, full_name, role) 
+         VALUES (?, ?, ?, ?, ?)'
     );
     
     $stmt->execute([
@@ -88,7 +80,6 @@ try {
         $email,
         $passwordHash,
         $fullName,
-        $facialSignature,
         'student'
     ]);
 
