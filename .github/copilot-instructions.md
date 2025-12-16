@@ -1,5 +1,29 @@
 # Professor Hawkeinstein Educational Platform - AI Agent Instructions
 
+## 🚨 CRITICAL: Deployment Environment Contract
+
+**READ THIS FIRST:** `docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md`
+
+This system uses **strict Dev vs Production separation:**
+- **DEV:** `/home/steve/Professor_Hawkeinstein` (coding, testing - NOT web-accessible)
+- **PROD:** `/var/www/html/basic_educational` (live site - ONLY web-accessible directory)
+
+**NEVER:**
+- Edit PROD files directly (changes lost on next deploy)
+- Assume DEV changes auto-sync to PROD (they don't)
+- Create new directories in `/var/www/html` without confirmation
+- Mix up DocumentRoot paths (always `/var/www/html/basic_educational`)
+
+**ALWAYS:**
+- Edit files in DEV first
+- Deploy to PROD explicitly (`make sync-web` or `cp`)
+- Check logs before assuming file sync issues
+- Ask before touching PROD filesystem
+
+See full contract in `docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md` for historical incidents and debugging rules.
+
+---
+
 ## Architecture Overview
 
 **Three-tier system:** Browser → PHP/Apache → C++ Agent Service → llama-server (LLM inference)

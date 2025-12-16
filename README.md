@@ -2,6 +2,16 @@
 
 A complete AI-powered educational platform featuring automated course generation, personalized student advisors, and interactive workbooks. Built with local LLM inference for privacy and cost efficiency.
 
+## 🚨 IMPORTANT: Dev vs Production Environment
+
+**Before making any file changes, read:** [`docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md`](docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md)
+
+This system has **strict separation** between development and production:
+- **Development:** `/home/steve/Professor_Hawkeinstein` (NOT web-accessible)
+- **Production:** `/var/www/html/basic_educational` (ONLY web-accessible path)
+
+Changes in DEV do NOT automatically sync to PROD. Always deploy explicitly using `make sync-web`.
+
 ## 🚀 Current Status (December 2025)
 
 **Alpha Release** - Core features functional, not production-ready:
