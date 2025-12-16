@@ -28,10 +28,13 @@ $stmt = $db->prepare("SELECT standard_code, description FROM approved_standards 
 $stmt->execute([$draftId]);
 $standards = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$outline = organizeStandardsIntoOutline($standards);
+// Try LLM-based outline generation first (uses Outline Generator agent)
+$outline = generateOutlineWithLLM($draft, $standards);
 
+// Fallback to pattern-based organization if LLM fails
 if (empty($outline)) {
-    $outline = generateOutlineWithLLM($draft, $standards);
+    error_log("[generate_draft_outline] LLM generation failed, falling back to pattern-based organization");
+    $outline = organizeStandardsIntoOutline($standards);
 }
 
 $outlineJson = json_encode($outline, JSON_PRETTY_PRINT);
@@ -111,15 +114,48 @@ function generateOutlineWithLLM($draft, $standards) {
         $standardsList .= "- " . ($std['standard_code'] ? $std['standard_code'] . ": " : "") . $std['description'] . "\n";
     }
     
-    $prompt = "Create a course outline for '{$draft['course_name']}'. Return ONLY a JSON array of units.";
+    $prompt = <<<PROMPT
+Create a course outline for "{$draft['course_name']}" ({$draft['grade']} {$draft['subject']}).
+
+Standards to cover:
+{$standardsList}
+
+Organize these standards into 3-5 units with 2-4 lessons each. Return ONLY a JSON array:
+[
+  {
+    "title": "Unit 1: Topic Name",
+    "description": "Brief unit description",
+    "lessons": [
+      {"title": "Lesson 1", "description": "What students will learn", "standard_code": "S1"},
+      {"title": "Lesson 2", "description": "What students will learn", "standard_code": "S2"}
+    ]
+  }
+]
+PROMPT;
+
+    error_log("[generateOutlineWithLLM] Calling Outline Generator agent for draft {$draft['draft_id']}");
     $agentResponse = callSystemAgent('outline', $prompt);
     
+    if (isset($agentResponse['_system_agent'])) {
+        error_log("[generateOutlineWithLLM] Using agent: " . $agentResponse['_system_agent']['agent_name']);
+    }
+    
     if (!empty($agentResponse['response'])) {
-        $resp = $agentResponse['response'];
+        $resp = trim($agentResponse['response']);
+        error_log("[generateOutlineWithLLM] Agent response length: " . strlen($resp) . " chars");
+        
+        // Try to extract JSON array from response
         if (preg_match('/\[.*\]/s', $resp, $matches)) {
             $decoded = json_decode($matches[0], true);
-            if ($decoded) return $decoded;
+            if ($decoded && is_array($decoded)) {
+                error_log("[generateOutlineWithLLM] Successfully parsed outline with " . count($decoded) . " units");
+                return $decoded;
+            }
         }
+        
+        error_log("[generateOutlineWithLLM] Failed to parse JSON from agent response");
+    } else {
+        error_log("[generateOutlineWithLLM] Agent returned empty response");
     }
     
     return [];

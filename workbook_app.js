@@ -55,10 +55,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function loadStudentInfo() {
-    const user = JSON.parse(sessionStorage.getItem('user') || '{}');
+    const user = getStudentSession('user') || {};
     if (user.username) {
         document.getElementById('studentName').textContent = user.username;
-        AppState.studentId = user.user_id;
+        AppState.studentId = user.user_id || user.userId;
     }
 }
 
@@ -369,10 +369,6 @@ function renderLesson(lesson) {
     
     // Render lesson content
     const contentHtml = `
-        <div class="alert alert-info">
-            <strong>🔒 Session Monitored:</strong> Your learning session is being monitored for academic integrity.
-        </div>
-        
         ${lesson.objectives && lesson.objectives.length > 0 ? `
         <section style="margin: 2rem 0;">
             <h2>📋 Learning Objectives</h2>
@@ -463,7 +459,7 @@ function renderLesson(lesson) {
     
     document.getElementById('lessonContent').innerHTML = contentHtml;
     
-    // Update video tab with placeholder
+    // Update video placeholder with lesson info
     document.getElementById('videoPlaceholder').innerHTML = `
         <div style="text-align: center;">
             <p style="font-size: 4rem; margin-bottom: 1rem;">🎥</p>
@@ -478,102 +474,16 @@ function renderLesson(lesson) {
         </div>
     `;
     
-    // Update notes tab with auto-generated summary from first 500 chars
-    const summaryText = lesson.explanation ? 
-        lesson.explanation.substring(0, 500).replace(/\n/g, '<br>') + '...' :
-        'Summary not available';
-    document.getElementById('lessonSummary').innerHTML = `
-        <div style="line-height: 1.6;">
-            ${summaryText}
-        </div>
-        <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-light);">
-            💡 <em>Tip: Review the full content in the reading section above</em>
-        </p>
-    `;
-    
-    // Update practice tab with actual questions from database
-    if (lesson.questions && lesson.questionCounts && lesson.questionCounts.total > 0) {
-        let practiceHtml = '<h3 style="margin-bottom: 1.5rem;">Practice with these questions:</h3>';
-        
-        // Multiple Choice Questions
-        if (lesson.questions.multiple_choice && lesson.questions.multiple_choice.length > 0) {
-            practiceHtml += '<h4 style="margin-top: 2rem; color: var(--primary);">📝 Multiple Choice</h4>';
-            lesson.questions.multiple_choice.forEach((q, idx) => {
-                const questionText = q.question || q.question_text || 'Question text missing';
-                const answer = q.correct_answer || q.answer || 'Answer missing';
-                practiceHtml += `
-                    <div class="example-box" style="margin: 1rem 0;">
-                        <p><strong>Question ${idx + 1}:</strong> ${questionText}</p>
-                        ${q.choices || q.options ? `
-                            <ul style="list-style: none; padding-left: 1rem; margin: 1rem 0;">
-                                ${(q.choices || q.options).map((opt, i) => `
-                                    <li style="padding: 0.5rem; margin: 0.25rem 0; background: var(--bg-light); border-radius: 4px; cursor: pointer;">
-                                        ${String.fromCharCode(65 + i)}. ${opt}
-                                    </li>
-                                `).join('')}
-                            </ul>
-                        ` : ''}
-                        <details style="margin-top: 1rem;">
-                            <summary style="cursor: pointer; color: var(--primary); font-weight: 600;">Show Answer</summary>
-                            <p style="margin-top: 0.5rem; padding: 1rem; background: var(--success-light); border-radius: 4px;">
-                                <strong>✓ Answer:</strong> ${answer}
-                                ${q.explanation ? `<br><strong>Explanation:</strong> ${q.explanation}` : ''}
-                            </p>
-                        </details>
-                    </div>
-                `;
-            });
+    // Enable/disable quiz button based on question availability
+    const openQuizBtn = document.getElementById('openQuizBtn');
+    if (openQuizBtn) {
+        if (lesson.questions && lesson.questionCounts && lesson.questionCounts.total > 0) {
+            openQuizBtn.disabled = false;
+            openQuizBtn.textContent = `✏️ Take Lesson Quiz (${lesson.questionCounts.total} questions)`;
+        } else {
+            openQuizBtn.disabled = true;
+            openQuizBtn.textContent = '✏️ Quiz Not Available';
         }
-        
-        // Fill in the Blank Questions
-        if (lesson.questions.fill_in_blank && lesson.questions.fill_in_blank.length > 0) {
-            practiceHtml += '<h4 style="margin-top: 2rem; color: var(--primary);">✏️ Fill in the Blank</h4>';
-            lesson.questions.fill_in_blank.forEach((q, idx) => {
-                const questionText = q.question || q.question_text || 'Question text missing';
-                const answer = q.correct_answer || q.answer || 'Answer missing';
-                practiceHtml += `
-                    <div class="example-box" style="margin: 1rem 0;">
-                        <p><strong>Question ${idx + 1}:</strong> ${questionText}</p>
-                        <details style="margin-top: 1rem;">
-                            <summary style="cursor: pointer; color: var(--primary); font-weight: 600;">Show Answer</summary>
-                            <p style="margin-top: 0.5rem; padding: 1rem; background: var(--success-light); border-radius: 4px;">
-                                <strong>✓ Answer:</strong> ${answer}
-                            </p>
-                        </details>
-                    </div>
-                `;
-            });
-        }
-        
-        // Short Essay Questions
-        if (lesson.questions.short_essay && lesson.questions.short_essay.length > 0) {
-            practiceHtml += '<h4 style="margin-top: 2rem; color: var(--primary);">📄 Short Essay</h4>';
-            lesson.questions.short_essay.forEach((q, idx) => {
-                const questionText = q.question || q.question_text || 'Question text missing';
-                const answer = q.sample_answer || q.answer || 'Sample answer missing';
-                practiceHtml += `
-                    <div class="example-box" style="margin: 1rem 0;">
-                        <p><strong>Question ${idx + 1}:</strong> ${questionText}</p>
-                        <details style="margin-top: 1rem;">
-                            <summary style="cursor: pointer; color: var(--primary); font-weight: 600;">Show Sample Answer</summary>
-                            <p style="margin-top: 0.5rem; padding: 1rem; background: var(--success-light); border-radius: 4px;">
-                                ${answer}
-                            </p>
-                        </details>
-                    </div>
-                `;
-            });
-        }
-        
-        document.getElementById('practiceQuestions').innerHTML = practiceHtml;
-    } else {
-        document.getElementById('practiceQuestions').innerHTML = `
-            <div style="text-align: center; padding: 3rem;">
-                <div style="font-size: 3rem; margin-bottom: 1rem;">📝</div>
-                <p style="color: var(--text-light);">Practice questions for this lesson are being prepared.</p>
-                <p style="color: var(--text-light); font-size: 0.9rem; margin-top: 0.5rem;">Check back soon!</p>
-            </div>
-        `;
     }
 }
 
@@ -652,20 +562,31 @@ function showError(title, message) {
 // ==========================================
 
 function setupEventListeners() {
-    // Media tabs
-    const mediaTabs = document.querySelectorAll('.media-tab');
-    mediaTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            // Remove active from all tabs and panels
-            document.querySelectorAll('.media-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.media-panel').forEach(p => p.classList.remove('active'));
+    // Quiz button - opens quiz in new window
+    const openQuizBtn = document.getElementById('openQuizBtn');
+    if (openQuizBtn) {
+        openQuizBtn.addEventListener('click', () => {
+            if (!AppState.currentCourseData || !AppState.selectedLesson) {
+                alert('Please select a lesson first');
+                return;
+            }
+
+            const courseData = AppState.currentCourseData;
+            const unit = courseData.units.find(u => u.unitNumber === AppState.selectedUnit);
+            const lesson = unit.lessons.find(l => l.lessonNumber === AppState.selectedLesson);
             
-            // Add active to clicked tab and corresponding panel
-            tab.classList.add('active');
-            const tabName = tab.getAttribute('data-tab');
-            document.getElementById(`${tabName}-panel`).classList.add('active');
+            // Build quiz URL with parameters
+            const quizUrl = `quiz.html?` +
+                `courseId=${encodeURIComponent(AppState.selectedCourse)}` +
+                `&unitIndex=${AppState.selectedUnit - 1}` +
+                `&lessonIndex=${AppState.selectedLesson - 1}` +
+                `&courseName=${encodeURIComponent(courseData.title)}` +
+                `&lessonTitle=${encodeURIComponent(lesson.title)}`;
+            
+            // Open quiz in new window
+            window.open(quizUrl, 'quiz_window', 'width=1000,height=800,scrollbars=yes,resizable=yes');
         });
-    });
+    }
     
     // Back to lessons button
     document.getElementById('backToLessons').addEventListener('click', () => {
@@ -722,27 +643,49 @@ async function sendChatMessage() {
         context = `Currently studying: ${lesson.lessonTitle} (${lesson.courseName}, Unit ${lesson.unitNumber})`;
     }
     
-    // Send to agent API
+    // Send to agent API via PHP proxy
     try {
+        const token = getStudentSession('token') || '';
+        
+        const payload = {
+            agentId: 1, // Professor Hawkeinstein
+            message: context ? `${context}\n\nStudent question: ${message}` : message
+        };
+        
+        console.log('[Workbook Chat] Calling PHP proxy with payload:', payload);
+        
         const response = await fetch('api/agent/chat.php', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: AppState.studentId || 1,
-                agentId: 1, // Professor Hawkeinstein
-                message: context ? `${context}\n\nStudent question: ${message}` : message
-            })
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
         });
         
-        const data = await response.json();
+        const responseText = await response.text();
+        console.log('[Workbook Chat] Raw response:', responseText);
         
-        if (data.success) {
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('[Workbook Chat] JSON parse error:', parseError);
+            console.error('[Workbook Chat] Response was:', responseText.substring(0, 500));
+            addChatMessage('agent', 'Sorry, received an invalid response from the server.');
+            return;
+        }
+        
+        console.log('[Workbook Chat] Parsed response:', data);
+        
+        if (data.success && data.response) {
             addChatMessage('agent', data.response);
         } else {
-            addChatMessage('agent', 'Sorry, I encountered an error. Please try again.');
+            console.error('[Workbook Chat] Error in response:', data);
+            addChatMessage('agent', 'Sorry, I encountered an error: ' + (data.message || 'No response'));
         }
     } catch (error) {
-        console.error('Chat error:', error);
+        console.error('[Workbook Chat] Error:', error);
         addChatMessage('agent', 'Sorry, I could not connect to the server.');
     }
 }

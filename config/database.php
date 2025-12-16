@@ -70,9 +70,11 @@ function getDB() {
     
     if ($pdo === null) {
         try {
+            // Use explicit TCP connection with 127.0.0.1:3306
             $dsn = sprintf(
-                'mysql:host=%s;dbname=%s;charset=%s',
-                DB_HOST,
+                'mysql:host=%s;port=%d;dbname=%s;charset=%s',
+                '127.0.0.1',
+                3306,
                 DB_NAME,
                 DB_CHARSET
             );
@@ -223,7 +225,7 @@ function logActivity($userId, $action, $details = '') {
     $logFile = __DIR__ . '/../logs/activity.log';
     $timestamp = date('Y-m-d H:i:s');
     $entry = "[$timestamp] User $userId: $action - $details\n";
-    file_put_contents($logFile, $entry, FILE_APPEND);
+    @file_put_contents($logFile, $entry, FILE_APPEND);
 }
 
 /**

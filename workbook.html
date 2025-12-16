@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="auth_storage.js"></script>
     <title>Workbook - Professor Hawkeinstein's Educational Foundation</title>
     <link rel="stylesheet" href="styles.css">
     <style>
@@ -177,24 +178,30 @@
             <ul class="nav-links">
                 <li><a href="student_dashboard.html">← Back to Dashboard</a></li>
                 <li><a href="#" id="studentName">Student</a></li>
+                <li>
+                    <button id="agentChatBubble" class="agent-chat-bubble" title="Chat with your AI agent">
+                        <span class="bubble-icon">💬</span>
+                        <span class="bubble-badge" id="unreadBadge" style="display: none;">0</span>
+                    </button>
+                </li>
             </ul>
         </div>
     </nav>
 
-    <!-- Workbook Layout -->
-    <div class="workbook-container">
-        <!-- Left Column: AI Agent Chat (1/3 width) -->
-        <aside class="workbook-chat">
-            <div class="chat-container" style="height: calc(100vh - 80px);">
-                <div class="chat-header">
-                    <div class="agent-avatar">PH</div>
-                    <div>
-                        <h4 style="margin: 0; color: white;">Professor Hawkeinstein</h4>
-                        <p style="margin: 0; font-size: 0.875rem; opacity: 0.9;">Your Learning Assistant</p>
-                    </div>
-                </div>
+    <!-- Floating Agent Chat Panel -->
+    <div id="agentChatPanel" class="agent-chat-panel">
+        <div class="chat-panel-header">
+            <div class="agent-avatar">PH</div>
+            <div style="flex: 1;">
+                <h4 style="margin: 0; color: white;">Professor Hawkeinstein</h4>
+                <p style="margin: 0; font-size: 0.875rem; opacity: 0.9;">Your Learning Assistant</p>
+            </div>
+            <button id="closeChatPanel" class="close-chat-btn" title="Close chat">
+                <span>✕</span>
+            </button>
+        </div>
 
-                <div class="chat-messages" id="workbookChat">
+        <div class="chat-messages" id="workbookChat">
                     <div class="message agent">
                         <div class="message-avatar">PH</div>
                         <div class="message-content">
@@ -205,14 +212,39 @@
                     </div>
                 </div>
 
-                <div class="chat-input-container">
-                    <input type="text" id="workbookChatInput" placeholder="Ask about the lesson..." />
-                    <button class="btn btn-primary" id="workbookSendBtn">Send</button>
+        <div class="chat-input-container">
+            <input type="text" id="workbookChatInput" placeholder="Ask about the lesson..." />
+            <button class="btn btn-primary" id="workbookSendBtn">Send</button>
+        </div>
+    </div>
+
+    <!-- Workbook Layout -->
+    <div class="workbook-container-fullwidth">
+        <!-- Left Panel: Multimedia Content -->
+        <aside class="multimedia-sidebar">
+            <div class="multimedia-sidebar-content">
+                <h3 style="margin: 0 0 1rem 0; color: var(--primary);">📺 Multimedia Content</h3>
+                
+                <!-- Video Container -->
+                <div class="video-container" style="margin: 0 0 1.5rem 0;">
+                    <div class="video-placeholder" id="videoPlaceholder">
+                        <div>
+                            <p>▶️</p>
+                            <p id="videoTitle">Video lesson</p>
+                            <p style="font-size: 1rem; margin-top: 1rem;" id="videoDuration">Select a lesson to view multimedia content</p>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Lesson Quiz Button -->
+                <button class="btn btn-primary" id="openQuizBtn" style="width: 100%; margin-top: 1rem;" disabled>
+                    ✏️ Take Lesson Quiz
+                </button>
+                <p style="font-size: 0.85rem; color: var(--text-light); text-align: center; margin-top: 0.5rem;">Opens in new window</p>
             </div>
         </aside>
 
-        <!-- Right Column: Content Area (2/3 width) -->
+        <!-- Content Area (Right Side) -->
         <main class="workbook-content">
             <!-- Navigation Panel -->
             <div class="workbook-nav-panel" id="navigationPanel">
@@ -251,54 +283,7 @@
                     </div>
 
                     <div class="reading-content" id="lessonContent">
-                        <div class="alert alert-info">
-                            <strong>🔒 Session Monitored:</strong> Your learning session is being monitored for academic integrity.
-                        </div>
                         <p style="text-align: center; color: var(--text-light); padding: 2rem;">Select a lesson to begin</p>
-                    </div>
-                </section>
-
-                <!-- Bottom Half: Video/Media -->
-                <section class="workbook-media">
-                    <div class="media-tabs">
-                        <button class="media-tab active" data-tab="video">📹 Video Lesson</button>
-                        <button class="media-tab" data-tab="notes">📝 Notes</button>
-                        <button class="media-tab" data-tab="practice">✏️ Practice</button>
-                    </div>
-
-                    <div class="media-content-area">
-                        <!-- Video Tab -->
-                        <div class="media-panel active" id="video-panel">
-                            <div class="video-container" style="margin: 0;">
-                                <div class="video-placeholder" id="videoPlaceholder">
-                                    <div>
-                                        <p>▶️</p>
-                                        <p id="videoTitle">Video lesson</p>
-                                        <p style="font-size: 1rem; margin-top: 1rem;" id="videoDuration"></p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Notes Tab -->
-                        <div class="media-panel" id="notes-panel">
-                            <div style="padding: 2rem; background: var(--bg-light); border-radius: 8px; min-height: 300px;">
-                                <h3>📝 Lesson Summary</h3>
-                                <div id="lessonSummary">
-                                    <p style="color: var(--text-light);">Summary will appear here when you load a lesson.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Practice Tab -->
-                        <div class="media-panel" id="practice-panel">
-                            <div style="padding: 2rem; background: var(--bg-light); border-radius: 8px; min-height: 300px;">
-                                <h3>✏️ Practice Questions</h3>
-                                <div id="practiceQuestions">
-                                    <p style="color: var(--text-light);">Practice questions will appear here when you load a lesson.</p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </section>
 
@@ -319,5 +304,53 @@
     </div>
 
     <script src="workbook_app.js"></script>
+    <script>
+        // Agent Chat Bubble Functionality
+        (function() {
+            const chatBubble = document.getElementById('agentChatBubble');
+            const chatPanel = document.getElementById('agentChatPanel');
+            const closeBtn = document.getElementById('closeChatPanel');
+            
+            // Toggle chat panel
+            chatBubble.addEventListener('click', function(e) {
+                e.stopPropagation();
+                chatPanel.classList.toggle('active');
+                
+                // Clear unread badge when opening
+                if (chatPanel.classList.contains('active')) {
+                    const badge = document.getElementById('unreadBadge');
+                    badge.style.display = 'none';
+                    badge.textContent = '0';
+                }
+            });
+            
+            // Close chat panel
+            closeBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                chatPanel.classList.remove('active');
+            });
+            
+            // Close when clicking outside
+            document.addEventListener('click', function(e) {
+                if (chatPanel.classList.contains('active') && 
+                    !chatPanel.contains(e.target) && 
+                    !chatBubble.contains(e.target)) {
+                    chatPanel.classList.remove('active');
+                }
+            });
+            
+            // Prevent panel clicks from closing
+            chatPanel.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+            
+            // Handle ESC key to close
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && chatPanel.classList.contains('active')) {
+                    chatPanel.classList.remove('active');
+                }
+            });
+        })();
+    </script>
 </body>
 </html>

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="auth_storage.js"></script>
     <title>Course Viewer - Professor Hawkeinstein's Educational Foundation</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -14,9 +15,45 @@
             <ul class="nav-links">
                 <li><a href="student_dashboard.html">← Back to Dashboard</a></li>
                 <li><a href="#" id="studentName">John Doe</a></li>
+                <li>
+                    <button id="agentChatBubble" class="agent-chat-bubble" title="Chat with your AI agent">
+                        <span class="bubble-icon">💬</span>
+                        <span class="bubble-badge" id="unreadBadge" style="display: none;">0</span>
+                    </button>
+                </li>
             </ul>
         </div>
     </nav>
+
+    <!-- Floating Agent Chat Panel -->
+    <div id="agentChatPanel" class="agent-chat-panel">
+        <div class="chat-panel-header">
+            <div class="agent-avatar">PH</div>
+            <div style="flex: 1;">
+                <h4 style="margin: 0; color: white;">Professor Hawkeinstein</h4>
+                <p style="margin: 0; font-size: 0.875rem; opacity: 0.9;">Mathematics Expert • Here to help with this lesson</p>
+            </div>
+            <button id="closeChatPanel" class="close-chat-btn" title="Close chat">
+                <span>✕</span>
+            </button>
+        </div>
+
+        <div class="chat-messages" id="lessonChat">
+            <div class="message agent">
+                <div class="message-avatar">PH</div>
+                <div class="message-content">
+                    <p><strong>Professor Hawkeinstein</strong></p>
+                    <p>Welcome to our lesson on quadratic equations! I've reviewed your progress and I know you've been working hard. Feel free to ask me anything about this lesson - I'm here to help you master these concepts.</p>
+                    <small style="opacity: 0.7;">Just now</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-input-container">
+            <input type="text" id="lessonChatInput" placeholder="Ask about quadratic equations..." />
+            <button class="btn btn-primary" id="lessonSendBtn">Send</button>
+        </div>
+    </div>
 
     <!-- Course Viewer -->
     <div class="container-fluid">
@@ -106,36 +143,6 @@
                             <li>Apply the formula: x = (-5 ± √49) / 4 = (-5 ± 7) / 4</li>
                             <li>Two solutions: x₁ = 2/4 = 0.5 and x₂ = -12/4 = -3</li>
                         </ol>
-                    </div>
-                </section>
-
-                <!-- Interactive AI Agent Section -->
-                <section class="mt-4">
-                    <h2>💬 Ask Professor Hawkeinstein</h2>
-                    <div class="chat-container" style="height: 400px;">
-                        <div class="chat-header">
-                            <div class="agent-avatar">PH</div>
-                            <div>
-                                <h4 style="margin: 0; color: white;">Professor Hawkeinstein</h4>
-                                <p style="margin: 0; font-size: 0.875rem; opacity: 0.9;">Mathematics Expert • Here to help with this lesson</p>
-                            </div>
-                        </div>
-
-                        <div class="chat-messages" id="lessonChat">
-                            <div class="message agent">
-                                <div class="message-avatar">PH</div>
-                                <div class="message-content">
-                                    <p><strong>Professor Hawkeinstein</strong></p>
-                                    <p>Welcome to our lesson on quadratic equations! I've reviewed your progress and I know you've been working hard. Feel free to ask me anything about this lesson - I'm here to help you master these concepts.</p>
-                                    <small style="opacity: 0.7;">Just now</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="chat-input-container">
-                            <input type="text" id="lessonChatInput" placeholder="Ask about quadratic equations..." />
-                            <button class="btn btn-primary" id="lessonSendBtn">Send</button>
-                        </div>
                     </div>
                 </section>
 
@@ -310,6 +317,53 @@
         setInterval(() => {
             console.log('Session tracking: Active');
         }, 5000);
+
+        // Agent Chat Bubble Functionality
+        (function() {
+            const chatBubble = document.getElementById('agentChatBubble');
+            const chatPanel = document.getElementById('agentChatPanel');
+            const closeBtn = document.getElementById('closeChatPanel');
+            
+            // Toggle chat panel
+            chatBubble.addEventListener('click', function(e) {
+                e.stopPropagation();
+                chatPanel.classList.toggle('active');
+                
+                // Clear unread badge when opening
+                if (chatPanel.classList.contains('active')) {
+                    const badge = document.getElementById('unreadBadge');
+                    badge.style.display = 'none';
+                    badge.textContent = '0';
+                }
+            });
+            
+            // Close chat panel
+            closeBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                chatPanel.classList.remove('active');
+            });
+            
+            // Close when clicking outside
+            document.addEventListener('click', function(e) {
+                if (chatPanel.classList.contains('active') && 
+                    !chatPanel.contains(e.target) && 
+                    !chatBubble.contains(e.target)) {
+                    chatPanel.classList.remove('active');
+                }
+            });
+            
+            // Prevent panel clicks from closing
+            chatPanel.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+            
+            // Handle ESC key to close
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && chatPanel.classList.contains('active')) {
+                    chatPanel.classList.remove('active');
+                }
+            });
+        })();
     </script>
 </body>
 </html>
