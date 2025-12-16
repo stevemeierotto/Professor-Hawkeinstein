@@ -31,7 +31,7 @@ Standards (CSP) → Agent 1 → Agent 2 → Agent 3 → Agent 4 → Agent 5
 
 ### ✅ Agent 3: Content Creator (ID 18)
 - **Status:** WORKING
-- **API:** `POST /api/admin/scrape_lesson_content.php?source=generate`
+- **API:** `POST /api/admin/generate_lesson_content.php`
 - **Test:** Not tested in this session, but confirmed in code
 - **Output:** Markdown/HTML lesson content
 
@@ -85,13 +85,13 @@ curl -X POST /api/admin/generate_draft_outline.php \
 
 ### 5. Generate Lesson Content (Agent 3)
 ```bash
-curl -X POST /api/admin/scrape_lesson_content.php \
+curl -X POST /api/admin/generate_lesson_content.php \
   -d '{
     "draftId":5,
     "unitIndex":0,
     "lessonIndex":0,
     "lessonTitle":"The American Revolution",
-    "source":"generate"
+    "lessonDescription":"Students will learn about the causes and effects..."
   }'
 ```
 **Result:** Returns full lesson content

@@ -1247,12 +1247,9 @@
 
         async function generateLesson(unitIndex, lessonIndex, lessonTitle, lessonDescription = '') {
             showAlert(`🤖 Generating content for: ${lessonTitle}...`, 'info');
-            
-            // Use full description for LLM generation, fall back to title if not provided
-            const searchQuery = lessonDescription || lessonTitle;
 
             try {
-                const res = await fetch('api/admin/scrape_lesson_content.php', {
+                const res = await fetch('api/admin/generate_lesson_content.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1263,8 +1260,7 @@
                         unitIndex,
                         lessonIndex,
                         lessonTitle,
-                        source: 'generate',
-                        searchQuery: searchQuery
+                        lessonDescription: lessonDescription || lessonTitle
                     })
                 });
                 const data = await res.json();
@@ -1431,7 +1427,7 @@
                     }
 
                     try {
-                        const res = await fetch('api/admin/scrape_lesson_content.php', {
+                        const res = await fetch('api/admin/generate_lesson_content.php', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -1442,8 +1438,7 @@
                                 unitIndex,
                                 lessonIndex,
                                 lessonTitle,
-                                source,
-                                searchQuery: lessonDescription
+                                lessonDescription
                             })
                         });
                         const data = await res.json();
@@ -1502,7 +1497,7 @@
                 }
 
                 try {
-                    const res = await fetch('api/admin/scrape_lesson_content.php', {
+                    const res = await fetch('api/admin/generate_lesson_content.php', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1513,8 +1508,7 @@
                             unitIndex,
                             lessonIndex,
                             lessonTitle,
-                            source,
-                            searchQuery: lessonDescription
+                            lessonDescription
                         })
                     });
                     const data = await res.json();

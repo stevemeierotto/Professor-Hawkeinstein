@@ -167,7 +167,7 @@ We still scrape **educational standards** from CSP (Common Standards Project), b
 }
 ```
 
-**Implementation:** `api/admin/scrape_lesson_content.php` with `source=generate` (existing, simplified version)
+**Implementation:** `api/admin/generate_lesson_content.php` (pure LLM generation, no scraping)
 
 **Status:** ✅ Basic implementation complete. Needs enhancement for structured JSON output.
 
@@ -532,7 +532,7 @@ Return as JSON array with format:
 ## Files Changed (December 2, 2025)
 
 - `api/admin/generate_draft_outline.php` - Now uses pattern recognition (no LLM for structure)
-- `api/admin/scrape_lesson_content.php` - Added `source=generate` option for LLM generation
+- `api/admin/generate_lesson_content.php` - Pure LLM generation (replaces old scraping approach)
 - `admin_course_wizard.html` - Added "🤖 Generate with AI" as default option
 - `COURSE_GENERATION_ARCHITECTURE.md` - This file (NEW)
 

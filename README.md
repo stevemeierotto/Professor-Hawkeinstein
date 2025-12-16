@@ -103,7 +103,7 @@ Professor_Hawkeinstein/
 │   ├── admin/                      # Admin-only endpoints (JWT required)
 │   │   ├── auth_check.php          # requireAdmin() middleware
 │   │   ├── generate_draft_outline.php    # Agent 1: Standards → Outline
-│   │   ├── scrape_lesson_content.php     # Agent 2: Generate lessons
+│   │   ├── generate_lesson_content.php   # Agent 2: Generate lessons
 │   │   ├── generate_lesson_questions.php # Agent 3: Question banks
 │   │   ├── publish_course.php      # Publish course to students
 │   │   ├── list_student_advisors.php     # View all advisor instances
@@ -387,7 +387,7 @@ sudo chmod -R 775 /var/www/Professor_Hawkeinstein/media
 ### Admin Endpoints (Require JWT)
 **Course Generation:**
 - `POST /api/admin/generate_draft_outline.php` - Agent 1: Create outline
-- `POST /api/admin/scrape_lesson_content.php` - Agent 2: Generate lessons
+- `POST /api/admin/generate_lesson_content.php` - Agent 2: Generate lessons
 - `POST /api/admin/generate_lesson_questions.php` - Agent 3: Create questions
   - Supports batch generation (5 questions per call)
 - `POST /api/admin/publish_course.php` - Publish course to students

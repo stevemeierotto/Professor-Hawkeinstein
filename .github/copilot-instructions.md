@@ -64,7 +64,7 @@ Standards (CSP) → Agent 1 (Outline) → Agent 2 (Lessons) → Agent 3 (Questio
 | Agent | Purpose | File |
 |-------|---------|------|
 | 1. Standards-to-Outline | Structure course | `generate_draft_outline.php` |
-| 2. Lesson Builder | Generate lesson content | `scrape_lesson_content.php?source=generate` |
+| 2. Lesson Builder | Generate lesson content | `generate_lesson_content.php` |
 | 3. Question Bank | Create quiz questions | `generate_lesson_questions.php` (TODO) |
 | 4. Unit Test | Compile unit tests | `generate_unit_test.php` (TODO) |
 | 5. Validator | QA check | `validate_course.php` (TODO) |

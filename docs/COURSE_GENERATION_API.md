@@ -149,12 +149,12 @@ curl -X POST "http://localhost:8081/api/admin/generate_draft_outline.php" \
 
 ### 5. Generate Lesson Content
 
-**Endpoint:** `POST /api/admin/scrape_lesson_content.php`
+**Endpoint:** `POST /api/admin/generate_lesson_content.php`
 
 Uses the **Content Creator Agent** to generate age-appropriate lesson content.
 
 ```bash
-curl -X POST "http://localhost:8081/api/admin/scrape_lesson_content.php" \
+curl -X POST "http://localhost:8081/api/admin/generate_lesson_content.php" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
