@@ -70,10 +70,12 @@ function getDB() {
     
     if ($pdo === null) {
         try {
-            // Use explicit TCP connection with 127.0.0.1:3306
+            // Use DB_HOST from environment (supports both Docker and local setups)
+            // Docker: DB_HOST=database (container name)
+            // Local: DB_HOST=127.0.0.1 (localhost)
             $dsn = sprintf(
                 'mysql:host=%s;port=%d;dbname=%s;charset=%s',
-                '127.0.0.1',
+                DB_HOST,
                 3306,
                 DB_NAME,
                 DB_CHARSET
