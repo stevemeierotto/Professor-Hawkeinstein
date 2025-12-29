@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Step 1: Course Metadata - Course Wizard</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="auth_storage.js"></script>
+    <script src="admin_auth.js"></script>
+    <style>
+        .wizard-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .wizard-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            padding: 2rem;
+        }
+        .wizard-steps {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        .step.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .step-number {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            background: var(--bg-light);
+            border: 2px solid var(--border-color);
+        }
+        .step.active .step-number {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        .wizard-header {
+            margin-bottom: 1.5rem;
+        }
+        .wizard-header h2 {
+            margin: 0 0 0.5rem 0;
+        }
+        .wizard-header p {
+            color: var(--text-light);
+            margin: 0;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-block;
+        }
+        .btn-primary {
+            background: #4f46e5;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #4338ca;
+        }
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+            border: 1px solid #d1d5db;
+        }
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .btn-group {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .alert-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <span class="logo">🎓 Professor Hawkeinstein's Educational Foundation</span>
+            <ul class="nav-links">
+                <li><a href="admin_dashboard.html">← Admin Dashboard</a></li>
+                <li><span id="adminName" style="color: var(--text-light);">Root Administrator</span></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="wizard-container">
+        <div class="wizard-card">
+            <!-- Wizard Steps -->
+            <div class="wizard-steps">
+                <div class="step active">
+                    <span class="step-number">1</span>
+                    <span>Metadata</span>
+                </div>
+                <span style="color: var(--text-light);">→</span>
+                <div class="step">
+                    <span class="step-number">2</span>
+                    <span>Standards</span>
+                </div>
+                <span style="color: var(--text-light);">→</span>
+                <div class="step">
+                    <span class="step-number">3</span>
+                    <span>Outline</span>
+                </div>
+                <span style="color: var(--text-light);">→</span>
+                <div class="step">
+                    <span class="step-number">4</span>
+                    <span>Publish</span>
+                </div>
+            </div>
+
+            <div class="wizard-header">
+                <h2>📝 Course Metadata</h2>
+                <p>Enter basic details for your new course. You will review standards and outline next.</p>
+            </div>
+
+            <div id="alertContainer"></div>
+
+            <form id="courseMetaForm">
+                <div class="form-group">
+                    <label for="courseName">Course Name *</label>
+                    <input type="text" id="courseName" name="courseName" class="form-control" placeholder="e.g., Introduction to Algebra" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="subject">Subject *</label>
+                    <select id="subject" name="subject" class="form-control" required>
+                        <option value="">-- Select Subject --</option>
+                        <option value="mathematics">Mathematics</option>
+                        <option value="science">Science</option>
+                        <option value="english">English/Language Arts</option>
+                        <option value="social_studies">Social Studies</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="grade">Grade Level *</label>
+                    <select id="grade" name="grade" class="form-control" required>
+                        <option value="">-- Select Grade --</option>
+                        <option value="kindergarten">Kindergarten</option>
+                        <option value="grade_1">Grade 1</option>
+                        <option value="grade_2">Grade 2</option>
+                        <option value="grade_3">Grade 3</option>
+                        <option value="grade_4">Grade 4</option>
+                        <option value="grade_5">Grade 5</option>
+                        <option value="grade_6">Grade 6</option>
+                        <option value="grade_7">Grade 7</option>
+                        <option value="grade_8">Grade 8</option>
+                        <option value="grade_9">Grade 9</option>
+                        <option value="grade_10">Grade 10</option>
+                        <option value="grade_11">Grade 11</option>
+                        <option value="grade_12">Grade 12</option>
+                    </select>
+                </div>
+
+                <div class="btn-group">
+                    <button type="button" class="btn btn-secondary" onclick="window.location.href='admin_courses.html'">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">Next: Select Standards →</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    // Auth check
+    const user = getAdminSession('user');
+    if (!user || !user.username || (user.role !== 'admin' && user.role !== 'root')) {
+        window.location.href = 'admin_login.html';
+    }
+    document.getElementById('adminName').textContent = user.name || user.username;
+
+    document.getElementById('courseMetaForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = 'Creating draft...';
+        
+        const formData = Object.fromEntries(new FormData(e.target));
+        
+        try {
+            const res = await fetch('api/admin/create_course_draft.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}`
+                },
+                body: JSON.stringify(formData)
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                window.location.href = `admin_content_review.html?draftId=${data.draftId}`;
+            } else {
+                document.getElementById('alertContainer').innerHTML = `<div class="alert alert-error">${data.message || 'Failed to create draft'}</div>`;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Next: Select Standards →';
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('alertContainer').innerHTML = `<div class="alert alert-error">Error creating course draft. Please try again.</div>`;
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Next: Select Standards →';
+        }
+    };
+    </script>
+</body>
+</html>

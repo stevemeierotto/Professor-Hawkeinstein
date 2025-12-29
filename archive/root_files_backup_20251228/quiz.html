@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Practice Quiz - Professor Hawkeinstein</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="auth_storage.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg-light);
+        }
+
+        .quiz-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .quiz-header {
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .quiz-header h1 {
+            margin: 0 0 0.5rem 0;
+            color: var(--primary);
+        }
+
+        .quiz-meta {
+            display: flex;
+            gap: 2rem;
+            color: var(--text-light);
+            font-size: 0.95rem;
+        }
+
+        .question-card {
+            background: var(--bg-light);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .question-number {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .question-type {
+            font-size: 0.85rem;
+            padding: 0.25rem 0.75rem;
+            background: var(--primary);
+            color: white;
+            border-radius: 4px;
+        }
+
+        .question-text {
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .answer-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .answer-option {
+            display: flex;
+            align-items: flex-start;
+            padding: 1rem;
+            background: white;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .answer-option:hover {
+            border-color: var(--primary);
+            background: #f8f9ff;
+        }
+
+        .answer-option.selected {
+            border-color: var(--primary);
+            background: #e8eaff;
+        }
+
+        .answer-option input[type="radio"] {
+            margin-right: 0.75rem;
+            margin-top: 0.25rem;
+        }
+
+        .answer-text {
+            flex: 1;
+        }
+
+        .short-answer-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .short-answer-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .quiz-actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px solid var(--border-color);
+        }
+
+        .quiz-progress {
+            text-align: center;
+            color: var(--text-light);
+            margin-top: 1rem;
+        }
+
+        .loading-message {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-light);
+        }
+
+        .error-message {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .quiz-complete {
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .quiz-complete h2 {
+            color: var(--success-color);
+            margin-bottom: 1rem;
+        }
+
+        .score-display {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 2rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <div class="quiz-header">
+            <h1 id="quizTitle">Practice Quiz</h1>
+            <div class="quiz-meta">
+                <span id="quizCourse"></span>
+                <span id="quizLesson"></span>
+                <span id="quizQuestionCount"></span>
+            </div>
+        </div>
+
+        <div id="quizContent">
+            <div class="loading-message">
+                <p>Loading quiz questions...</p>
+            </div>
+        </div>
+
+        <div class="quiz-actions" id="quizActions" style="display: none;">
+            <button class="btn btn-outline" id="prevQuestion">← Previous</button>
+            <button class="btn btn-primary" id="nextQuestion">Next →</button>
+        </div>
+
+        <div class="quiz-progress" id="quizProgress"></div>
+    </div>
+
+    <script>
+        // Get quiz parameters from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const courseId = urlParams.get('courseId');
+        const unitIndex = urlParams.get('unitIndex');
+        const lessonIndex = urlParams.get('lessonIndex');
+        const courseName = urlParams.get('courseName') || 'Unknown Course';
+        const lessonTitle = urlParams.get('lessonTitle') || 'Unknown Lesson';
+
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let userAnswers = {};
+
+        // Load quiz data
+        async function loadQuiz() {
+            if (!courseId || unitIndex === null || lessonIndex === null) {
+                document.getElementById('quizContent').innerHTML = `
+                    <div class="error-message">
+                        <h3>⚠️ Invalid Quiz Parameters</h3>
+                        <p>Missing required course or lesson information.</p>
+                        <button class="btn btn-outline" onclick="window.close()">Close Window</button>
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                const apiUrl = `${window.location.origin}${window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'))}/api/course/get_lesson_content.php?courseId=${courseId}&unitIndex=${unitIndex}&lessonIndex=${lessonIndex}`;
+                console.log('Fetching from:', apiUrl);
+                const response = await fetch(apiUrl);
+                
+                const responseText = await response.text();
+                console.log('Raw API response:', responseText);
+                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError);
+                    console.error('Response was:', responseText.substring(0, 500));
+                    throw new Error(`JSON.parse: ${parseError.message}`);
+                }
+
+                if (data.success && data.questions) {
+                    // Random selection: 3 questions from each type
+                    const multipleChoice = data.questions.multiple_choice || [];
+                    const fillInBlank = data.questions.fill_in_blank || [];
+                    const shortEssay = data.questions.short_essay || [];
+                    
+                    // Shuffle and pick 3 from each
+                    const shuffleArray = (arr) => arr.sort(() => Math.random() - 0.5);
+                    const selectedMC = shuffleArray([...multipleChoice]).slice(0, 3);
+                    const selectedFIB = shuffleArray([...fillInBlank]).slice(0, 3);
+                    const selectedEssay = shuffleArray([...shortEssay]).slice(0, 3);
+                    
+                    // Combine and shuffle final quiz (9 questions total)
+                    questions = shuffleArray([...selectedMC, ...selectedFIB, ...selectedEssay]);
+
+                    if (questions.length === 0) {
+                        document.getElementById('quizContent').innerHTML = `
+                            <div class="error-message">
+                                <h3>No Questions Available</h3>
+                                <p>This lesson doesn't have any quiz questions yet.</p>
+                                <button class="btn btn-outline" onclick="window.close()">Close Window</button>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    // Update header
+                    document.getElementById('quizTitle').textContent = `Lesson Quiz: ${lessonTitle}`;
+                    document.getElementById('quizCourse').textContent = `📚 ${courseName}`;
+                    document.getElementById('quizLesson').textContent = `📖 Lesson ${parseInt(lessonIndex) + 1}`;
+                    document.getElementById('quizQuestionCount').textContent = `❓ ${questions.length} Questions`;
+
+                    // Show first question
+                    displayQuestion(0);
+                    document.getElementById('quizActions').style.display = 'flex';
+                } else {
+                    throw new Error('Failed to load quiz data');
+                }
+            } catch (error) {
+                console.error('Quiz load error:', error);
+                document.getElementById('quizContent').innerHTML = `
+                    <div class="error-message">
+                        <h3>⚠️ Error Loading Quiz</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-outline" onclick="window.close()">Close Window</button>
+                    </div>
+                `;
+            }
+        }
+
+        function displayQuestion(index) {
+            currentQuestionIndex = index;
+            const question = questions[index];
+            
+            // Get answer options - API uses 'options', some may have 'choices'
+            const answerOptions = question.options || question.choices;
+            const questionType = answerOptions ? 'Multiple Choice' : 
+                                question.hint ? 'Fill in the Blank' : 'Short Answer';
+
+            let html = `
+                <div class="question-card">
+                    <div class="question-header">
+                        <span class="question-number">Question ${index + 1} of ${questions.length}</span>
+                        <span class="question-type">${questionType}</span>
+                    </div>
+                    <div class="question-text">${question.question || question.question_text}</div>
+            `;
+
+            if (answerOptions) {
+                // Multiple choice
+                html += '<div class="answer-options">';
+                answerOptions.forEach((choice, i) => {
+                    const isSelected = userAnswers[index] === choice;
+                    html += `
+                        <label class="answer-option ${isSelected ? 'selected' : ''}" data-index="${index}" data-answer="${choice}">
+                            <input type="radio" name="q${index}" value="${choice}" ${isSelected ? 'checked' : ''}>
+                            <span class="answer-text">${choice}</span>
+                        </label>
+                    `;
+                });
+                html += '</div>';
+            } else {
+                // Short answer or fill in blank
+                const savedAnswer = userAnswers[index] || '';
+                html += `
+                    <textarea class="short-answer-input" data-index="${index}" rows="4" placeholder="Type your answer here...">${savedAnswer}</textarea>
+                `;
+                if (question.hint) {
+                    html += `<p style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-light);">💡 Hint: ${question.hint}</p>`;
+                }
+            }
+
+            html += '</div>';
+            document.getElementById('quizContent').innerHTML = html;
+
+            // Add event listeners
+            document.querySelectorAll('.answer-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    const idx = parseInt(this.dataset.index);
+                    const answer = this.dataset.answer;
+                    userAnswers[idx] = answer;
+                    
+                    // Update UI
+                    this.parentElement.querySelectorAll('.answer-option').forEach(opt => opt.classList.remove('selected'));
+                    this.classList.add('selected');
+                });
+            });
+
+            document.querySelectorAll('.short-answer-input').forEach(input => {
+                input.addEventListener('input', function() {
+                    const idx = parseInt(this.dataset.index);
+                    userAnswers[idx] = this.value;
+                });
+            });
+
+            // Update navigation buttons
+            document.getElementById('prevQuestion').disabled = index === 0;
+            document.getElementById('nextQuestion').textContent = index === questions.length - 1 ? 'Submit Quiz' : 'Next →';
+
+            // Update progress - only count non-empty answers
+            const answered = Object.keys(userAnswers).filter(key => {
+                const answer = userAnswers[key];
+                return answer && answer.toString().trim() !== '';
+            }).length;
+            document.getElementById('quizProgress').textContent = `${answered} of ${questions.length} questions answered`;
+        }
+
+        // Navigation
+        document.getElementById('prevQuestion').addEventListener('click', () => {
+            if (currentQuestionIndex > 0) {
+                displayQuestion(currentQuestionIndex - 1);
+            }
+        });
+
+        document.getElementById('nextQuestion').addEventListener('click', () => {
+            if (currentQuestionIndex < questions.length - 1) {
+                displayQuestion(currentQuestionIndex + 1);
+            } else {
+                submitQuiz();
+            }
+        });
+
+        async function submitQuiz() {
+            // Count only non-empty answers
+            const answered = Object.keys(userAnswers).filter(key => {
+                const answer = userAnswers[key];
+                return answer && answer.toString().trim() !== '';
+            }).length;
+            
+            if (answered < questions.length) {
+                if (!confirm(`You've only answered ${answered} of ${questions.length} questions. Submit anyway?`)) {
+                    return;
+                }
+            }
+
+            // Show loading state
+            document.getElementById('quizContent').innerHTML = `
+                <div class="loading-message">
+                    <p>Grading your quiz...</p>
+                </div>
+            `;
+            document.getElementById('quizActions').style.display = 'none';
+            document.getElementById('quizProgress').style.display = 'none';
+
+            try {
+                // Get authentication token from auth_storage.js helper
+                const token = (typeof getStudentSession !== 'undefined' ? getStudentSession('token') : null) ||
+                             sessionStorage.getItem('student_token') || 
+                             localStorage.getItem('authToken') || '';
+                
+                console.log('🔍 DEBUG - Token:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
+                
+                // Submit quiz for grading
+                const gradeUrl = `${window.location.origin}${window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'))}/api/progress/submit_quiz.php`;
+                console.log('🔍 DEBUG - Grade URL:', gradeUrl);
+                
+                const response = await fetch(gradeUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache'
+                    },
+                    cache: 'no-store',
+                    body: JSON.stringify({
+                        courseId: courseId,
+                        unitIndex: unitIndex,
+                        lessonIndex: lessonIndex,
+                        questions: questions,
+                        userAnswers: userAnswers
+                    })
+                });
+
+                // Debug: Log response details
+                console.log('Grade response status:', response.status);
+                console.log('Grade response headers:', [...response.headers.entries()]);
+                
+                // Check HTTP status before parsing
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Grade API error:', response.status, errorText);
+                    throw new Error(`Grading request failed (${response.status})`);
+                }
+
+                const responseText = await response.text();
+                console.log('Grade API response:', responseText);
+                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('JSON parse error:', parseError);
+                    console.error('Response was:', responseText.substring(0, 500));
+                    throw new Error(`JSON.parse: ${parseError.message}`);
+                }
+
+                if (data.success) {
+                    // Display results
+                    displayResults(data);
+                } else {
+                    throw new Error(data.message || 'Grading failed');
+                }
+            } catch (error) {
+                console.error('Grading error:', error);
+                document.getElementById('quizContent').innerHTML = `
+                    <div class="error-message">
+                        <h3>⚠️ Grading Error</h3>
+                        <p>${error.message}</p>
+                        <button class="btn btn-outline" onclick="window.close()">Close Window</button>
+                    </div>
+                `;
+            }
+        }
+
+        function displayResults(data) {
+            const { score, total_questions, correct, partial, incorrect, results } = data;
+            
+            let html = `
+                <div class="quiz-complete">
+                    <h2>✅ Quiz Graded!</h2>
+                    <div class="score-display">${score}%</div>
+                    <div style="display: flex; gap: 2rem; justify-content: center; margin: 1.5rem 0;">
+                        <div><strong style="color: #22c55e;">${correct}</strong> Correct</div>
+                        ${partial > 0 ? `<div><strong style="color: #f59e0b;">${partial}</strong> Partial</div>` : ''}
+                        <div><strong style="color: #ef4444;">${incorrect}</strong> Incorrect</div>
+                    </div>
+            `;
+
+            // Show detailed results
+            html += '<div style="margin-top: 2rem; text-align: left;">';
+            results.forEach((result, idx) => {
+                const gradeColor = result.grade === 'Correct' ? '#22c55e' : 
+                                  result.grade === 'Partially Correct' ? '#f59e0b' : '#ef4444';
+                const gradeIcon = result.grade === 'Correct' ? '✓' : 
+                                 result.grade === 'Partially Correct' ? '◐' : '✗';
+                
+                html += `
+                    <div style="background: var(--bg-light); border-left: 4px solid ${gradeColor}; padding: 1rem; margin-bottom: 1rem; border-radius: 4px;">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                            <strong>Question ${idx + 1}</strong>
+                            <span style="color: ${gradeColor}; font-weight: 600;">${gradeIcon} ${result.grade}</span>
+                        </div>
+                        <p style="margin: 0.5rem 0; font-size: 0.95rem;">${result.question_text}</p>
+                        <p style="margin: 0.5rem 0; font-size: 0.9rem; color: var(--text-light);">
+                            <strong>Your answer:</strong> ${result.user_answer || '<em>No answer</em>'}
+                        </p>
+                        ${result.grade !== 'Correct' ? `
+                            <p style="margin: 0.5rem 0; font-size: 0.9rem; color: var(--text-light);">
+                                <strong>Expected:</strong> ${result.correct_answer}
+                            </p>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            html += '</div>';
+
+            html += `
+                    <button class="btn btn-primary" style="margin-top: 2rem;" onclick="window.close()">
+                        Close Quiz
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('quizContent').innerHTML = html;
+        }
+
+        // Load quiz on page load
+        loadQuiz();
+    </script>
+</body>
+</html>

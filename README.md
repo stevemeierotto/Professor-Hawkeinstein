@@ -15,6 +15,7 @@ Changes in DEV do NOT automatically sync to PROD. Always deploy explicitly using
 ## 🚀 Current Status (December 2025)
 
 **Alpha Release** - Core features functional, not production-ready:
+- ✅ **Two-Subsystem Architecture** - Student Portal + Course Factory separation
 - ✅ Automated course generation from educational standards (5-agent pipeline)
 - ✅ 12-lesson "2nd Grade Science" course published with full content
 - ✅ Student advisors with persistent memory and conversation history
@@ -36,11 +37,36 @@ Changes in DEV do NOT automatically sync to PROD. Always deploy explicitly using
 
 ## Architecture Overview
 
+The platform uses a **two-subsystem architecture** with strict separation:
+
 ```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          Browser Access                                  │
+│                                                                         │
+│  app.professorhawkeinstein.local    factory.professorhawkeinstein.local │
+│          ↓                                    ↓                         │
+│  ┌───────────────────┐              ┌────────────────────┐              │
+│  │  Student Portal   │              │   Course Factory   │              │
+│  │  /student_portal/ │              │   /course_factory/ │              │
+│  │                   │              │                    │              │
+│  │  • Login/Register │              │  • Admin Dashboard │              │
+│  │  • Dashboard      │              │  • Course Wizard   │              │
+│  │  • Workbook       │              │  • Question Gen    │              │
+│  │  • Course Viewer  │              │  • Content Review  │              │
+│  │  • Progress       │              │  • Agent Factory   │              │
+│  └─────────┬─────────┘              └──────────┬─────────┘              │
+│            │                                   │                        │
+│            └─────────────┬─────────────────────┘                        │
+│                          ↓                                              │
+│              ┌───────────────────────┐                                  │
+│              │    Shared Services    │                                  │
+│              │    /shared/ /api/     │                                  │
+│              └───────────┬───────────┘                                  │
+└──────────────────────────┼──────────────────────────────────────────────┘
+                           ↓
 ┌──────────────────────────────────────────────────────────┐
 │                     Docker Compose                       │
 ├──────────────────────────────────────────────────────────┤
-│                                                          │
 │  ┌─────────────┐  ┌──────────────┐  ┌────────────────┐ │
 │  │ phef-api    │  │ phef-agent   │  │ phef-llama     │ │
 │  │ PHP :8081   │←→│ C++ :8080    │←→│ llama-server   │ │
@@ -53,12 +79,14 @@ Changes in DEV do NOT automatically sync to PROD. Always deploy explicitly using
 │  │MariaDB :3307│                                        │
 │  └─────────────┘                                        │
 └──────────────────────────────────────────────────────────┘
-         ↑
-         │ HTTP
-    ┌────┴────┐
-    │ Browser │
-    └─────────┘
 ```
+
+### Subsystem Boundaries
+| Subsystem | URL | Purpose |
+|-----------|-----|---------|
+| Student Portal | `app.professorhawkeinstein.local` | Learning, progress tracking, advisor chat |
+| Course Factory | `factory.professorhawkeinstein.local` | Content authoring, course generation |
+| Shared | `/shared/`, `/api/` | Auth utilities, database, common APIs |
 
 ## Core Features
 
@@ -92,60 +120,50 @@ Changes in DEV do NOT automatically sync to PROD. Always deploy explicitly using
 
 ```
 Professor_Hawkeinstein/
-├── index.html                      # Landing page
-├── login.html / register.html      # Authentication pages
-├── student_dashboard.html          # Student dashboard with advisor chat
-├── workbook.html                   # Interactive lesson workbook
-├── admin_*.html                    # Admin dashboards (12+ pages)
-├── styles.css                      # Global styles
-├── workbook_app.js                 # Workbook application logic
-├── start_services.sh               # Docker services startup script
-├── clear_llm_cache.sh              # Memory management utility
-├── Makefile                        # Build and deployment automation
+├── student_portal/                 # Student-facing subsystem
+│   ├── index.php                   # → student_dashboard.html
+│   ├── login.html                  # Student authentication
+│   ├── student_dashboard.html      # Main student UI
+│   ├── workbook.html               # Interactive lessons
+│   ├── course_viewer.html          # Read-only course view
+│   └── api/                        # API proxies (23 files)
+│
+├── course_factory/                 # Admin authoring subsystem
+│   ├── index.php                   # → admin_dashboard.html
+│   ├── admin_dashboard.html        # Main admin UI
+│   ├── admin_course_wizard.html    # Course creation
+│   ├── admin_question_generator.html # Question generation
+│   └── api/                        # API proxies (67 files)
+│
+├── shared/                         # Shared utilities
+│   ├── auth/                       # JWT and middleware
+│   └── db/                         # Database wrapper
 │
 ├── config/
-│   └── database.php                # Database config, JWT auth, utilities
+│   ├── database.php                # Database config, JWT auth
+│   └── apache/                     # Subdomain vhost configs
 │
-├── api/
-│   ├── auth/
-│   │   ├── login.php               # JWT-based authentication
-│   │   └── logout.php              # Session termination
+├── api/                            # Original APIs (still active)
+│   ├── auth/                       # Authentication endpoints
 │   ├── admin/                      # Admin-only endpoints (JWT required)
-│   │   ├── auth_check.php          # requireAdmin() middleware
-│   │   ├── generate_draft_outline.php    # Agent 1: Standards → Outline
-│   │   ├── generate_lesson_content.php   # Agent 2: Generate lessons
-│   │   ├── generate_lesson_questions.php # Agent 3: Question banks
-│   │   ├── publish_course.php      # Publish course to students
-│   │   ├── list_student_advisors.php     # View all advisor instances
-│   │   └── scraper_csp.php         # Common Standards Project API
-│   ├── student/
-│   │   ├── get_advisor.php         # Get student's advisor instance
-│   │   └── update_advisor_data.php # Update conversation/progress
-│   ├── course/
-│   │   ├── get_available_courses.php     # Student course list
-│   │   ├── get_lesson_content.php  # Fetch lesson from database
-│   │   └── courses/                # Course JSON files
-│   ├── agent/
-│   │   ├── chat.php                # Proxy to C++ agent service
-│   │   └── list.php                # Available agents
-│   └── helpers/
-│       └── system_agent_helper.php # System agent configuration
+│   ├── student/                    # Student endpoints
+│   ├── course/                     # Course data
+│   ├── agent/                      # Agent chat proxy
+│   └── helpers/                    # Utility functions
 │
 ├── cpp_agent/                      # C++ Agent Microservice
-│   ├── src/
-│   │   ├── main.cpp                # HTTP server entry point
-│   │   ├── http_server.cpp         # HTTP endpoints (:8080)
-│   │   ├── agent_manager.cpp       # Agent orchestration
-│   │   ├── llamacpp_client.cpp     # llama-server HTTP client
-│   │   └── database.cpp            # MariaDB connection
-│   ├── Makefile                    # Build configuration
+│   ├── src/                        # Source files
+│   ├── include/                    # Headers
 │   └── bin/agent_service           # Compiled binary
 │
-├── llama.cpp/                      # llama-server submodule
-│   └── llama-server                # LLM inference server
+├── archive/                        # Archived root-level files
+├── docs/                           # Documentation
+│   ├── ARCHITECTURE.md             # System architecture spec
+│   ├── REFACTOR_TODO.md            # Migration checklist
+│   └── URL_INVENTORY.md            # URL mapping
 │
-└── models/
-    └── qwen2.5-1.5b-instruct-q4_k_m.gguf  # Quantized LLM model
+├── start_services.sh               # Docker startup script
+└── docker-compose.yml              # Container orchestration
 ```
 
 ## Quick Start
@@ -174,14 +192,23 @@ This starts:
 ### 2. Access the Platform
 
 Open your browser to:
-- **Student Portal**: http://localhost:8081
-- **Admin Dashboard**: http://localhost:8081/admin_dashboard.html
+- **Student Portal**: http://app.professorhawkeinstein.local or http://localhost:8081/student_portal/
+- **Admin Dashboard**: http://factory.professorhawkeinstein.local or http://localhost:8081/course_factory/
 
 **Default Credentials:**
 - Username: `root`
 - Password: `Root1234`
 
-### 3. Deployment to Production
+### 3. Local DNS Setup (for subdomains)
+
+Add to `/etc/hosts`:
+```
+127.0.0.1 professorhawkeinstein.local
+127.0.0.1 app.professorhawkeinstein.local
+127.0.0.1 factory.professorhawkeinstein.local
+```
+
+### 4. Deployment to Production
 
 ```bash
 # Sync files to web directory

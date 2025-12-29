@@ -2,8 +2,16 @@
 #define CONFIG_H
 
 #include <string>
+#include <map>
 #include <fstream>
 #include <jsoncpp/json/json.h>
+
+struct ModelConfig {
+    int port = 8090;
+    std::string file;
+    int ctxSize = 4096;
+    int threads = 4;
+};
 
 struct Config {
     std::string llamaServerUrl = "http://localhost:8090";
@@ -13,6 +21,9 @@ struct Config {
     // Model configuration
     std::string modelsBasePath = "/home/steve/Professor_Hawkeinstein/models";
     std::string defaultModel = "qwen2.5-1.5b-instruct-q4_k_m.gguf";
+    
+    // Multi-model support: model_name -> ModelConfig
+    std::map<std::string, ModelConfig> models;
     
     // Database configuration
     std::string dbHost = "localhost";
@@ -65,7 +76,31 @@ struct Config {
             if (agent.isMember("top_p")) topP = agent["top_p"].asFloat();
         }
         
+        // Load multi-model configuration
+        if (root.isMember("models")) {
+            auto modelsJson = root["models"];
+            for (const auto& modelName : modelsJson.getMemberNames()) {
+                ModelConfig mc;
+                auto m = modelsJson[modelName];
+                if (m.isMember("port")) mc.port = m["port"].asInt();
+                if (m.isMember("file")) mc.file = m["file"].asString();
+                if (m.isMember("ctx_size")) mc.ctxSize = m["ctx_size"].asInt();
+                if (m.isMember("threads")) mc.threads = m["threads"].asInt();
+                models[modelName] = mc;
+            }
+        }
+        
         return true;
+    }
+    
+    // Get the llama-server URL for a specific model
+    std::string getServerUrlForModel(const std::string& modelName) const {
+        auto it = models.find(modelName);
+        if (it != models.end()) {
+            return "http://localhost:" + std::to_string(it->second.port);
+        }
+        // Fallback to default
+        return llamaServerUrl;
     }
 };
 

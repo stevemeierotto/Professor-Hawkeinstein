@@ -3,7 +3,25 @@
   "model_name": "llama-2-7b-chat",
   "server_port": 8080,
   "models_base_path": "/app/models",
-  "default_model": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+  "default_model": "llama-2-7b-chat.Q4_0.gguf",
+  
+  "_comment_multi_model": "Set multi_model_enabled to true to load multiple models (requires more RAM)",
+  "multi_model_enabled": false,
+  
+  "models": {
+    "qwen2.5-1.5b-instruct-q4_k_m.gguf": {
+      "port": 8090,
+      "file": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+      "ctx_size": 4096,
+      "threads": 4
+    },
+    "llama-2-7b-chat.Q4_0.gguf": {
+      "port": 8090,
+      "file": "llama-2-7b-chat.Q4_0.gguf",
+      "ctx_size": 4096,
+      "threads": 4
+    }
+  },
   "database": {
     "host": "database",
     "port": 3306,

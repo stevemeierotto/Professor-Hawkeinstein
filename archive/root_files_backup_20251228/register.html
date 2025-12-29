@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Professor Hawkeinstein's Educational Foundation</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .registration-form {
+            max-width: 600px;
+            margin: 2rem auto;
+            background: var(--bg-light);
+            padding: 2rem;
+            border-radius: var(--radius-lg);
+        }
+
+        .progress-steps {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .step {
+            flex: 1;
+            height: 4px;
+            background: var(--border-color);
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .step.active {
+            background: var(--primary-color);
+        }
+
+        .step.complete {
+            background: var(--success-color);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="logo">🎓 Professor Hawkeinstein's Educational Foundation</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="login.html" class="btn btn-primary">Login</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Registration Container -->
+    <div class="form-container">
+        <h2 class="text-center">Create Your Account</h2>
+        <p class="text-center" style="color: var(--text-light); margin-bottom: 2rem;">Join Professor Hawkeinstein's Educational Foundation and begin your personalized learning journey</p>
+
+        <div class="registration-form">
+            <h3>📋 Your Information</h3>
+            
+            <form id="registrationForm">
+                <div class="form-group">
+                    <label for="fullName">Full Name</label>
+                    <input type="text" id="fullName" name="fullName" required placeholder="John Doe">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" required placeholder="john@example.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" required placeholder="john_doe">
+                    <small style="color: var(--text-light);">3-20 characters, letters and numbers only</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required placeholder="At least 8 characters">
+                    <small style="color: var(--text-light);">Must be at least 8 characters with uppercase, lowercase, and number</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" name="confirmPassword" required placeholder="Confirm password">
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;" id="registerBtn">
+                        Create Account
+                    </button>
+                    <button type="button" class="btn btn-outline" style="flex: 1;" id="cancelBtn">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+
+            <div class="text-center" style="margin-top: 2rem;">
+                <p>Already have an account? <a href="login.html" style="color: var(--primary-color); font-weight: 600; text-decoration: none;">Login here</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const registerBtn = document.getElementById('registerBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const registrationForm = document.getElementById('registrationForm');
+
+        // Show message helper
+        function showMessage(message, type = 'info') {
+            alert(message);
+        }
+
+        // Registration form submission
+        registrationForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Validate form
+            const fullName = document.getElementById('fullName').value;
+            const email = document.getElementById('email').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Validate username
+            if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+                showMessage('Username must be 3-20 characters (letters, numbers, underscores only).', 'error');
+                return;
+            }
+
+            // Validate password
+            if (password.length < 8) {
+                showMessage('Password must be at least 8 characters.', 'error');
+                return;
+            }
+
+            if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+                showMessage('Password must contain uppercase, lowercase, and numbers.', 'error');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showMessage('Passwords do not match.');
+                return;
+            }
+
+            // Prepare registration data (no biometric data)
+            const registrationData = {
+                fullName,
+                email,
+                username,
+                password
+            };
+
+            try {
+                registerBtn.disabled = true;
+                registerBtn.textContent = '⏳ Creating account...';
+
+                const response = await fetch('api/auth/register.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(registrationData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ Account created successfully! Redirecting to login...');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 1000);
+                } else {
+                    showMessage('Error: ' + (data.message || 'Registration failed'));
+                    registerBtn.disabled = false;
+                    registerBtn.textContent = 'Create Account';
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                showMessage('Network error during registration. Please try again.');
+                registerBtn.disabled = false;
+                registerBtn.textContent = 'Create Account';
+            }
+        });
+
+        // Cancel button
+        cancelBtn.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+    </script>
+</body>
+</html>

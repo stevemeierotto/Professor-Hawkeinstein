@@ -249,6 +249,62 @@ Before deploying to PROD, verify:
 
 ---
 
+## 🐳 DOCKER DEPLOYMENT RULES
+
+**Docker containers do NOT auto-update when you change files.**
+
+Docker images are frozen snapshots. Running containers don't see changes to source files.
+
+### Key Docker Files
+
+| File | Purpose | Location |
+|------|---------|----------|
+| `config.json` | Local services config | `cpp_agent/config.json` |
+| `config.docker.json` | Docker container config | `cpp_agent/config.docker.json` |
+| `docker-compose.yml` | Container orchestration | Project root |
+| `Dockerfile` | Agent service image | `cpp_agent/Dockerfile` |
+
+### When to Restart Docker
+
+| Change Type | Command Needed |
+|-------------|----------------|
+| Config files (`config.docker.json`, `.env`) | `docker-compose down && docker-compose up -d` |
+| PHP/HTML/JS files | No restart (volume mounted) |
+| C++ code changes | `docker-compose down && docker-compose up -d --build` |
+| Dockerfile changes | `docker-compose down && docker-compose up -d --build` |
+| Model file changes | `docker-compose down && docker-compose up -d` |
+| Database schema changes | Apply migrations, then restart affected services |
+
+### Docker vs Local Services
+
+**Docker (default for development/testing):**
+- Ports: 8081 (web), 8080 (agent), 8090 (llama), 3307 (db)
+- Config: `cpp_agent/config.docker.json`
+- Models: Mounted from `./models:/app/models`
+
+**Local Services (alternative):**
+- Stop Docker first: `docker-compose down`
+- Config: `cpp_agent/config.json`
+- Start: `./start_services.sh`
+
+### Verify Docker Model
+
+```bash
+# Check which model is loaded
+docker logs phef-llama --tail 20 | grep -i model
+
+# Check agent service config
+docker logs phef-agent --tail 20 | grep -i model
+```
+
+### Historical Docker Issues (December 2025)
+
+**Issue:** Changed model from Qwen to Llama-2, but Docker still used Qwen.
+**Root Cause:** Updated `config.json` but not `config.docker.json`. Containers weren't rebuilt.
+**Fix:** Update `config.docker.json`, then `docker-compose down && docker-compose up -d --build`
+
+---
+
 ## 🔗 RELATED DOCUMENTATION
 
 - **File Sync Guide:** `docs/FILE_SYNC_GUIDE.md`

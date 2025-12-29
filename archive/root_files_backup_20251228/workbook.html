@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="auth_storage.js"></script>
+    <title>Workbook - Professor Hawkeinstein's Educational Foundation</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* Workbook Navigation Styles */
+        .workbook-nav-panel {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            color: var(--text-light);
+            flex-wrap: wrap;
+        }
+        
+        .breadcrumb a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .nav-card {
+            background: var(--bg-light);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .nav-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .nav-card.active {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .nav-card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .nav-card.disabled:hover {
+            transform: none;
+            border-color: var(--border-color);
+        }
+        
+        .nav-card-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .nav-card-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .nav-card-meta {
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+        
+        .lesson-nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .lesson-nav-buttons button {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .view-mode-selector {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .view-mode-btn {
+            padding: 0.5rem 1rem;
+            border: 2px solid var(--border-color);
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .view-mode-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .error-message {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+        
+        .loading-message {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-light);
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border-color);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .example-box {
+            background: var(--bg-light);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .lesson-text {
+            line-height: 1.8;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="logo">🎓 Professor Hawkeinstein's Educational Foundation</a>
+            <ul class="nav-links">
+                <li><a href="student_dashboard.html">← Back to Dashboard</a></li>
+                <li><a href="#" id="studentName">Student</a></li>
+                <li>
+                    <button id="agentChatBubble" class="agent-chat-bubble" title="Chat with your AI agent">
+                        <span class="bubble-icon">💬</span>
+                        <span class="bubble-badge" id="unreadBadge" style="display: none;">0</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Floating Agent Chat Panel -->
+    <div id="agentChatPanel" class="agent-chat-panel">
+        <div class="chat-panel-header">
+            <div class="agent-avatar">PH</div>
+            <div style="flex: 1;">
+                <h4 style="margin: 0; color: white;">Professor Hawkeinstein</h4>
+                <p style="margin: 0; font-size: 0.875rem; opacity: 0.9;">Your Learning Assistant</p>
+            </div>
+            <button id="closeChatPanel" class="close-chat-btn" title="Close chat">
+                <span>✕</span>
+            </button>
+        </div>
+
+        <div class="chat-messages" id="workbookChat">
+                    <div class="message agent">
+                        <div class="message-avatar">PH</div>
+                        <div class="message-content">
+                            <p><strong>Professor Hawkeinstein</strong></p>
+                            <p>Welcome to your Workbook! Select a course, unit, and lesson from the right panel to begin. I'm here to help you understand the material.</p>
+                            <small style="opacity: 0.7;">Just now</small>
+                        </div>
+                    </div>
+                </div>
+
+        <div class="chat-input-container">
+            <input type="text" id="workbookChatInput" placeholder="Ask about the lesson..." />
+            <button class="btn btn-primary" id="workbookSendBtn">Send</button>
+        </div>
+    </div>
+
+    <!-- Workbook Layout -->
+    <div class="workbook-container-fullwidth">
+        <!-- Content Area -->
+        <main class="workbook-content" style="margin-left: 0; width: 100%;">
+            <!-- Navigation Panel -->
+            <div class="workbook-nav-panel" id="navigationPanel">
+                <!-- Breadcrumb -->
+                <div class="breadcrumb" id="breadcrumb">
+                    <span>📚 Workbook</span>
+                </div>
+                
+                <!-- View Mode Selector -->
+                <div class="view-mode-selector">
+                    <button class="view-mode-btn active" data-view="courses" id="viewCourses">Courses</button>
+                    <button class="view-mode-btn" data-view="units" id="viewUnits" style="display:none;">Units</button>
+                    <button class="view-mode-btn" data-view="lessons" id="viewLessons" style="display:none;">Lessons</button>
+                </div>
+                
+                <!-- Dynamic Navigation Content -->
+                <div id="navContent">
+                    <div class="loading-message">
+                        <div class="loading-spinner"></div>
+                        <p>Loading courses...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lesson Content Panel (hidden initially) -->
+            <div id="lessonPanel" style="display: none;">
+                <div style="display: flex; gap: 1.5rem; align-items: flex-start;">
+                    <!-- Left Panel: Video and Visuals -->
+                    <aside id="mediaPanel" style="width: 320px; flex-shrink: 0; max-height: calc(100vh - 200px); overflow-y: auto; position: sticky; top: 1rem;">
+                        <!-- Content will be injected by JavaScript -->
+                    </aside>
+
+                    <!-- Main Content Area -->
+                    <section class="workbook-reading" style="flex: 1;">
+                        <div class="workbook-header">
+                            <div>
+                                <h1 id="lessonTitle">Lesson Title</h1>
+                                <p class="workbook-meta" id="lessonMeta">
+                                    <span id="courseInfo">Course Info</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="reading-content" id="lessonContent">
+                            <p style="text-align: center; color: var(--text-light); padding: 2rem;">Select a lesson to begin</p>
+                        </div>
+
+                        <!-- Lesson Quiz Button -->
+                        <div style="margin-top: 2rem; text-align: center;">
+                            <button class="btn btn-primary" id="openQuizBtn" disabled>
+                                ✏️ Take Lesson Quiz
+                            </button>
+                            <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 0.5rem;">Opens in new window</p>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Lesson Navigation Buttons -->
+                <div class="lesson-nav-buttons">
+                    <button class="btn btn-outline" id="prevLesson" disabled>
+                        <span>←</span> Previous Lesson
+                    </button>
+                    <button class="btn btn-secondary" id="backToLessons">
+                        📚 Back to Lessons
+                    </button>
+                    <button class="btn btn-primary" id="nextLesson" disabled>
+                        Next Lesson <span>→</span>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="workbook_app.js"></script>
+    <script>
+        // Agent Chat Bubble Functionality
+        (function() {
+            const chatBubble = document.getElementById('agentChatBubble');
+            const chatPanel = document.getElementById('agentChatPanel');
+            const closeBtn = document.getElementById('closeChatPanel');
+            
+            // Toggle chat panel
+            chatBubble.addEventListener('click', function(e) {
+                e.stopPropagation();
+                chatPanel.classList.toggle('active');
+                
+                // Clear unread badge when opening
+                if (chatPanel.classList.contains('active')) {
+                    const badge = document.getElementById('unreadBadge');
+                    badge.style.display = 'none';
+                    badge.textContent = '0';
+                }
+            });
+            
+            // Close chat panel
+            closeBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                chatPanel.classList.remove('active');
+            });
+            
+            // Close when clicking outside
+            document.addEventListener('click', function(e) {
+                if (chatPanel.classList.contains('active') && 
+                    !chatPanel.contains(e.target) && 
+                    !chatBubble.contains(e.target)) {
+                    chatPanel.classList.remove('active');
+                }
+            });
+            
+            // Prevent panel clicks from closing
+            chatPanel.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+            
+            // Handle ESC key to close
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && chatPanel.classList.contains('active')) {
+                    chatPanel.classList.remove('active');
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

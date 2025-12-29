@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="auth_storage.js"></script>
+    <script src="admin_auth.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Factory - Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .factory-container {
+            max-width: 1000px;
+            margin: 2rem auto;
+        }
+
+        .wizard {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .wizard-progress {
+            display: flex;
+            background: #f8fafc;
+            padding: 1rem;
+        }
+
+        .wizard-step {
+            flex: 1;
+            text-align: center;
+            padding: 1rem;
+            position: relative;
+            color: var(--text-light);
+        }
+
+        .wizard-step.active {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .wizard-step.completed {
+            color: var(--success);
+        }
+
+        .wizard-step::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: -50%;
+            width: 100%;
+            height: 2px;
+            background: #e5e7eb;
+            z-index: 0;
+        }
+
+        .wizard-step:last-child::after {
+            display: none;
+        }
+
+        .wizard-step.completed::after {
+            background: var(--success);
+        }
+
+        .wizard-content {
+            padding: 2rem;
+        }
+
+        .step-panel {
+            display: none;
+        }
+
+        .step-panel.active {
+            display: block;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .knowledge-source {
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .wizard-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .template-card {
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .template-card:hover {
+            border-color: var(--primary);
+            background: #f8fafc;
+        }
+
+        .template-card.selected {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+
+        .preview-box {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <span class="logo">🎓 Professor Hawkeinstein's Educational Foundation</span>
+            <ul class="nav-links">
+                <li><a href="admin_dashboard.html">← Admin Dashboard</a></li>
+                <li><span id="adminName" style="color: var(--text-light);">Root Administrator</span></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="factory-container">
+        <h1>🤖 Agent Factory</h1>
+        <p style="color: var(--text-light); margin-bottom: 2rem;">
+            Create specialized AI teaching agents with curated knowledge bases
+        </p>
+
+        <!-- Admin Advisor Section -->
+        <div class="wizard" style="margin-bottom: 2rem;">
+            <div class="wizard-content">
+                <h2 style="margin: 0 0 1rem 0;">👤 Your Personal Advisor</h2>
+                <p style="color: var(--text-light); margin-bottom: 1.5rem;">
+                    Create your own admin advisor instance to get personalized help with system management, student support, and educational strategies.
+                </p>
+                
+                <div id="adminAdvisorStatus">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+                
+                <div id="adminAdvisorChat" style="display: none; margin-top: 1.5rem;">
+                    <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1rem; max-height: 400px; overflow-y: auto; margin-bottom: 1rem; background: #f9fafb;" id="adminChatHistory">
+                        <!-- Chat messages will appear here -->
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" id="adminChatInput" placeholder="Ask your advisor anything..." style="flex: 1; padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px;">
+                        <button class="btn btn-primary" onclick="sendAdminChatMessage()">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="wizard">
+            <!-- Progress Steps -->
+            <div class="wizard-progress">
+                <div class="wizard-step active" data-step="1">
+                    <span>1. Agent Type</span>
+                </div>
+                <div class="wizard-step" data-step="2">
+                    <span>2. Configuration</span>
+                </div>
+                <div class="wizard-step" data-step="3">
+                    <span>3. Knowledge Base</span>
+                </div>
+                <div class="wizard-step" data-step="4">
+                    <span>4. Review & Create</span>
+                </div>
+            </div>
+
+            <!-- Wizard Content -->
+            <div class="wizard-content">
+                <!-- Step 1: Agent Type Selection -->
+                <div class="step-panel active" id="step1">
+                    <h2>Select Agent Type</h2>
+                    <p style="color: var(--text-light); margin-bottom: 2rem;">
+                        Choose a template for your agent's specialization
+                    </p>
+
+                    <div id="templateList">
+                        <div class="template-card" data-template="math_elementary">
+                            <h3 style="margin: 0 0 0.5rem 0;">📐 Elementary Math Tutor</h3>
+                            <p style="margin: 0; color: var(--text-light);">
+                                Specialized for grades K-5. Focus on foundational math concepts, number sense, and problem-solving.
+                            </p>
+                            <div style="margin-top: 1rem; font-size: 0.875rem;">
+                                <strong>Best for:</strong> Grade 1-2 Math, Basic Arithmetic, Visual Learning
+                            </div>
+                        </div>
+
+                        <div class="template-card" data-template="math_middle">
+                            <h3 style="margin: 0 0 0.5rem 0;">📊 Middle School Math Tutor</h3>
+                            <p style="margin: 0; color: var(--text-light);">
+                                Specialized for grades 6-8. Covers algebra, geometry, and pre-calculus concepts.
+                            </p>
+                            <div style="margin-top: 1rem; font-size: 0.875rem;">
+                                <strong>Best for:</strong> Algebraic Thinking, Geometric Reasoning
+                            </div>
+                        </div>
+
+                        <div class="template-card" data-template="science_elementary">
+                            <h3 style="margin: 0 0 0.5rem 0;">🔬 Elementary Science Guide</h3>
+                            <p style="margin: 0; color: var(--text-light);">
+                                Specialized for grades K-5. Exploration-focused approach to basic scientific concepts.
+                            </p>
+                            <div style="margin-top: 1rem; font-size: 0.875rem;">
+                                <strong>Best for:</strong> Scientific Inquiry, Nature Study, Experiments
+                            </div>
+                        </div>
+
+                        <div class="template-card" data-template="custom">
+                            <h3 style="margin: 0 0 0.5rem 0;">⚙️ Custom Agent</h3>
+                            <p style="margin: 0; color: var(--text-light);">
+                                Build a completely custom agent with your own specifications.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Configuration -->
+                <div class="step-panel" id="step2">
+                    <h2>Configure Agent</h2>
+                    <p style="color: var(--text-light); margin-bottom: 2rem;">
+                        Set up your agent's personality and behavior
+                    </p>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Agent Name *</label>
+                            <input type="text" id="agentName" placeholder="e.g., Ms. Johnson" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Agent Type</label>
+                            <input type="text" id="agentType" placeholder="e.g., math_tutor" readonly>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Grade Level Focus *</label>
+                            <select id="gradeLevel" required>
+                                <option value="">Select grade level...</option>
+                                <option value="pre_k">Pre-K</option>
+                                <option value="kindergarten">Kindergarten</option>
+                                <option value="grade_1">Grade 1</option>
+                                <option value="grade_2">Grade 2</option>
+                                <option value="grade_3">Grade 3</option>
+                                <option value="grade_4">Grade 4</option>
+                                <option value="grade_5">Grade 5</option>
+                                <option value="grade_6">Grade 6</option>
+                                <option value="middle_school">Middle School (7-8)</option>
+                                <option value="high_school">High School (9-12)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Subject Area *</label>
+                            <select id="subjectArea" required>
+                                <option value="">Select subject...</option>
+                                <option value="mathematics">Mathematics</option>
+                                <option value="science">Science</option>
+                                <option value="language_arts">Language Arts</option>
+                                <option value="social_studies">Social Studies</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Specialization Description</label>
+                        <textarea id="specialization" placeholder="Describe the agent's expertise and teaching approach..."></textarea>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>LLM Model</label>
+                            <select id="modelName">
+                                <option value="qwen2.5-1.5b-instruct-q4_k_m.gguf" selected>Qwen 2.5 1.5B (Instruct)</option>
+                                <option value="llama-2-7b-chat">Llama 2 7B Chat</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Temperature (Creativity)</label>
+                            <input type="number" id="temperature" min="0" max="2" step="0.1" value="0.7">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>System Prompt</label>
+                        <textarea id="systemPrompt" rows="6" placeholder="You are a helpful teaching assistant..."></textarea>
+                        <small style="color: var(--text-light);">
+                            This prompt defines your agent's personality and teaching style
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Step 3: Knowledge Base -->
+                <div class="step-panel" id="step3">
+                    <h2>Build Knowledge Base</h2>
+                    <p style="color: var(--text-light); margin-bottom: 2rem;">
+                        Add educational content for your agent to reference
+                    </p>
+
+                    <div style="background: #f8fafc; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;">
+                        <h3 style="margin: 0 0 1rem 0;">Add Content from Approved Sources</h3>
+                        <div id="approvedContentList">
+                            <p style="color: var(--text-light);">Loading approved content...</p>
+                        </div>
+                    </div>
+
+                    <div style="background: #eff6ff; padding: 1.5rem; border-radius: 8px; border: 1px solid #3b82f6;">
+                        <h3 style="margin: 0 0 1rem 0;">Or Scrape New Content</h3>
+                        <p style="margin: 0; color: var(--text-light);">
+                            <a href="admin_scraper.html" style="color: var(--primary); font-weight: 500;">
+                                Go to Content Scraper →
+                            </a> to add new educational materials
+                        </p>
+                    </div>
+
+                    <div id="selectedKnowledge" style="margin-top: 2rem;">
+                        <h3>Selected Knowledge Sources: <span id="knowledgeCount">0</span></h3>
+                        <div id="knowledgeList"></div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Review -->
+                <div class="step-panel" id="step4">
+                    <h2>Review & Create Agent</h2>
+                    <p style="color: var(--text-light); margin-bottom: 2rem;">
+                        Review your agent configuration before creation
+                    </p>
+
+                    <div id="agentPreview" class="preview-box">
+                        <pre id="previewContent"></pre>
+                    </div>
+                </div>
+
+                <!-- Wizard Actions -->
+                <div class="wizard-actions">
+                    <button type="button" class="btn btn-outline" id="prevBtn" style="display: none;">
+                        ← Previous
+                    </button>
+                    <div style="flex: 1;"></div>
+                    <button type="button" class="btn btn-primary" id="nextBtn">
+                        Next →
+                    </button>
+                    <button type="button" class="btn btn-primary" id="createBtn" style="display: none;">
+                        🚀 Create Agent
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auth check
+        const user = getAdminSession('user' || '{}');
+        if (!user.username || (user.role !== 'admin' && user.role !== 'root')) {
+            window.location.href = 'login.html';
+        }
+        document.getElementById('adminName').textContent = user.name;
+
+        let currentStep = 1;
+        let selectedTemplate = null;
+        let selectedKnowledge = [];
+        const agentData = {};
+
+        // Template selection
+        document.querySelectorAll('.template-card').forEach(card => {
+            card.addEventListener('click', function() {
+                document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedTemplate = this.dataset.template;
+                
+                // Pre-fill configuration based on template
+                applyTemplate(selectedTemplate);
+            });
+        });
+
+        function applyTemplate(template) {
+            const templates = {
+                math_elementary: {
+                    type: 'math_tutor',
+                    gradeLevel: 'grade_1',
+                    subject: 'mathematics',
+                    specialization: 'Elementary mathematics tutor focusing on number sense, basic arithmetic, and problem-solving strategies appropriate for young learners.',
+                    systemPrompt: 'You are a patient and encouraging elementary math tutor. You explain concepts using simple language, visual examples, and real-world analogies. You celebrate student progress and help them build confidence in mathematics.'
+                },
+                math_middle: {
+                    type: 'math_tutor',
+                    gradeLevel: 'middle_school',
+                    subject: 'mathematics',
+                    specialization: 'Middle school mathematics covering algebra, geometry, and pre-calculus concepts with emphasis on logical reasoning.',
+                    systemPrompt: 'You are an engaging middle school math tutor. You bridge concrete and abstract thinking, encouraging students to explore patterns and relationships in mathematics.'
+                },
+                science_elementary: {
+                    type: 'science_guide',
+                    gradeLevel: 'grade_1',
+                    subject: 'science',
+                    specialization: 'Elementary science education with hands-on, exploration-based learning approach.',
+                    systemPrompt: 'You are an enthusiastic science guide for young learners. You encourage curiosity, ask guiding questions, and help students explore the natural world through observation and simple experiments.'
+                },
+                custom: {
+                    type: 'general_tutor',
+                    gradeLevel: '',
+                    subject: '',
+                    specialization: '',
+                    systemPrompt: ''
+                }
+            };
+
+            const config = templates[template] || templates.custom;
+            document.getElementById('agentType').value = config.type;
+            document.getElementById('gradeLevel').value = config.gradeLevel;
+            document.getElementById('subjectArea').value = config.subject;
+            document.getElementById('specialization').value = config.specialization;
+            document.getElementById('systemPrompt').value = config.systemPrompt;
+        }
+
+        // Wizard navigation
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            if (validateStep(currentStep)) {
+                saveStepData();
+                currentStep++;
+                updateWizard();
+            }
+        });
+
+        document.getElementById('prevBtn').addEventListener('click', () => {
+            currentStep--;
+            updateWizard();
+        });
+
+        document.getElementById('createBtn').addEventListener('click', createAgent);
+
+        function validateStep(step) {
+            if (step === 1 && !selectedTemplate) {
+                alert('Please select an agent template');
+                return false;
+            }
+            if (step === 2) {
+                const required = ['agentName', 'gradeLevel', 'subjectArea'];
+                for (const field of required) {
+                    if (!document.getElementById(field).value) {
+                        alert('Please fill in all required fields');
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        function saveStepData() {
+            if (currentStep === 2) {
+                agentData.name = document.getElementById('agentName').value;
+                agentData.type = document.getElementById('agentType').value;
+                agentData.gradeLevel = document.getElementById('gradeLevel').value;
+                agentData.subject = document.getElementById('subjectArea').value;
+                agentData.specialization = document.getElementById('specialization').value;
+                agentData.model = document.getElementById('modelName').value;
+                agentData.temperature = document.getElementById('temperature').value;
+                agentData.systemPrompt = document.getElementById('systemPrompt').value;
+            }
+        }
+
+        function updateWizard() {
+            // Update progress
+            document.querySelectorAll('.wizard-step').forEach((step, index) => {
+                step.classList.remove('active', 'completed');
+                if (index + 1 < currentStep) step.classList.add('completed');
+                if (index + 1 === currentStep) step.classList.add('active');
+            });
+
+            // Update panels
+            document.querySelectorAll('.step-panel').forEach((panel, index) => {
+                panel.classList.remove('active');
+                if (index + 1 === currentStep) panel.classList.add('active');
+            });
+
+            // Update buttons
+            document.getElementById('prevBtn').style.display = currentStep > 1 ? 'block' : 'none';
+            document.getElementById('nextBtn').style.display = currentStep < 4 ? 'block' : 'none';
+            document.getElementById('createBtn').style.display = currentStep === 4 ? 'block' : 'none';
+
+            // Load step-specific data
+            if (currentStep === 3) {
+                loadApprovedContent();
+            }
+            if (currentStep === 4) {
+                showPreview();
+            }
+        }
+
+        async function loadApprovedContent() {
+            try {
+                const grade = agentData.gradeLevel || '';
+                const subject = agentData.subject || '';
+                const url = `api/admin/list_scraped_content.php?status=approved&grade_level=${grade}&subject_area=${subject}&limit=50`;
+                
+                const response = await fetch(url, {
+                });
+
+                if (response.ok) {
+                    const content = await response.json();
+                    displayApprovedContent(content);
+                }
+            } catch (error) {
+                console.error('Error loading content:', error);
+            }
+        }
+
+        function displayApprovedContent(items) {
+            const list = document.getElementById('approvedContentList');
+            
+            if (items.length === 0) {
+                list.innerHTML = '<p style="color: var(--text-light);">No approved content available for this grade/subject</p>';
+                return;
+            }
+
+            list.innerHTML = items.map(item => {
+                const escapedTitle = (item.page_title || 'Untitled').replace(/'/g, "&apos;").replace(/"/g, "&quot;");
+                return `
+                    <div class="knowledge-source">
+                        <div>
+                            <strong>${item.page_title || 'Untitled'}</strong><br>
+                            <small style="color: var(--text-light);">${item.domain}</small>
+                        </div>
+                        <button class="btn btn-sm btn-primary" onclick='addKnowledge(${item.content_id}, "${escapedTitle}")'>
+                            Add
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function addKnowledge(contentId, title) {
+            // Check if already added
+            if (selectedKnowledge.some(item => item.id === contentId)) {
+                alert('This content is already added!');
+                return;
+            }
+            
+            selectedKnowledge.push({ id: contentId, title: title });
+            updateKnowledgeList();
+        }
+
+        function removeKnowledge(contentId) {
+            selectedKnowledge = selectedKnowledge.filter(item => item.id !== contentId);
+            updateKnowledgeList();
+        }
+
+        function updateKnowledgeList() {
+            document.getElementById('knowledgeCount').textContent = selectedKnowledge.length;
+            
+            const listDiv = document.getElementById('knowledgeList');
+            if (selectedKnowledge.length === 0) {
+                listDiv.innerHTML = '<p style="color: var(--text-light); font-size: 0.9rem;">No content selected yet. Click "Add" on approved content above.</p>';
+                return;
+            }
+            
+            listDiv.innerHTML = selectedKnowledge.map(item => `
+                <div class="knowledge-source" style="background: #f0f9ff; border: 1px solid #3b82f6;">
+                    <div>
+                        <strong>${item.title}</strong><br>
+                        <small style="color: var(--text-light);">Content ID: ${item.id}</small>
+                    </div>
+                    <button class="btn btn-sm btn-outline" onclick="removeKnowledge(${item.id})">
+                        Remove
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function showPreview() {
+            const preview = {
+                agent_name: agentData.name,
+                agent_type: agentData.type,
+                specialization: agentData.specialization,
+                grade_level: agentData.gradeLevel,
+                subject_area: agentData.subject,
+                model_name: agentData.model,
+                temperature: agentData.temperature,
+                system_prompt: agentData.systemPrompt,
+                knowledge_sources: selectedKnowledge.length
+            };
+
+            document.getElementById('previewContent').textContent = JSON.stringify(preview, null, 2);
+        }
+
+        async function createAgent() {
+            try {
+                const response = await fetch('api/admin/create_agent.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        
+                    },
+                    body: JSON.stringify({
+                        ...agentData,
+                        knowledge_sources: selectedKnowledge.map(item => item.id)
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    alert(`Agent created successfully! ID: ${result.agent_id}`);
+                    window.location.href = 'admin_dashboard.html';
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.error || 'Failed to create agent'));
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            }
+        }
+
+        // Make functions global
+        window.addKnowledge = addKnowledge;
+        window.removeKnowledge = removeKnowledge;
+
+        // ============================================
+        // ADMIN ADVISOR FUNCTIONALITY
+        // ============================================
+        
+        let adminAdvisorInstance = null;
+        
+        async function loadAdminAdvisor() {
+            try {
+                const response = await fetch('api/admin/get_agent_instance.php?owner_type=admin');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    adminAdvisorInstance = data.instance;
+                    showAdvisorChat();
+                } else if (response.status === 404) {
+                    showAdvisorCreation();
+                } else {
+                    throw new Error('Failed to load advisor');
+                }
+            } catch (error) {
+                console.error('Error loading admin advisor:', error);
+                document.getElementById('adminAdvisorStatus').innerHTML = `
+                    <p style="color: var(--error);">Error loading advisor: ${error.message}</p>
+                `;
+            }
+        }
+        
+        function showAdvisorCreation() {
+            document.getElementById('adminAdvisorStatus').innerHTML = `
+                <div style="background: #f0f9ff; padding: 1rem; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                    <p style="margin: 0 0 1rem 0;"><strong>You don't have a personal advisor yet!</strong></p>
+                    <p style="margin: 0 0 1rem 0; font-size: 0.9rem; color: var(--text-light);">
+                        Create an advisor instance to get AI-powered assistance with:
+                    </p>
+                    <ul style="margin: 0 0 1rem 0; padding-left: 1.5rem; font-size: 0.9rem;">
+                        <li>Student progress analysis</li>
+                        <li>Content curation strategies</li>
+                        <li>Agent configuration recommendations</li>
+                        <li>System administration guidance</li>
+                    </ul>
+                    <button class="btn btn-primary" onclick="createAdminAdvisor()">Create My Advisor</button>
+                </div>
+            `;
+        }
+        
+        async function createAdminAdvisor() {
+            try {
+                // Find Professor Hawkeinstein or first available advisor agent
+                const agentsResponse = await fetch('api/admin/list_agents.php?is_advisor=1');
+                if (!agentsResponse.ok) throw new Error('Failed to load advisor agents');
+                
+                const agentsData = await agentsResponse.json();
+                const agents = agentsData.agents || [];
+                if (agents.length === 0) throw new Error('No advisor agents available');
+                
+                // Prefer Admin Advisor, then any Hawkeinstein, otherwise use first advisor
+                const advisorAgent = agents.find(a => a.agent_name.includes('Admin Advisor')) 
+                    || agents.find(a => a.agent_type === 'admin_advisor')
+                    || agents.find(a => a.agent_name.includes('Hawkeinstein')) 
+                    || agents[0];
+                
+                const response = await fetch('api/admin/create_agent_instance.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        agent_id: advisorAgent.agent_id,
+                        owner_type: 'admin'
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    adminAdvisorInstance = data.instance;
+                    showAdvisorChat();
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Failed to create advisor');
+                }
+            } catch (error) {
+                alert('Error creating advisor: ' + error.message);
+                console.error('Create advisor error:', error);
+            }
+        }
+        
+        function showAdvisorChat() {
+            document.getElementById('adminAdvisorStatus').innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #ecfdf5; border-radius: 8px; border-left: 4px solid #10b981;">
+                    <div>
+                        <p style="margin: 0; font-weight: 500;">✅ Your advisor is ready!</p>
+                        <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-light);">
+                            ${adminAdvisorInstance.agent_name} • Last active: ${adminAdvisorInstance.last_interaction ? new Date(adminAdvisorInstance.last_interaction).toLocaleString() : 'Just now'}
+                        </p>
+                    </div>
+                    <button class="btn btn-sm btn-outline" onclick="toggleAdvisorChat()">Chat</button>
+                </div>
+            `;
+            
+            loadChatHistory();
+        }
+        
+        function toggleAdvisorChat() {
+            const chatDiv = document.getElementById('adminAdvisorChat');
+            chatDiv.style.display = chatDiv.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function loadChatHistory() {
+            if (!adminAdvisorInstance || !adminAdvisorInstance.conversation_history) return;
+            
+            const chatHistory = document.getElementById('adminChatHistory');
+            const history = adminAdvisorInstance.conversation_history || [];
+            
+            if (history.length === 0) {
+                chatHistory.innerHTML = `
+                    <p style="color: var(--text-light); text-align: center; margin: 2rem 0;">
+                        No messages yet. Start a conversation with your advisor!
+                    </p>
+                `;
+                return;
+            }
+            
+            chatHistory.innerHTML = history.map(msg => {
+                const isUser = msg.role === 'user';
+                return `
+                    <div style="margin-bottom: 1rem; text-align: ${isUser ? 'right' : 'left'};">
+                        <div style="display: inline-block; max-width: 70%; padding: 0.75rem; border-radius: 8px; background: ${isUser ? '#3b82f6' : '#e5e7eb'}; color: ${isUser ? 'white' : 'black'}; text-align: left;">
+                            <p style="margin: 0; font-size: 0.9rem;">${escapeHtml(msg.message)}</p>
+                            <small style="opacity: 0.7; font-size: 0.75rem;">${new Date(msg.timestamp).toLocaleTimeString()}</small>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+        
+        async function sendAdminChatMessage() {
+            const input = document.getElementById('adminChatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // Disable input
+            input.disabled = true;
+            const originalValue = input.value;
+            input.value = 'Sending...';
+            
+            try {
+                const response = await fetch('api/admin/chat_instance.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        owner_type: 'admin'
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Add messages to chat history
+                    adminAdvisorInstance.conversation_history.push({
+                        role: 'user',
+                        message: message,
+                        timestamp: new Date().toISOString()
+                    });
+                    adminAdvisorInstance.conversation_history.push({
+                        role: 'advisor',
+                        message: data.response,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    loadChatHistory();
+                    input.value = '';
+                } else {
+                    const error = await response.json();
+                    alert('Error: ' + (error.error || 'Failed to send message'));
+                    input.value = originalValue;
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+                input.value = originalValue;
+            } finally {
+                input.disabled = false;
+                input.focus();
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Load admin advisor on page load
+        window.addEventListener('DOMContentLoaded', loadAdminAdvisor);
+        
+        // Make functions global
+        window.createAdminAdvisor = createAdminAdvisor;
+        window.toggleAdvisorChat = toggleAdvisorChat;
+        window.sendAdminChatMessage = sendAdminChatMessage;
+        
+        // Allow Enter key to send messages
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatInput = document.getElementById('adminChatInput');
+            if (chatInput) {
+                chatInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        sendAdminChatMessage();
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

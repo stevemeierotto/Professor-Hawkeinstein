@@ -50,6 +50,7 @@ try {
             sc.title,
             sc.content_text,
             sc.content_html,
+            sc.video_url,
             dlc.relevance_score
         FROM draft_lesson_content dlc
         JOIN scraped_content sc ON dlc.content_id = sc.content_id
@@ -109,7 +110,8 @@ try {
         'content' => [
             'title' => $content['title'],
             'text' => $content['content_text'],
-            'html' => $content['content_html']
+            'html' => $content['content_html'],
+            'videoUrl' => $content['video_url']
         ],
         'questions' => $questionsByType,
         'questionCounts' => [

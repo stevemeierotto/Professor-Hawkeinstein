@@ -62,3 +62,4 @@ QUICK_START.txt
 *.json
 sync_to_web.sh
 Makefile
+archive/

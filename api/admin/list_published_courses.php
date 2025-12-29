@@ -5,7 +5,7 @@ require_once 'auth_check.php';
 requireAdmin();
 header('Content-Type: application/json');
 
-$db = getDb();
+$db = getDB();
 
 // Get all active/published courses from database
 $stmt = $db->prepare("SELECT course_id, course_name, course_description, difficulty_level, subject_area, created_at FROM courses WHERE is_active = 1 ORDER BY created_at DESC");

@@ -5,27 +5,73 @@
 #include <algorithm>
 
 AgentManager::AgentManager(Config& config) : config(config) {
-    std::cout << "Initializing Agent Manager with llama.cpp..." << std::endl;
+    std::cout << "Initializing Agent Manager with multi-model support..." << std::endl;
     
-    // Initialize llama.cpp client with dynamic model path from config
-    // Model path is constructed as: modelsBasePath + "/" + defaultModel
-    std::string modelPath = config.modelsBasePath + "/" + config.defaultModel;
-    std::cout << "Loading model from: " << modelPath << std::endl;
+    // Initialize llama.cpp clients for each configured model
+    for (const auto& [modelName, modelConfig] : config.models) {
+        std::string serverUrl = "http://localhost:" + std::to_string(modelConfig.port);
+        std::string modelPath = config.modelsBasePath + "/" + modelConfig.file;
+        
+        std::cout << "Registering model: " << modelName << " at " << serverUrl << std::endl;
+        
+        llamaClients[modelName] = std::make_unique<LlamaCppClient>(
+            serverUrl,
+            modelPath,
+            modelConfig.ctxSize,
+            config.temperature
+        );
+    }
     
-    llamaClient = std::make_unique<LlamaCppClient>(
-        config.llamaServerUrl,
-        modelPath,
-        config.maxContextLength,
-        config.temperature
-    );
+    // Also create a default client for backward compatibility
+    if (llamaClients.empty()) {
+        std::string modelPath = config.modelsBasePath + "/" + config.defaultModel;
+        std::cout << "No models configured, using default: " << modelPath << std::endl;
+        
+        llamaClients[config.defaultModel] = std::make_unique<LlamaCppClient>(
+            config.llamaServerUrl,
+            modelPath,
+            config.maxContextLength,
+            config.temperature
+        );
+    }
     
     database = std::make_unique<Database>(config.dbHost, config.dbPort, config.dbName, config.dbUser, config.dbPassword);
     ragEngine = std::make_unique<RAGEngine>(database.get(), nullptr);  // RAG without embeddings for now
     
-    std::cout << "Agent Manager initialized successfully" << std::endl;
+    std::cout << "Agent Manager initialized with " << llamaClients.size() << " model(s)" << std::endl;
 }
 
 AgentManager::~AgentManager() {
+}
+
+LlamaCppClient* AgentManager::getClientForModel(const std::string& modelName) {
+    // Try exact match first
+    auto it = llamaClients.find(modelName);
+    if (it != llamaClients.end()) {
+        return it->second.get();
+    }
+    
+    // Try partial match (e.g., "llama-2-7b-chat" matches "llama-2-7b-chat.Q4_0.gguf")
+    for (auto& [name, client] : llamaClients) {
+        if (name.find(modelName) != std::string::npos || modelName.find(name) != std::string::npos) {
+            std::cout << "Matched model '" << modelName << "' to '" << name << "'" << std::endl;
+            return client.get();
+        }
+    }
+    
+    // Fallback to default model
+    std::cout << "Model '" << modelName << "' not found, using default: " << config.defaultModel << std::endl;
+    it = llamaClients.find(config.defaultModel);
+    if (it != llamaClients.end()) {
+        return it->second.get();
+    }
+    
+    // Last resort: return first available client
+    if (!llamaClients.empty()) {
+        return llamaClients.begin()->second.get();
+    }
+    
+    return nullptr;
 }
 
 Agent AgentManager::loadAgent(int agentId) {
@@ -93,11 +139,17 @@ std::string AgentManager::processMessage(int userId, int agentId, const std::str
         int maxTokens = agent.parameters.count("max_tokens") ? std::stoi(agent.parameters["max_tokens"]) : 512;
         float temperature = agent.parameters.count("temperature") ? std::stof(agent.parameters["temperature"]) : 0.7f;
         
+        // Get the appropriate client for this agent's model
+        LlamaCppClient* client = getClientForModel(agent.modelName);
+        if (!client) {
+            throw std::runtime_error("No LLM client available for model: " + agent.modelName);
+        }
+        
         std::cout << "Querying llama.cpp with model: " << agent.modelName 
                   << " (max_tokens=" << maxTokens << ", temp=" << temperature << ")" << std::endl;
         
         // Query llama.cpp with agent-specific parameters
-        std::string response = llamaClient->generate(prompt, maxTokens, temperature);
+        std::string response = client->generate(prompt, maxTokens, temperature);
         
         // Store conversation in memory
         storeMemory(userId, agentId, message, response);
@@ -131,11 +183,17 @@ std::string AgentManager::processMessageWithContext(int userId, int agentId, con
         int maxTokens = agent.parameters.count("max_tokens") ? std::stoi(agent.parameters["max_tokens"]) : 512;
         float temperature = agent.parameters.count("temperature") ? std::stof(agent.parameters["temperature"]) : 0.7f;
         
+        // Get the appropriate client for this agent's model
+        LlamaCppClient* client = getClientForModel(agent.modelName);
+        if (!client) {
+            throw std::runtime_error("No LLM client available for model: " + agent.modelName);
+        }
+        
         std::cout << "Querying llama.cpp with model: " << agent.modelName 
                   << " (max_tokens=" << maxTokens << ", temp=" << temperature << ")" << std::endl;
         
         // Query llama.cpp with agent-specific parameters
-        std::string response = llamaClient->generate(prompt, maxTokens, temperature);
+        std::string response = client->generate(prompt, maxTokens, temperature);
         
         // Store conversation in memory
         storeMemory(userId, agentId, message, response);

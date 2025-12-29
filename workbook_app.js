@@ -137,9 +137,19 @@ async function loadLesson(courseId, unitNumber, lessonNumber) {
         
         // Fetch actual lesson content from database (convert to 0-based indexing)
         const response = await fetch(`api/course/get_lesson_content.php?courseId=${courseId}&unitIndex=${unitNumber - 1}&lessonIndex=${lessonNumber - 1}`);
+        
+        if (!response.ok) {
+            console.error('HTTP Error:', response.status, response.statusText);
+            throw new Error(`Failed to fetch lesson content: ${response.status} ${response.statusText}`);
+        }
+        
         const contentData = await response.json();
         
+        console.log('API Response:', contentData);
+        console.log('success:', contentData.success, 'hasContent:', contentData.hasContent);
+        
         if (!contentData.success || !contentData.hasContent) {
+            console.error('Content validation failed. Response:', JSON.stringify(contentData, null, 2));
             throw new Error('Lesson content not yet generated');
         }
         
@@ -154,6 +164,7 @@ async function loadLesson(courseId, unitNumber, lessonNumber) {
             // Add fetched content
             explanation: contentData.content.text,
             contentHtml: contentData.content.html,
+            videoUrl: contentData.content.videoUrl,
             questions: contentData.questions,
             questionCounts: contentData.questionCounts,
             courseId: courseId
@@ -167,6 +178,146 @@ async function loadLesson(courseId, unitNumber, lessonNumber) {
 // ==========================================
 // VIEW RENDERING
 // ==========================================
+
+function renderMediaPanel(lesson) {
+    const mediaPanel = document.getElementById('mediaPanel');
+    if (!mediaPanel) return;
+    
+    const hasVideo = lesson.videoUrl && lesson.videoUrl.trim() !== '';
+    
+    mediaPanel.innerHTML = `
+        <!-- Lesson Title in Sidebar -->
+        <div style="margin-bottom: 1.5rem; padding: 1rem; background: var(--primary-color); color: white; border-radius: 12px;">
+            <h3 style="margin: 0; font-size: 1.1rem;">${lesson.lessonTitle}</h3>
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.85rem; opacity: 0.9;">Lesson ${lesson.lessonNumber}</p>
+        </div>
+        
+        <!-- Video Section -->
+        <div style="margin-bottom: 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; overflow: hidden; ${hasVideo ? 'cursor: pointer;' : ''}">
+            <div style="padding: 1rem;">
+                <h3 style="color: white; margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    🎥 Video Lesson
+                    ${hasVideo ? '<span style="font-size: 0.8rem; opacity: 0.8;">Click to expand</span>' : ''}
+                </h3>
+            </div>
+            ${hasVideo ? `
+            <div class="video-thumbnail" data-video-url="${lesson.videoUrl}" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; background: rgba(0,0,0,0.2);">
+                <iframe 
+                    src="https://www.youtube.com/embed/${lesson.videoUrl}?enablejsapi=1" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen
+                    id="videoPlayer"
+                    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+                </iframe>
+            </div>
+            <button class="expand-video-btn" style="width: 100%; padding: 0.5rem; background: rgba(255,255,255,0.9); border: none; cursor: pointer; font-size: 0.85rem; color: #667eea; font-weight: 600;">
+                ⛶ Expand to 75%
+            </button>
+            ` : `
+            <div style="padding: 1.5rem; background: rgba(255, 255, 255, 0.9); text-align: center;">
+                <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📹</div>
+                <p style="color: #6c757d; font-size: 0.9rem; margin: 0;">No video available</p>
+                <p style="color: #6c757d; font-size: 0.75rem; margin-top: 0.25rem;">Video content can be added by instructors</p>
+            </div>
+            `}
+        </div>
+        
+        <!-- Visuals Section -->
+        <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 12px; overflow: hidden; border: 2px dashed #6c63ff;">
+            <div style="padding: 1rem;">
+                <h3 style="margin: 0; font-size: 1rem;">🎨 Visual Learning</h3>
+            </div>
+            <div style="padding: 1.5rem; background: white; text-align: center;">
+                <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📊📈🔬</div>
+                <p style="color: var(--text-light); font-size: 0.85rem; margin: 0;">Diagrams & visuals</p>
+                <p style="color: var(--text-light); font-size: 0.75rem; margin-top: 0.25rem;">Coming soon</p>
+            </div>
+        </div>
+    `;
+    
+    // Add click handler for expand button
+    if (hasVideo) {
+        const expandBtn = mediaPanel.querySelector('.expand-video-btn');
+        console.log('Expand button found:', expandBtn);
+        if (expandBtn) {
+            expandBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Expand button clicked!');
+                expandVideo(lesson.videoUrl);
+            });
+        } else {
+            console.error('Expand button NOT found!');
+        }
+    }
+}
+
+function expandVideo(videoUrl) {
+    console.log('expandVideo called with:', videoUrl);
+    
+    // Remove any existing modal first
+    const existingModal = document.getElementById('videoModal');
+    if (existingModal) existingModal.remove();
+    
+    // Create modal overlay
+    const modal = document.createElement('div');
+    modal.id = 'videoModal';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100vw';
+    modal.style.height = '100vh';
+    modal.style.background = 'rgba(0, 0, 0, 0.9)';
+    modal.style.zIndex = '10000';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.padding = '2rem';
+    modal.style.boxSizing = 'border-box';
+    
+    modal.innerHTML = `
+        <div style="position: relative; width: 75vw; max-width: 1200px; height: 75vh; max-height: 80vh;">
+            <!-- Close button - fixed position in top right corner of screen -->
+            <button id="closeVideoBtn" style="position: fixed; top: 20px; right: 20px; background: #ff4757; color: white; border: none; border-radius: 30px; padding: 12px 24px; font-size: 1.1rem; font-weight: bold; cursor: pointer; z-index: 10002; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); transition: all 0.2s;">
+                ✕ Close Video
+            </button>
+            <iframe 
+                src="https://www.youtube.com/embed/${videoUrl}?autoplay=1" 
+                frameborder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowfullscreen
+                style="width: 100%; height: 100%; border-radius: 12px; border: 3px solid white;">
+            </iframe>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    console.log('Modal appended to body');
+    
+    // Close button handler
+    document.getElementById('closeVideoBtn').addEventListener('click', closeVideoModal);
+    
+    // Click outside to close
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeVideoModal();
+    });
+    
+    // ESC key to close
+    document.addEventListener('keydown', handleEscapeKey);
+}
+
+function handleEscapeKey(e) {
+    if (e.key === 'Escape') closeVideoModal();
+}
+
+function closeVideoModal() {
+    const modal = document.getElementById('videoModal');
+    if (modal) {
+        modal.remove();
+        document.removeEventListener('keydown', handleEscapeKey);
+    }
+}
 
 async function showCourseView() {
     AppState.currentView = 'courses';
@@ -362,10 +513,15 @@ async function selectLesson(lessonNumber) {
 // ==========================================
 
 function renderLesson(lesson) {
-    // Update title and metadata
+    console.log('Rendering lesson with videoUrl:', lesson.videoUrl);
+    
+    // Update metadata only (title is now in media panel)
     document.getElementById('lessonTitle').textContent = lesson.lessonTitle;
     document.getElementById('courseInfo').textContent = 
-        `${lesson.courseName} • ${lesson.unitTitle} • Lesson ${lesson.lessonNumber}`;
+        `${lesson.courseName} • ${lesson.unitTitle}`;
+    
+    // Render media panel (video and visuals)
+    renderMediaPanel(lesson);
     
     // Render lesson content
     const contentHtml = `
@@ -382,16 +538,6 @@ function renderLesson(lesson) {
             <h2>📖 Lesson Content</h2>
             <div class="lesson-text" style="line-height: 1.8; font-size: 1.05rem;">
                 ${lesson.contentHtml || lesson.explanation.replace(/\n/g, '<br>')}
-            </div>
-        </section>
-        
-        <!-- Placeholder for Visuals/Diagrams -->
-        <section style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 12px; border: 2px dashed #6c63ff;">
-            <h2 style="text-align: center; margin-bottom: 1rem;">🎨 Visual Learning Section</h2>
-            <div style="text-align: center; padding: 3rem; background: white; border-radius: 8px;">
-                <div style="font-size: 4rem; margin-bottom: 1rem;">📊📈🔬</div>
-                <p style="color: var(--text-light); font-size: 1.1rem;">Diagrams, charts, and interactive visualizations will appear here</p>
-                <p style="color: var(--text-light); font-size: 0.9rem; margin-top: 0.5rem;">Coming soon: Concept maps, labeled diagrams, and animations</p>
             </div>
         </section>
         
@@ -458,21 +604,6 @@ function renderLesson(lesson) {
     `;
     
     document.getElementById('lessonContent').innerHTML = contentHtml;
-    
-    // Update video placeholder with lesson info
-    document.getElementById('videoPlaceholder').innerHTML = `
-        <div style="text-align: center;">
-            <p style="font-size: 4rem; margin-bottom: 1rem;">🎥</p>
-            <h3 style="margin-bottom: 1rem;">${lesson.lessonTitle}</h3>
-            <p style="font-size: 1rem; color: var(--text-light); margin-bottom: 1rem;">Video lesson will be available here</p>
-            <div style="background: rgba(108, 99, 255, 0.1); padding: 1rem; border-radius: 8px; margin-top: 1.5rem;">
-                <p style="font-size: 0.9rem; color: var(--primary); font-weight: 600;">📹 Coming Soon</p>
-                <p style="font-size: 0.85rem; color: var(--text-light); margin-top: 0.5rem;">
-                    Animated explanations, demonstrations, and visual walkthroughs
-                </p>
-            </div>
-        </div>
-    `;
     
     // Enable/disable quiz button based on question availability
     const openQuizBtn = document.getElementById('openQuizBtn');

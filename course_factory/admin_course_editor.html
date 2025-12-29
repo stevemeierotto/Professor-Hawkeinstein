@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="auth_storage.js"></script>
+    <script src="admin_auth.js"></script>
+    <title>Course Editor - Admin</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .editor-container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+        .editor-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 2rem;
+        }
+        .lesson-sidebar {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            height: fit-content;
+            position: sticky;
+            top: 1rem;
+        }
+        .lesson-sidebar h3 {
+            margin: 0 0 1rem 0;
+            color: var(--primary-color);
+        }
+        .unit-group {
+            margin-bottom: 1.5rem;
+        }
+        .unit-title {
+            font-weight: 600;
+            padding: 0.5rem;
+            background: var(--bg-light);
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+        }
+        .lesson-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .lesson-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-radius: 6px;
+            margin-bottom: 0.25rem;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .lesson-item:hover {
+            background: var(--bg-light);
+        }
+        .lesson-item.active {
+            background: var(--primary-color);
+            color: white;
+        }
+        .lesson-item .has-video {
+            font-size: 0.8rem;
+        }
+        .editor-main {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+        }
+        .editor-section {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .editor-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .editor-section h3 {
+            margin: 0 0 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        .form-group textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+        .form-group .help-text {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-top: 0.5rem;
+        }
+        .video-preview {
+            margin-top: 1rem;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
+        }
+        .video-preview iframe {
+            width: 100%;
+            aspect-ratio: 16/9;
+            border: none;
+        }
+        .video-preview.empty {
+            background: var(--bg-light);
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-light);
+        }
+        .btn-row {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .content-preview {
+            background: var(--bg-light);
+            padding: 1.5rem;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .status-saved {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-unsaved {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            padding: 1rem 2rem;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+        }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .toast.error {
+            background: #dc3545;
+        }
+        .toast.success {
+            background: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <a href="admin_dashboard.html" class="logo">🎓 Admin Panel</a>
+            <ul class="nav-links">
+                <li><a href="admin_courses.html">← Back to Courses</a></li>
+                <li><a href="#" id="adminName">Admin</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="editor-container">
+        <div class="editor-header">
+            <div>
+                <h1 id="courseName">Loading Course...</h1>
+                <p id="courseMeta" style="color: var(--text-light);"></p>
+            </div>
+            <div>
+                <span class="status-badge status-saved" id="saveStatus">All changes saved</span>
+            </div>
+        </div>
+
+        <div class="editor-layout">
+            <!-- Lesson Sidebar -->
+            <aside class="lesson-sidebar">
+                <h3>📚 Lessons</h3>
+                <div id="lessonList">
+                    <p style="color: var(--text-light);">Loading lessons...</p>
+                </div>
+            </aside>
+
+            <!-- Main Editor -->
+            <main class="editor-main">
+                <div id="editorContent">
+                    <p style="text-align: center; color: var(--text-light); padding: 3rem;">
+                        Select a lesson from the sidebar to edit
+                    </p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // State
+        let courseData = null;
+        let currentLesson = null;
+        let lessonContent = {};
+        let hasUnsavedChanges = false;
+
+        // Get course ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const courseId = urlParams.get('course') || urlParams.get('id');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!courseId) {
+                showToast('No course specified', 'error');
+                return;
+            }
+            await loadCourse();
+        });
+
+        // Load course data
+        async function loadCourse() {
+            try {
+                // Load course JSON file (same as workbook uses)
+                const response = await fetch(`api/course/courses/course_${courseId}.json`);
+                
+                if (!response.ok) {
+                    throw new Error(`Course file not found: course_${courseId}.json`);
+                }
+                
+                courseData = await response.json();
+                
+                // Update header
+                document.getElementById('courseName').textContent = courseData.courseName || 'Course Editor';
+                document.getElementById('courseMeta').textContent = 
+                    `${courseData.subject || ''} • ${courseData.level || ''} • ${courseData.units?.length || 0} units`;
+                
+                // Render lesson sidebar
+                renderLessonSidebar();
+                
+            } catch (error) {
+                console.error('Error loading course:', error);
+                showToast('Error loading course: ' + error.message, 'error');
+            }
+        }
+
+        // Render lesson sidebar
+        function renderLessonSidebar() {
+            const container = document.getElementById('lessonList');
+            
+            if (!courseData.units || courseData.units.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-light);">No units found</p>';
+                return;
+            }
+            
+            container.innerHTML = courseData.units.map(unit => `
+                <div class="unit-group">
+                    <div class="unit-title">📖 Unit ${unit.unitNumber}: ${escapeHtml(unit.unitTitle)}</div>
+                    <ul class="lesson-list">
+                        ${unit.lessons.map(lesson => `
+                            <li class="lesson-item" onclick="selectLesson(${unit.unitNumber}, ${lesson.lessonNumber})" 
+                                id="lesson-${unit.unitNumber}-${lesson.lessonNumber}">
+                                <span>Lesson ${lesson.lessonNumber}</span>
+                                <span class="has-video" id="video-indicator-${unit.unitNumber}-${lesson.lessonNumber}">
+                                    ${lesson.hasVideo ? '🎥' : ''}
+                                </span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `).join('');
+        }
+
+        // Select a lesson to edit
+        async function selectLesson(unitNumber, lessonNumber) {
+            // Check for unsaved changes
+            if (hasUnsavedChanges) {
+                if (!confirm('You have unsaved changes. Continue without saving?')) {
+                    return;
+                }
+            }
+            
+            // Update active state
+            document.querySelectorAll('.lesson-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`lesson-${unitNumber}-${lessonNumber}`)?.classList.add('active');
+            
+            currentLesson = { unitNumber, lessonNumber };
+            
+            // Load lesson content
+            try {
+                const res = await fetch(`api/course/get_lesson_content.php?courseId=${courseId}&unitIndex=${unitNumber - 1}&lessonIndex=${lessonNumber - 1}`);
+                const data = await res.json();
+                
+                if (data.success && data.hasContent) {
+                    lessonContent = {
+                        contentId: data.content?.contentId,
+                        title: data.content?.title || `Unit ${unitNumber} Lesson ${lessonNumber}`,
+                        text: data.content?.text || '',
+                        html: data.content?.html || '',
+                        videoUrl: data.content?.videoUrl || ''
+                    };
+                } else {
+                    // Get lesson title from course data
+                    const unit = courseData.units?.find(u => u.unitNumber === unitNumber);
+                    const lesson = unit?.lessons?.find(l => l.lessonNumber === lessonNumber);
+                    
+                    lessonContent = {
+                        title: lesson?.lessonTitle || `Unit ${unitNumber} Lesson ${lessonNumber}`,
+                        text: '',
+                        html: '',
+                        videoUrl: ''
+                    };
+                }
+                
+                renderEditor();
+                hasUnsavedChanges = false;
+                updateSaveStatus();
+                
+            } catch (error) {
+                console.error('Error loading lesson:', error);
+                showToast('Error loading lesson', 'error');
+            }
+        }
+
+        // Render the editor for current lesson
+        function renderEditor() {
+            const container = document.getElementById('editorContent');
+            
+            container.innerHTML = `
+                <h2>Editing: ${escapeHtml(lessonContent.title)}</h2>
+                <p style="color: var(--text-light); margin-bottom: 2rem;">
+                    Unit ${currentLesson.unitNumber}, Lesson ${currentLesson.lessonNumber}
+                </p>
+                
+                <!-- Video Section -->
+                <div class="editor-section">
+                    <h3>🎥 Video Content</h3>
+                    <div class="form-group">
+                        <label for="videoUrl">YouTube Video ID or URL</label>
+                        <input type="text" id="videoUrl" value="${escapeHtml(lessonContent.videoUrl || '')}" 
+                               placeholder="e.g., dQw4w9WgXcQ or https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                               oninput="onFieldChange()">
+                        <p class="help-text">Enter the YouTube video ID (the part after v=) or the full YouTube URL</p>
+                    </div>
+                    <div class="video-preview ${lessonContent.videoUrl ? '' : 'empty'}" id="videoPreview">
+                        ${lessonContent.videoUrl ? 
+                            `<iframe src="https://www.youtube.com/embed/${extractVideoId(lessonContent.videoUrl)}" allowfullscreen></iframe>` :
+                            `<p>📹 No video set. Enter a YouTube URL above to add a video.</p>`
+                        }
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn btn-secondary" onclick="previewVideo()">Preview Video</button>
+                        <button class="btn btn-primary" onclick="saveVideo()">💾 Save Video</button>
+                    </div>
+                </div>
+                
+                <!-- Lesson Content Section -->
+                <div class="editor-section">
+                    <h3>📝 Lesson Content</h3>
+                    <div class="form-group">
+                        <label for="lessonTitle">Lesson Title</label>
+                        <input type="text" id="lessonTitle" value="${escapeHtml(lessonContent.title)}" 
+                               oninput="onFieldChange()">
+                    </div>
+                    <div class="form-group">
+                        <label>Current Content Preview</label>
+                        <div class="content-preview">
+                            ${lessonContent.html || lessonContent.text || '<p style="color: var(--text-light);">No content yet</p>'}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="lessonText">Edit Content (Plain Text)</label>
+                        <textarea id="lessonText" oninput="onFieldChange()">${escapeHtml(lessonContent.text || '')}</textarea>
+                        <p class="help-text">Edit the lesson text content. HTML formatting will be preserved in the preview above.</p>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn btn-primary" onclick="saveContent()">💾 Save Content</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Extract YouTube video ID from URL or return as-is if already an ID
+        function extractVideoId(input) {
+            if (!input) return '';
+            
+            // If it's already just an ID (11 characters, no special chars except - and _)
+            if (/^[\w-]{11}$/.test(input)) {
+                return input;
+            }
+            
+            // Try to extract from various YouTube URL formats
+            const patterns = [
+                /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s]+)/,
+                /youtube\.com\/v\/([^&\s]+)/
+            ];
+            
+            for (const pattern of patterns) {
+                const match = input.match(pattern);
+                if (match) return match[1];
+            }
+            
+            return input; // Return as-is if no pattern matches
+        }
+
+        // Preview video
+        function previewVideo() {
+            const input = document.getElementById('videoUrl').value.trim();
+            const videoId = extractVideoId(input);
+            const preview = document.getElementById('videoPreview');
+            
+            if (videoId) {
+                preview.classList.remove('empty');
+                preview.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`;
+            } else {
+                preview.classList.add('empty');
+                preview.innerHTML = `<p>📹 No video set. Enter a YouTube URL above to add a video.</p>`;
+            }
+        }
+
+        // Save video URL
+        async function saveVideo() {
+            const input = document.getElementById('videoUrl').value.trim();
+            const videoId = extractVideoId(input);
+            
+            try {
+                const res = await fetch('api/admin/update_lesson_video.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        courseId: courseId,
+                        unitIndex: currentLesson.unitNumber - 1,
+                        lessonIndex: currentLesson.lessonNumber - 1,
+                        video_url: videoId
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    lessonContent.videoUrl = videoId;
+                    showToast('Video saved successfully!', 'success');
+                    hasUnsavedChanges = false;
+                    updateSaveStatus();
+                    
+                    // Update video indicator in sidebar
+                    const indicator = document.getElementById(`video-indicator-${currentLesson.unitNumber}-${currentLesson.lessonNumber}`);
+                    if (indicator) {
+                        indicator.textContent = videoId ? '🎥' : '';
+                    }
+                } else {
+                    throw new Error(data.message || 'Failed to save');
+                }
+            } catch (error) {
+                console.error('Error saving video:', error);
+                showToast('Error saving video: ' + error.message, 'error');
+            }
+        }
+
+        // Save lesson content
+        async function saveContent() {
+            const title = document.getElementById('lessonTitle').value.trim();
+            const text = document.getElementById('lessonText').value.trim();
+            
+            try {
+                const res = await fetch('api/admin/update_lesson_content.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        draft_id: courseId,
+                        unit: currentLesson.unitNumber,
+                        lesson: currentLesson.lessonNumber,
+                        title: title,
+                        content_text: text
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    lessonContent.title = title;
+                    lessonContent.text = text;
+                    showToast('Content saved successfully!', 'success');
+                    hasUnsavedChanges = false;
+                    updateSaveStatus();
+                } else {
+                    throw new Error(data.message || 'Failed to save');
+                }
+            } catch (error) {
+                console.error('Error saving content:', error);
+                showToast('Error saving content: ' + error.message, 'error');
+            }
+        }
+
+        // Track changes
+        function onFieldChange() {
+            hasUnsavedChanges = true;
+            updateSaveStatus();
+        }
+
+        // Update save status indicator
+        function updateSaveStatus() {
+            const status = document.getElementById('saveStatus');
+            if (hasUnsavedChanges) {
+                status.textContent = 'Unsaved changes';
+                status.className = 'status-badge status-unsaved';
+            } else {
+                status.textContent = 'All changes saved';
+                status.className = 'status-badge status-saved';
+            }
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Warn before leaving with unsaved changes
+        window.addEventListener('beforeunload', (e) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+    </script>
+</body>
+</html>

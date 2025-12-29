@@ -14,7 +14,8 @@ class LlamaCppClient;  // Forward declaration
 class AgentManager {
 private:
     Config& config;
-    std::unique_ptr<LlamaCppClient> llamaClient;
+    // Map of model_name -> LlamaCppClient for multi-model support
+    std::map<std::string, std::unique_ptr<LlamaCppClient>> llamaClients;
     std::unique_ptr<Database> database;
     std::unique_ptr<RAGEngine> ragEngine;
     std::map<int, Agent> agentCache;
@@ -23,6 +24,7 @@ private:
     std::vector<std::string> retrieveRelevantContext(int agentId, const std::string& query);
     void storeMemory(int userId, int agentId, const std::string& userMessage, const std::string& agentResponse);
     std::string buildPrompt(const Agent& agent, const std::string& userMessage, const std::vector<std::string>& context);
+    LlamaCppClient* getClientForModel(const std::string& modelName);
     
 public:
     AgentManager(Config& config);

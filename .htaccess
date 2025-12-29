@@ -3,6 +3,33 @@
 
 RewriteEngine On
 
+# =============================================================================
+# ARCHITECTURE REDIRECTS (Phase 5/6)
+# Redirect root-level URLs to their proper subsystem locations
+# Files have been archived - these are permanent redirects now
+# See: docs/ARCHITECTURE.md
+# =============================================================================
+
+# Course Factory redirects (admin_* URLs -> /course_factory/)
+RewriteRule ^admin_(.+)\.html$ /course_factory/admin_$1.html [R=301,L]
+RewriteRule ^admin_auth\.js$ /course_factory/admin_auth.js [R=301,L]
+
+# Student Portal redirects
+RewriteRule ^login\.html$ /student_portal/login.html [R=301,L]
+RewriteRule ^register\.html$ /student_portal/register.html [R=301,L]
+RewriteRule ^student_dashboard\.html$ /student_portal/student_dashboard.html [R=301,L]
+RewriteRule ^workbook\.html$ /student_portal/workbook.html [R=301,L]
+RewriteRule ^course_viewer\.html$ /student_portal/course_viewer.html [R=301,L]
+RewriteRule ^quiz\.html$ /student_portal/quiz.html [R=301,L]
+RewriteRule ^index\.html$ /student_portal/index.html [R=301,L]
+
+# Root URL -> Student Portal
+RewriteRule ^$ /student_portal/ [R=301,L]
+
+# =============================================================================
+# END ARCHITECTURE REDIRECTS
+# =============================================================================
+
 # Prevent direct access to config and log files
 <FilesMatch "(\.log|database\.php)$">
     Order allow,deny
