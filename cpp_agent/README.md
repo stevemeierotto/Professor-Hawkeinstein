@@ -123,9 +123,6 @@ Process a student message through an AI agent.
 ### GET /agent/list
 Get all available agents.
 
-### POST /biometric/verify-face
-Verify student identity using facial recognition.
-
 ### GET /health
 Health check endpoint.
 

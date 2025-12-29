@@ -45,7 +45,7 @@
  */
 
 require_once __DIR__ . '/../admin/auth_check.php';
-requireAdmin();
+$adminUser = requireAdmin();
 
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../course/CourseMetadata.php';
@@ -342,9 +342,8 @@ try {
     $completed = !$stoppedEarly && ($processedLessons >= $totalLessons || $failedLessons === 0);
     
     // Log activity
-    $admin = getAdminFromToken();
     logActivity(
-        $admin['userId'],
+        $adminUser['userId'],
         'GENERATE_FULL_COURSE',
         "Generated $successfulLessons of $totalLessons lessons for $courseName (failures: $failedLessons)"
     );
@@ -510,11 +509,8 @@ function callCourseDesignAgent($prompt) {
     
     if (curl_errno($ch)) {
         $error = curl_error($ch);
-        curl_close($ch);
         return ['success' => false, 'error' => "Agent service error: $error"];
     }
-    
-    curl_close($ch);
     
     if ($httpCode !== 200) {
         return ['success' => false, 'error' => "Agent service returned HTTP $httpCode"];

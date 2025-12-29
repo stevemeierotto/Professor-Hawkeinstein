@@ -27,7 +27,7 @@
  */
 
 require_once __DIR__ . '/../admin/auth_check.php';
-requireAdmin();
+$adminUser = requireAdmin();
 
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../course/CourseMetadata.php';
@@ -174,9 +174,8 @@ try {
     }
     
     // Log the activity
-    $admin = getAdminFromToken();
     logActivity(
-        $admin['userId'],
+        $adminUser['userId'],
         'SAVE_LESSON',
         "Saved lesson $lessonNumber to unit $unitNumber in course $courseId (action: {$result['action']})"
     );

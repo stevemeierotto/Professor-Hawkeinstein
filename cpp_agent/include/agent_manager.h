@@ -34,8 +34,6 @@ public:
     std::string processMessageWithContext(int userId, int agentId, const std::string& message, const std::string& ragContext);
     Json::Value listAgents();
     Json::Value getAgent(int agentId);
-    bool verifyFace(int userId, const std::string& imageData);
-    bool verifyVoice(int userId, const std::string& audioData);
 };
 
 #endif // AGENT_MANAGER_H

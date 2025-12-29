@@ -19,7 +19,7 @@ try {
         exit;
     }
     
-    $db = getDBConnection();
+    $db = getDB();
     
     // Get draft_id from published_courses table
     $stmt = $db->prepare("

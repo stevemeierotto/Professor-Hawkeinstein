@@ -30,8 +30,7 @@ CREATE TABLE users (
     full_name VARCHAR(100) NOT NULL,
     role ENUM('student', 'admin', 'root') DEFAULT 'student',
     created_by INT NULL,  -- For admins created by root
-    facial_signature BLOB NULL,  -- Removed for liability (legacy column)
-    voice_signature BLOB NULL,   -- Removed for liability (legacy column)
+    -- DEPRECATED: facial_signature and voice_signature columns removed for liability with minors
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL,
     is_active BOOLEAN DEFAULT TRUE,
@@ -41,7 +40,7 @@ CREATE TABLE users (
     INDEX idx_role (role)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Sessions table: Track user sessions and anti-cheating monitoring
+-- Sessions table: Track user sessions
 CREATE TABLE sessions (
     session_id VARCHAR(64) PRIMARY KEY,
     user_id INT NOT NULL,
@@ -49,9 +48,6 @@ CREATE TABLE sessions (
     last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     ip_address VARCHAR(45),
     user_agent TEXT,
-    facial_verified BOOLEAN DEFAULT FALSE,
-    voice_verified BOOLEAN DEFAULT FALSE,
-    cheating_flags INT DEFAULT 0,  -- Counter for suspicious activities
     is_active BOOLEAN DEFAULT TRUE,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     INDEX idx_user_id (user_id),

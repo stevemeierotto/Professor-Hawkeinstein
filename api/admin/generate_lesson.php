@@ -263,7 +263,6 @@ function callCourseDesignAgent($prompt) {
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curlError = curl_error($ch);
-    curl_close($ch);
     
     if ($curlError) {
         return ['success' => false, 'error' => "Agent service error: $curlError"];

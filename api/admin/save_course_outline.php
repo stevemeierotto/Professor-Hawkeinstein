@@ -26,7 +26,7 @@
  */
 
 require_once __DIR__ . '/../admin/auth_check.php';
-requireAdmin();
+$adminUser = requireAdmin();
 
 require_once __DIR__ . '/../../config/database.php';
 
@@ -157,9 +157,8 @@ try {
     }
     
     // Log the activity
-    $admin = getAdminFromToken();
     logActivity(
-        $admin['userId'],
+        $adminUser['userId'],
         'SAVE_COURSE_OUTLINE',
         "Saved course outline: $courseId with " . count($courseMetadata['units']) . " units, $totalLessons lessons"
     );

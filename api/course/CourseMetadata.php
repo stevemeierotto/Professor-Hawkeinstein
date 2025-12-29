@@ -158,6 +158,23 @@ class CourseMetadata {
     }
     
     /**
+     * Get all course data
+     * @return array
+     */
+    public function getData() {
+        return $this->data;
+    }
+    
+    /**
+     * Set all course data
+     * @param array $data Full course data array
+     */
+    public function setData($data) {
+        $this->data = $data;
+        $this->data['updatedAt'] = date('c');
+    }
+    
+    /**
      * Get all units
      * @return array
      */

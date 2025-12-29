@@ -261,21 +261,3 @@ Json::Value AgentManager::getAgent(int agentId) {
     
     return result;
 }
-
-bool AgentManager::verifyFace(int userId, const std::string& imageData) {
-    // TODO: Implement OpenCV facial recognition
-    // For now, return placeholder
-    std::cout << "Face verification requested for user " << userId << std::endl;
-    
-    // This will be replaced with actual OpenCV implementation
-    // that compares the captured face with stored biometric_signature
-    
-    return true;  // Placeholder
-}
-
-bool AgentManager::verifyVoice(int userId, const std::string& audioData) {
-    // TODO: Implement voice authentication
-    std::cout << "Voice verification requested for user " << userId << std::endl;
-    
-    return true;  // Placeholder
-}

@@ -258,7 +258,6 @@ function callAgentService($endpoint, $data) {
         $response = curl_exec($ch);
         $curlError = curl_error($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
         
         error_log("[callAgentService] HTTP $httpCode, response length: " . strlen($response) . ", error: $curlError");
         

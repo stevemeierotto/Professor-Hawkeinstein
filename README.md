@@ -1,566 +1,353 @@
 # Professor Hawkeinstein Educational Platform
 
-A complete AI-powered educational platform featuring automated course generation, personalized student advisors, and interactive workbooks. Built with local LLM inference for privacy and cost efficiency.
+An AI-powered educational platform with automated course generation, personalized student advisors, and interactive workbooks. Built with local LLM inference using llama.cpp.
 
-## 🚨 IMPORTANT: Dev vs Production Environment
+## Development vs Production Environment
 
-**Before making any file changes, read:** [`docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md`](docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md)
+**Read before making changes:** [`docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md`](docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md)
 
-This system has **strict separation** between development and production:
-- **Development:** `/home/steve/Professor_Hawkeinstein` (NOT web-accessible)
-- **Production:** `/var/www/html/basic_educational` (ONLY web-accessible path)
+- **Development:** `/home/steve/Professor_Hawkeinstein` (not web-accessible)
+- **Production:** `/var/www/html/basic_educational` (web-accessible)
 
-Changes in DEV do NOT automatically sync to PROD. Always deploy explicitly using `make sync-web`.
+Changes in DEV do not automatically sync to PROD. Deploy explicitly using `make sync-web`.
 
-## 🚀 Current Status (December 2025)
+## Current Status (December 2025)
 
-**Alpha Release** - Core features functional, not production-ready:
-- ✅ **Two-Subsystem Architecture** - Student Portal + Course Factory separation
-- ✅ Automated course generation from educational standards (5-agent pipeline)
-- ✅ 12-lesson "2nd Grade Science" course published with full content
-- ✅ Student advisors with persistent memory and conversation history
-- ✅ Interactive workbook with lessons and practice questions
-- ✅ Admin dashboard for course creation and question generation
-- ✅ Dockerized deployment (MariaDB, PHP API, C++ Agent Service, llama-server)
-- ⚠️ **Not Ready:** Lesson quizzes, unit tests, video content, security hardening
+**Alpha Release** - Core features functional, not production-ready.
+
+| Feature | Status |
+|---------|--------|
+| Two-subsystem architecture (Student Portal + Course Factory) | ✅ Working |
+| C++ agent service with llama.cpp integration | ✅ Working |
+| Live AI responses from LLM | ✅ Working |
+| Course generation from educational standards | ✅ Working |
+| Student advisors with persistent memory | ✅ Working |
+| Interactive workbook with lessons and questions | ✅ Working |
+| Admin dashboard for course creation | ✅ Working |
+| Docker deployment | ✅ Working |
+| Lesson quizzes and unit tests | ⏳ Partial |
+| Video/multimedia content | ❌ Placeholders only |
+| Vector similarity search (RAG) | ❌ Not implemented |
 
 ## Technology Stack
 
-- **Frontend**: HTML5, CSS3, JavaScript (vanilla, no frameworks)
-- **Backend**: PHP 8.0+ with JWT authentication
-- **Database**: MariaDB 10.7+ (Docker container: `phef-database:3307`)
-- **AI Agents**: C++ HTTP microservice on port 8080 (Docker: `phef-agent`)
-- **LLM**: llama-server on port 8090 (Docker: `phef-llama`) running Qwen 2.5 1.5B
-- **API Layer**: PHP on port 8081 (Docker: `phef-api`)
-- **Memory Management**: Prompt cache clearing script for long-running sessions
-- **Security**: Username/password authentication (biometric features removed for liability)
+| Component | Technology | Port |
+|-----------|------------|------|
+| Frontend | HTML5, CSS3, vanilla JavaScript | - |
+| Backend | PHP 8.0+ with JWT authentication | 80/443 |
+| Database | MariaDB 10.7+ | 3306 (or 3307 in Docker) |
+| Agent Service | C++ HTTP microservice | 8080 |
+| LLM Server | llama-server (llama.cpp) | 8090 |
+| Model | Qwen 2.5 1.5B or Llama 2 7B (quantized) | - |
 
-## Architecture Overview
-
-The platform uses a **two-subsystem architecture** with strict separation:
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                          Browser Access                                  │
-│                                                                         │
-│  app.professorhawkeinstein.local    factory.professorhawkeinstein.local │
-│          ↓                                    ↓                         │
-│  ┌───────────────────┐              ┌────────────────────┐              │
-│  │  Student Portal   │              │   Course Factory   │              │
-│  │  /student_portal/ │              │   /course_factory/ │              │
-│  │                   │              │                    │              │
-│  │  • Login/Register │              │  • Admin Dashboard │              │
-│  │  • Dashboard      │              │  • Course Wizard   │              │
-│  │  • Workbook       │              │  • Question Gen    │              │
-│  │  • Course Viewer  │              │  • Content Review  │              │
-│  │  • Progress       │              │  • Agent Factory   │              │
-│  └─────────┬─────────┘              └──────────┬─────────┘              │
-│            │                                   │                        │
-│            └─────────────┬─────────────────────┘                        │
-│                          ↓                                              │
-│              ┌───────────────────────┐                                  │
-│              │    Shared Services    │                                  │
-│              │    /shared/ /api/     │                                  │
-│              └───────────┬───────────┘                                  │
-└──────────────────────────┼──────────────────────────────────────────────┘
-                           ↓
-┌──────────────────────────────────────────────────────────┐
-│                     Docker Compose                       │
-├──────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────────┐ │
-│  │ phef-api    │  │ phef-agent   │  │ phef-llama     │ │
-│  │ PHP :8081   │←→│ C++ :8080    │←→│ llama-server   │ │
-│  │             │  │              │  │ :8090          │ │
-│  └─────┬───────┘  └──────────────┘  └────────────────┘ │
-│        │                                                 │
-│        ↓                                                 │
-│  ┌─────────────┐                                        │
-│  │phef-database│                                        │
-│  │MariaDB :3307│                                        │
-│  └─────────────┘                                        │
-└──────────────────────────────────────────────────────────┘
+Browser
+   │
+   ├── Student Portal (student_portal/)
+   │   └── Dashboard, Workbook, Quiz, Login
+   │
+   └── Course Factory (course_factory/)
+       └── Admin Dashboard, Course Wizard, Question Generator
+           │
+           ↓
+    ┌──────────────┐
+    │  PHP API     │ (api/)
+    │  Port 80     │
+    └──────┬───────┘
+           │
+           ↓
+    ┌──────────────┐      ┌────────────────┐
+    │ agent_service│ ───→ │  llama-server  │
+    │  Port 8080   │      │   Port 8090    │
+    └──────┬───────┘      └────────────────┘
+           │
+           ↓
+    ┌──────────────┐
+    │   MariaDB    │
+    │  Port 3306   │
+    └──────────────┘
 ```
 
-### Subsystem Boundaries
-| Subsystem | URL | Purpose |
-|-----------|-----|---------|
-| Student Portal | `app.professorhawkeinstein.local` | Learning, progress tracking, advisor chat |
-| Course Factory | `factory.professorhawkeinstein.local` | Content authoring, course generation |
-| Shared | `/shared/`, `/api/` | Auth utilities, database, common APIs |
+### Subsystems
 
-## Core Features
-
-### 🤖 AI-Powered Course Generation
-- **5-Agent Pipeline**: Standards → Outline → Lessons → Questions → Validation
-- **Automated Content**: Generates 10K+ character lessons from educational standards
-- **Question Banks**: Multiple choice, fill-in-blank, and short essay questions
-- **Batch Generation**: Creates 5 questions per LLM call for efficiency
-- **Memory Management**: Built-in cache clearing for long generation sessions
-
-### 👨‍🎓 Personalized Student Advisors
-- **1:1 Student-Advisor Mapping**: Each student gets their own Professor Hawkeinstein
-- **Persistent Memory**: Conversation history, progress notes, testing results
-- **Isolated Data**: No cross-contamination between students
-- **Template-Instance Pattern**: Advisor templates → per-student instances
-
-### 📚 Interactive Workbooks
-- **Lesson Content**: 11K+ character educational content with formatting
-- **Practice Questions**: Organized by type with expandable answers
-- **Visual Placeholders**: Sections for future diagrams, videos, and animations
-- **Progressive Navigation**: Next/Previous lesson navigation
-- **Chat Integration**: Professor Hawkeinstein assistant panel for questions
-
-### 🛠️ Admin Tools
-- **Course Wizard**: Multi-step course creation from standards
-- **Question Generator**: Batch generation with progress tracking (target: 10 per type)
-- **Content Review**: Preview and approve generated content
-- **Agent Factory**: Create custom AI agents with specific prompts
+| Subsystem | Path | Purpose |
+|-----------|------|---------|
+| Student Portal | `/student_portal/` | Learning interface, advisor chat, workbooks |
+| Course Factory | `/course_factory/` | Admin tools, course creation, content review |
+| Shared | `/shared/`, `/api/`, `/config/` | Authentication, database, common utilities |
 
 ## Project Structure
 
 ```
 Professor_Hawkeinstein/
-├── student_portal/                 # Student-facing subsystem
-│   ├── index.php                   # → student_dashboard.html
-│   ├── login.html                  # Student authentication
-│   ├── student_dashboard.html      # Main student UI
-│   ├── workbook.html               # Interactive lessons
-│   ├── course_viewer.html          # Read-only course view
-│   └── api/                        # API proxies (23 files)
+├── start_services.sh           # Service startup script
+├── schema.sql                  # Database schema
+├── Makefile                    # Build and deployment
+├── docker-compose.yml          # Container orchestration
 │
-├── course_factory/                 # Admin authoring subsystem
-│   ├── index.php                   # → admin_dashboard.html
-│   ├── admin_dashboard.html        # Main admin UI
-│   ├── admin_course_wizard.html    # Course creation
-│   ├── admin_question_generator.html # Question generation
-│   └── api/                        # API proxies (67 files)
+├── student_portal/             # Student-facing subsystem
+│   ├── student_dashboard.html
+│   ├── workbook.html
+│   ├── quiz.html
+│   ├── login.html
+│   ├── register.html
+│   └── app.js
 │
-├── shared/                         # Shared utilities
-│   ├── auth/                       # JWT and middleware
-│   └── db/                         # Database wrapper
+├── course_factory/             # Admin subsystem
+│   ├── admin_dashboard.html
+│   ├── admin_course_wizard.html
+│   ├── admin_question_generator.html
+│   ├── admin_agent_factory.html
+│   └── admin_login.html
+│
+├── api/                        # PHP API endpoints
+│   ├── admin/                  # Admin endpoints (50+, JWT required)
+│   ├── agent/                  # Agent chat proxy
+│   ├── auth/                   # Authentication
+│   ├── course/                 # Course content
+│   ├── student/                # Student endpoints
+│   └── progress/               # Progress tracking
+│
+├── cpp_agent/                  # C++ agent microservice
+│   ├── src/
+│   │   ├── main.cpp
+│   │   ├── http_server.cpp
+│   │   ├── agent_manager.cpp
+│   │   ├── llamacpp_client.cpp
+│   │   ├── database.cpp
+│   │   └── rag_engine.cpp
+│   ├── include/
+│   └── bin/agent_service
 │
 ├── config/
-│   ├── database.php                # Database config, JWT auth
-│   └── apache/                     # Subdomain vhost configs
+│   └── database.php            # DB config, JWT settings
 │
-├── api/                            # Original APIs (still active)
-│   ├── auth/                       # Authentication endpoints
-│   ├── admin/                      # Admin-only endpoints (JWT required)
-│   ├── student/                    # Student endpoints
-│   ├── course/                     # Course data
-│   ├── agent/                      # Agent chat proxy
-│   └── helpers/                    # Utility functions
+├── shared/                     # Shared utilities
+│   ├── auth/
+│   └── db/
 │
-├── cpp_agent/                      # C++ Agent Microservice
-│   ├── src/                        # Source files
-│   ├── include/                    # Headers
-│   └── bin/agent_service           # Compiled binary
-│
-├── archive/                        # Archived root-level files
-├── docs/                           # Documentation
-│   ├── ARCHITECTURE.md             # System architecture spec
-│   ├── REFACTOR_TODO.md            # Migration checklist
-│   └── URL_INVENTORY.md            # URL mapping
-│
-├── start_services.sh               # Docker startup script
-└── docker-compose.yml              # Container orchestration
+├── docs/                       # Documentation
+├── models/                     # LLM model files (not in git)
+└── llama.cpp/                  # llama.cpp build
 ```
 
 ## Quick Start
 
 ### Prerequisites
-- Docker & Docker Compose
-- Make (for automation)
-- 8GB+ RAM (for LLM inference)
 
-### 1. Clone and Start Services
+- Linux (tested on Ubuntu)
+- Docker & Docker Compose (for containerized deployment)
+- OR: Apache 2.4+, PHP 8.0+, MariaDB 10.7+, g++ with C++17
+- 8GB+ RAM for LLM inference
+
+### Option 1: Docker Deployment
 
 ```bash
 git clone https://github.com/stevemeierotto/Professor-Hawkeinstein.git
 cd Professor_Hawkeinstein
 
-# Start all Docker services
+# Start all services
 ./start_services.sh
 ```
 
-This starts:
-- **phef-database** (MariaDB :3307)
-- **phef-llama** (llama-server :8090) - loads Qwen 2.5 1.5B model
-- **phef-agent** (C++ agent service :8080)
-- **phef-api** (PHP API :8081)
+Services started:
+- **phef-database** (MariaDB) - port 3307
+- **phef-llama** (llama-server) - port 8090
+- **phef-agent** (C++ service) - port 8080
+- **phef-api** (PHP) - port 8081
 
-### 2. Access the Platform
+Access:
+- Student Portal: http://localhost:8081/student_portal/
+- Admin Dashboard: http://localhost:8081/course_factory/
 
-Open your browser to:
-- **Student Portal**: http://app.professorhawkeinstein.local or http://localhost:8081/student_portal/
-- **Admin Dashboard**: http://factory.professorhawkeinstein.local or http://localhost:8081/course_factory/
+### Option 2: Native Deployment
 
-**Default Credentials:**
-- Username: `root`
-- Password: `Root1234`
-
-### 3. Local DNS Setup (for subdomains)
-
-Add to `/etc/hosts`:
-```
-127.0.0.1 professorhawkeinstein.local
-127.0.0.1 app.professorhawkeinstein.local
-127.0.0.1 factory.professorhawkeinstein.local
-```
-
-### 4. Deployment to Production
-
-```bash
-# Sync files to web directory
-make sync-web
-
-# Or manual rsync
-./scripts/sync_to_web.sh
-```
-
-### 2. PHP Configuration
-
-Update `config/database.php` with your database credentials:
-
-```php
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'professorhawkeinstein_platform');
-define('DB_USER', 'professorhawkeinstein_user');
-define('DB_PASS', 'your_secure_password_here');
-```
-
-**Important**: Change security keys in production:
-- `JWT_SECRET`
-- `PASSWORD_PEPPER`
-
-### 3. Apache Configuration
-
-Create virtual host configuration:
-
-```apache
-<VirtualHost *:80>
-    ServerName professorhawkeinstein.local
-    DocumentRoot /var/www/html/basic_educational
-    
-    <Directory /var/www/basic_educational>
-        Options -Indexes +FollowSymLinks
-        AllowOverride All
-        Require all granted
-    </Directory>
-    
-    ErrorLog ${APACHE_LOG_DIR}/professorhawkeinstein_error.log
-    CustomLog ${APACHE_LOG_DIR}/professorhawkeinstein_access.log combined
-</VirtualHost>
-```
-
-Enable required Apache modules:
-```bash
-sudo a2enmod rewrite
-sudo a2enmod headers
-sudo systemctl restart apache2
-```
-
-### 4. llama-server Setup
-
-Install and run llama-server for local LLM inference:
-
-```bash
-# Build llama.cpp
-git clone https://github.com/ggerganov/llama.cpp.git
-cd llama.cpp
-make
-
-# Download model
-cd models
-wget https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf
-
-# Start llama-server
-../llama-server --model qwen2.5-1.5b-instruct-q4_k_m.gguf --port 8090 --threads 4 --ctx-size 4096
-```
-
-### 5. C++ Agent Microservice
-
-The C++ agent microservice needs to be implemented with the following components:
-
-**Required Libraries:**
-- libcurl (for llama-server HTTP API)
-- nlohmann/json (JSON parsing)
-- cpp-httplib (HTTP server)
-- MySQL Connector/C++ (database access)
-
-**Endpoints to implement:**
-- `POST /api/chat` - Process agent chat requests
-**Note:** Biometric API endpoints have been removed for liability reasons.
-- `POST /api/rag/query` - RAG retrieval
-- `POST /api/embedding/generate` - Generate embeddings
-
-**Compilation:**
-```bash
-cd cpp_agent
-make clean && make
-./bin/agent_service
-```
-
-Or use the startup script:
-```bash
-./start_services.sh
-```
-
-### 6. Permissions
-
-```bash
-# Set proper permissions
-sudo chown -R www-data:www-data /var/www/basic_educational
-sudo chmod -R 755 /var/www/basic_educational
-sudo chmod -R 775 /var/www/Professor_Hawkeinstein/logs
-sudo chmod -R 775 /var/www/Professor_Hawkeinstein/media
-```
-
-## Testing
-
-1. **Test database connection:**
+1. **Install dependencies:**
    ```bash
-   php -r "require 'config/database.php'; getDB(); echo 'Connected!';"
+   sudo apt install apache2 php8.0 php8.0-mysql mariadb-server
+   sudo apt install g++ libcurl4-openssl-dev libjsoncpp-dev libmysqlclient-dev
    ```
 
-2. **Test frontend:**
-   Navigate to `http://professorhawkeinstein.local` (or `http://localhost/basic_educational`)
-
-3. **Demo credentials:**
-   - Username: `john_doe`
-   - Password: `student123`
-
-4. **Test API endpoints:**
+2. **Set up database:**
    ```bash
-   curl -X POST http://localhost/basic_educational/api/auth/login.php \
-     -H "Content-Type: application/json" \
-     -d '{"username":"root","password":"Root1234"}'
+   mysql -u root -p < schema.sql
    ```
 
-## Current Implementation Status
+3. **Configure PHP:**
+   Edit `config/database.php` with your credentials:
+   ```php
+   define('DB_HOST', 'localhost');
+   define('DB_NAME', 'professorhawkeinstein_platform');
+   define('DB_USER', 'your_user');
+   define('DB_PASS', 'your_password');
+   ```
 
-### ✅ Completed
-- **Core Infrastructure**
-  - Docker containerization (4 services)
-  - MariaDB database with comprehensive schema
-  - PHP API layer with JWT authentication
-  - C++ agent microservice with HTTP server
-  - llama-server integration (Qwen 2.5 1.5B)
+4. **Build and start llama-server:**
+   ```bash
+   cd llama.cpp
+   make
+   ./build/bin/llama-server \
+       --model ../models/qwen2.5-1.5b-instruct-q4_k_m.gguf \
+       --port 8090 --threads 4 --ctx-size 4096
+   ```
 
-- **Course Generation System**
-  - 5-agent pipeline (Standards → Outline → Lessons → Questions → Validator)
-  - Common Standards Project (CSP) API integration
-  - Automated lesson content generation (11K+ chars per lesson)
-  - Question bank generation (3 types: multiple choice, fill-in-blank, essay)
-  - Batch generation for efficiency (5 questions per call)
-  - Course publishing workflow
+5. **Build and start agent service:**
+   ```bash
+   cd cpp_agent
+   make clean && make
+   ./bin/agent_service
+   ```
 
-- **Student Features**
-  - Personal advisor instances (1:1 mapping)
-  - Interactive workbook with lessons and questions
-  - Persistent conversation history
-  - Progress tracking
-  - Course enrollment system
+6. **Start services:**
+   ```bash
+   ./start_services.sh
+   ```
 
-- **Admin Tools**
-  - Course creation wizard
-  - Question generator with progress tracking
-  - Content review interface
-  - Student advisor management
-  - Agent factory for custom agents
+### Default Credentials
 
-- **Performance Optimizations**
-  - System prompts: 200-400 chars (90% faster)
-  - Prompt caching for repeated requests
-  - Memory management scripts
-  - Batch processing for question generation
+- **Admin:** `root` / `Root1234`
+- **Test Student:** `john_doe` / `student123`
 
-### 🚧 In Progress
-- Video content placeholders (sections created, content pending)
-- Visual diagrams and charts (placeholders ready)
-- Larger LLM for improved content diversity
-- Additional courses beyond 2nd Grade Science
-
-### 📋 Planned Features
-- **Multimedia Enhancement**
-  - Video lesson integration
-  - Interactive diagrams and animations
-  - Audio explanations
-  - 3D visualizations for science concepts
-
-- **Advanced Assessment**
-  - Unit tests compilation (Agent 4)
-  - Course validation (Agent 5)
-  - Adaptive difficulty based on performance
-  - Real-time progress dashboards
-
-**Note:** Biometric security features have been removed for liability reasons.
-  - Continuous monitoring
-  - Cheating detection alerts
-
-- **Social Learning**
-  - Student collaboration tools
-  - Discussion forums
-  - Peer review system
-  - Leaderboards and achievements
-
-## API Documentation
+## API Reference
 
 ### Authentication
-- `POST /api/auth/login.php` - JWT-based login
-  - Returns: `{success, token, user{userId, username, role}}`
-- `POST /api/auth/logout.php` - Session termination
 
-### Student Endpoints
-- `GET /api/student/get_advisor.php` - Get student's personal advisor
-  - Returns: Advisor instance with conversation history, progress notes
-- `POST /api/student/update_advisor_data.php` - Update advisor data
-  - Supports: conversation_turn, test_result, progress_notes
-- `GET /api/course/get_available_courses.php` - List published courses
-- `GET /api/course/get_lesson_content.php` - Fetch lesson content
-  - Params: `courseId`, `unitIndex`, `lessonIndex`
-  - Returns: Content text/HTML + question banks by type
-
-### Admin Endpoints (Require JWT)
-**Course Generation:**
-- `POST /api/admin/generate_draft_outline.php` - Agent 1: Create outline
-- `POST /api/admin/generate_lesson_content.php` - Agent 2: Generate lessons
-- `POST /api/admin/generate_lesson_questions.php` - Agent 3: Create questions
-  - Supports batch generation (5 questions per call)
-- `POST /api/admin/publish_course.php` - Publish course to students
-
-**Management:**
-- `GET /api/admin/list_student_advisors.php` - View all advisor instances
-- `POST /api/admin/assign_student_advisor.php` - Create advisor for student
-- `POST /api/admin/scraper_csp.php` - Scrape educational standards
-
-**Content Review:**
-- `GET /api/admin/get_lesson_content.php` - Preview lesson content
-- `GET /api/admin/list_scraped_content.php` - List generated content
-
-### Agent Microservice (C++)
-- `POST /agent/chat` - Send message to AI agent
-  - Body: `{userId, agentId, message}`
-  - Returns: `{response, success}`
-- `GET /agent/list` - List active agents
-- `GET /health` - Health check endpoint
-
-## Key Technical Details
-
-### Database Schema
-- **professorhawkeinstein_platform** (MariaDB)
-- Key tables:
-  - `users` - Student and admin accounts
-  - `agents` - Agent templates (e.g., Professor Hawkeinstein)
-  - `student_advisors` - Per-student advisor instances (1:1 mapping)
-  - `courses` / `course_drafts` - Published courses and drafts
-  - `draft_lesson_content` - Generated lesson content
-  - `lesson_question_banks` - Question banks (JSON arrays by type)
-  - `scraped_content` - Source content from CSP API
-
-### LLM Configuration
-- **Model**: Qwen 2.5 1.5B Instruct (quantized Q4_K_M)
-- **Context**: 8192 tokens
-- **Threads**: 4
-- **System prompts**: 200-400 chars for speed
-- **Max tokens**: 256 (chat), 1024-4800 (content generation)
-- **Cache**: Prompt caching enabled, manual clearing with `clear_llm_cache.sh`
-
-### Course Generation Pipeline
-1. **Agent 1** (Outline): CSP standards → course structure
-2. **Agent 2** (Lessons): Standards → 11K+ char educational content
-3. **Agent 3** (Questions): Lessons → 3 question types (10 each target)
-4. **Agent 4** (Unit Tests): *Planned* - Compile comprehensive tests
-5. **Agent 5** (Validator): *Planned* - QA and content validation
-
-### Memory Management
-- Template-Instance pattern for advisors (prevents data leakage)
-- Conversation history stored per student advisor
-- Progress notes and testing results isolated per student
-- llama-server prompt cache cleared periodically
-- No cross-contamination between students
-
-### Performance Optimizations
-- Batch question generation (5 per LLM call)
-- Prompt caching for repeated requests
-- Compact system prompts (90% speed improvement)
-- Deduplication only on exact matches
-- Stop sequences to prevent infinite generation
-
-## Troubleshooting
-
-### Service Issues
 ```bash
-# Check service status
-docker ps
+# Login
+curl -X POST http://localhost/basic_educational/api/auth/login.php \
+  -H "Content-Type: application/json" \
+  -d '{"username":"root","password":"Root1234"}'
 
-# View logs
-docker logs phef-llama
-docker logs phef-agent
-docker logs phef-api
-
-# Restart services
-./start_services.sh
-
-# Clear LLM cache if responses slow/repetitive
-./clear_llm_cache.sh
+# Response: {success, token, user{userId, username, role}}
 ```
 
-### Database Connection
+### Agent Chat
+
 ```bash
-# Connect to database
-docker exec -it phef-database mysql -uprofessorhawkeinstein_user -pBT1716lit professorhawkeinstein_platform
-
-# Check tables
-SHOW TABLES;
-```
-
-### Agent Service
-```bash
-# Check health
-curl http://localhost:8080/health
-
-# Test chat
+# Send message to agent
 curl -X POST http://localhost:8080/agent/chat \
   -H "Content-Type: application/json" \
   -d '{"userId":1,"agentId":1,"message":"Hello"}'
+
+# Response: {response, success}
+```
+
+### Student Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/student/get_advisor.php` | GET | Get student's personal advisor |
+| `/api/student/update_advisor_data.php` | POST | Update conversation/progress |
+| `/api/course/get_available_courses.php` | GET | List published courses |
+| `/api/course/get_lesson_content.php` | GET | Fetch lesson content |
+
+### Admin Endpoints (JWT Required)
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/admin/generate_draft_outline.php` | POST | Create course outline |
+| `/api/admin/generate_lesson_content.php` | POST | Generate lesson content |
+| `/api/admin/generate_lesson_questions.php` | POST | Create question banks |
+| `/api/admin/publish_course.php` | POST | Publish course |
+| `/api/admin/list_courses.php` | GET | List all courses |
+| `/api/admin/list_student_advisors.php` | GET | View advisor instances |
+
+### Health Checks
+
+```bash
+curl http://localhost:8090/health  # llama-server
+curl http://localhost:8080/health  # agent_service
+```
+
+## Course Generation Pipeline
+
+The system uses a 5-agent pipeline for course creation:
+
+| Agent | Purpose | Status |
+|-------|---------|--------|
+| 1. Outline | Standards → Course structure | ✅ Working |
+| 2. Lessons | Standards → Lesson content | ✅ Working |
+| 3. Questions | Lessons → Question banks | ✅ Working |
+| 4. Unit Tests | Compile assessments | ⏳ Planned |
+| 5. Validator | QA check | ⏳ Planned |
+
+## LLM Configuration
+
+| Setting | Value |
+|---------|-------|
+| Model | Qwen 2.5 1.5B or Llama 2 7B (Q4 quantized) |
+| Context | 4096-8192 tokens |
+| Threads | 4 |
+| System prompts | 200-400 chars (optimized for speed) |
+| Max tokens | 256 (chat), 1024-4800 (content generation) |
+| Response time | 4-9 seconds typical |
+
+## Troubleshooting
+
+### Check Service Status
+
+```bash
+# Docker
+docker ps
+docker logs phef-llama
+docker logs phef-agent
+
+# Native
+curl http://localhost:8080/health
+curl http://localhost:8090/health
+```
+
+### View Logs
+
+```bash
+tail -f /tmp/llama_server.log
+tail -f /tmp/agent_service_full.log
+tail -f /var/log/apache2/error.log
 ```
 
 ### Common Issues
-- **401 errors**: Check JWT token in browser sessionStorage
-- **Agent timeouts**: Check `/tmp/agent_service_full.log`
-- **LLM slow responses**: Clear prompt cache with `./clear_llm_cache.sh`
-- **Content not displaying**: Verify 0-based indexing in API calls
+
+| Issue | Solution |
+|-------|----------|
+| 401 errors | Check JWT token in browser sessionStorage |
+| Agent timeouts | Check `/tmp/agent_service_full.log` |
+| Slow LLM responses | Run `./clear_llm_cache.sh` |
+| Database connection | Verify credentials in `config/database.php` |
+
+### Database Access
+
+```bash
+# Docker
+docker exec -it phef-database mysql -uprofessorhawkeinstein_user -pBT1716lit professorhawkeinstein_platform
+
+# Native
+mysql -u professorhawkeinstein_user -p professorhawkeinstein_platform
+```
+
+## Known Limitations
+
+1. **No vector search** - RAG uses basic text matching, not semantic similarity
+2. **Single-node only** - No clustering or horizontal scaling
+3. **Model size constraints** - Runs quantized models on consumer hardware
+4. **No WebSocket** - Frontend uses polling for updates
+5. **Multimedia placeholders** - Video/audio content not implemented
+
+## Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) | System architecture |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Technical architecture |
+| [docs/COURSE_GENERATION_API.md](docs/COURSE_GENERATION_API.md) | Course creation API |
+| [docs/ADVISOR_INSTANCE_API.md](docs/ADVISOR_INSTANCE_API.md) | Student advisor system |
+| [docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md](docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md) | Dev/prod separation |
+| [docs/REFACTOR_TODO.md](docs/REFACTOR_TODO.md) | Pending tasks |
 
 ## License
 
 Proprietary - All rights reserved
-
-## Contact
-
-For questions about this implementation, refer to the inline documentation in each PHP file.
-
----
-
-## Documentation
-
-### Quick Start
-- `SETUP_COMPLETE.md` - Quick start guide
-- `PROJECT_OVERVIEW.md` - System architecture overview
-- `FUTURE_IMPROVEMENTS.md` - Roadmap and planned features
-
-### Technical Guides (in `docs/` folder)
-- `docs/COURSE_GENERATION_API.md` - Course creation API reference
-- `docs/COURSE_GENERATION_ARCHITECTURE.md` - 5-agent pipeline architecture
-- `docs/AGENT_FACTORY_GUIDE.md` - Creating custom AI agents
-- `docs/ADVISOR_INSTANCE_API.md` - Student advisor system API
-- `docs/ASSESSMENT_GENERATION_API.md` - Quiz and test generation
-- `docs/WORKBOOK_GUIDE.md` - Interactive workbook system
-
-- `docs/RAG_ENGINE_README.md` - RAG implementation details
-- `docs/FILE_SYNC_GUIDE.md` - Deployment automation
-- `docs/ERROR_HANDLING_GUIDE.md` - Error handling patterns
-- `docs/MEMORY_POLICY_QUICKREF.md` - Agent memory isolation
 
 ## Repository
 

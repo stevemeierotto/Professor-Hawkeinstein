@@ -146,29 +146,6 @@ void HTTPServer::handleClient(int clientSocket) {
             } catch (...) {
                 response = createHTTPResponse(400, "{\"error\":\"Invalid agent ID\"}");
             }
-        } else if (path == "/biometric/verify-face" && method == "POST") {
-            Json::Value requestJson;
-            Json::CharReaderBuilder builder;
-            std::stringstream ss(body);
-            std::string errs;
-            
-            if (!Json::parseFromStream(builder, ss, &requestJson, &errs)) {
-                response = createHTTPResponse(400, "{\"error\":\"Invalid JSON\"}");
-            } else {
-                int userId = requestJson["userId"].asInt();
-                std::string imageData = requestJson["imageData"].asString();
-                
-                bool verified = agentManager.verifyFace(userId, imageData);
-                
-                Json::Value responseJson;
-                responseJson["verified"] = verified;
-                responseJson["confidence"] = verified ? 0.92 : 0.15;
-                
-                Json::StreamWriterBuilder writerBuilder;
-                std::string jsonResponse = Json::writeString(writerBuilder, responseJson);
-                
-                response = createHTTPResponse(200, jsonResponse);
-            }
         } else if (path == "/api/chat" && method == "POST") {
             // New endpoint format for dashboard compatibility
             Json::Value requestJson;

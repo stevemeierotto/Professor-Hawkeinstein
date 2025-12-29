@@ -42,7 +42,7 @@
  */
 
 require_once __DIR__ . '/../admin/auth_check.php';
-requireAdmin();
+$adminUser = requireAdmin();
 
 require_once __DIR__ . '/../../config/database.php';
 
@@ -147,9 +147,8 @@ try {
     }
     
     // Log the activity
-    $admin = getAdminFromToken();
     logActivity(
-        $admin['userId'],
+        $adminUser['userId'],
         'GENERATE_COURSE_OUTLINE',
         "Generated course outline: $subject ($level) with $unitCount units"
     );
@@ -288,14 +287,11 @@ function callCourseDesignAgent($prompt) {
     
     if (curl_errno($ch)) {
         $error = curl_error($ch);
-        curl_close($ch);
         return [
             'success' => false,
             'error' => "Agent service error: $error"
         ];
     }
-    
-    curl_close($ch);
     
     if ($httpCode !== 200) {
         return [
