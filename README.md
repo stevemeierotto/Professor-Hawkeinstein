@@ -463,13 +463,14 @@ mysql -u professorhawkeinstein_user -p professorhawkeinstein_platform
 
 ## Design Philosophy
 
-### Grade-Based Difficulty System
+### Grade-Based Complexity
 
-**Important:** This platform does not use traditional "beginner/intermediate/advanced" difficulty labels. 
+**The grade level defines the complexity.** A 2nd grade science lesson is inherently appropriate for 2nd graders, and a 10th grade physics lesson is appropriate for 10th graders. 
 
-**The grade level IS the difficulty level.** A 2nd grade science lesson is inherently appropriate for 2nd graders, and a 10th grade physics lesson is appropriate for 10th graders. 
+This platform does not use "beginner/intermediate/advanced" or "easy/medium/hard" difficulty labels as they are redundant when the grade level already indicates the appropriate complexity level.
 
-Any references to "easy/medium/hard" difficulty in the codebase should be removed as they are redundant and potentially confusing when the grade level already indicates the appropriate complexity.
+## Documentation
+
 ### Quick Reference
 | Document | Purpose |
 |----------|---------|

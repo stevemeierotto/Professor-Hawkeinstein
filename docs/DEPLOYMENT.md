@@ -446,22 +446,22 @@ Output ONLY valid JSON array. No explanations. No markdown.
 QUESTION: What is the main idea?
 ANSWER: The answer here
 EXPLANATION: Why this is correct
-DIFFICULTY: easy
 
 QUESTION: Next question?
 ANSWER: The answer
 EXPLANATION: Brief explanation
-DIFFICULTY: medium
 ```
+
+**Note:** Questions are inherently appropriate for the course's grade level. No additional difficulty labeling needed.
 
 **Parameters:** `temp=0.5, max_tokens=2048` (varied, educational)
 
 ### Quiz Creator (Agent 20)
 
 **Requirements:**
-- Mix question types
-- Balance difficulty (40% easy, 40% medium, 20% hard)
-- Logical ordering
+- Mix question types (fill-in-blank, multiple choice, short essay)
+- Logical ordering (simple concepts first, building to complex)
+- Appropriate for course grade level
 
 **Parameters:** `temp=0.4, max_tokens=1024` (organized)
 
@@ -470,7 +470,7 @@ DIFFICULTY: medium
 **Requirements:**
 - 20-30 questions covering all lessons
 - Multiple question types
-- Progressive difficulty
+- Comprehensive coverage of unit concepts
 
 **Parameters:** `temp=0.4, max_tokens=2048` (thorough)
 

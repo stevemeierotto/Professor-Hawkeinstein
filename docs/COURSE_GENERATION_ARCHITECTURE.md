@@ -185,7 +185,7 @@ We still scrape **educational standards** from CSP (Common Standards Project), b
 - **Total: 60 questions per lesson**
 - Questions should cover all key concepts from the lesson
 - Age-appropriate vocabulary for the grade level
-- Varying difficulty levels within each bag
+- Range from simple recall to higher-order thinking
 
 **Input:**
 ```json
@@ -214,15 +214,13 @@ We still scrape **educational standards** from CSP (Common Standards Project), b
           "id": "fib_1",
           "question": "Science is always _____ as we learn new things.",
           "correct_answer": "changing",
-          "hint": "Think about how we discover new ideas",
-          "difficulty": "easy"
+          "hint": "Think about how we discover new ideas"
         },
         {
           "id": "fib_2", 
           "question": "Long ago, people thought the Earth was _____.",
           "correct_answer": "flat",
-          "hint": "They couldn't see the curve",
-          "difficulty": "easy"
+          "hint": "They couldn't see the curve"
         }
         // ... 18 more fill-in-blank questions
       ]
@@ -236,8 +234,7 @@ We still scrape **educational standards** from CSP (Common Standards Project), b
           "question": "What did people long ago think about the shape of Earth?",
           "options": ["Round", "Flat", "Square", "Triangle"],
           "correct_answer": "Flat",
-          "explanation": "Long ago, people believed Earth was flat because they couldn't see the curve.",
-          "difficulty": "easy"
+          "explanation": "Long ago, people believed Earth was flat because they couldn't see the curve."
         },
         {
           "id": "mc_2",
@@ -249,8 +246,7 @@ We still scrape **educational standards** from CSP (Common Standards Project), b
             "To confuse people"
           ],
           "correct_answer": "To learn new things and improve our understanding",
-          "explanation": "Scientists are curious and always want to discover more!",
-          "difficulty": "medium"
+          "explanation": "Scientists are curious and always want to discover more!"
         }
         // ... 18 more multiple choice questions
       ]
@@ -267,8 +263,7 @@ We still scrape **educational standards** from CSP (Common Standards Project), b
             "full_credit": "Explains that science evolves and scientists verify findings",
             "partial_credit": "Mentions curiosity or learning",
             "keywords": ["learn", "discover", "change", "new", "check"]
-          },
-          "difficulty": "medium"
+          }
         },
         {
           "id": "essay_2",
@@ -278,8 +273,7 @@ We still scrape **educational standards** from CSP (Common Standards Project), b
             "full_credit": "Provides specific example and explains the change in understanding",
             "partial_credit": "Gives example but limited explanation",
             "keywords": ["thought", "learned", "changed", "different"]
-          },
-          "difficulty": "easy"
+          }
         }
         // ... 18 more short essay questions
       ]
@@ -292,11 +286,8 @@ We still scrape **educational standards** from CSP (Common Standards Project), b
       "multiple_choice": 20,
       "short_essay": 20
     },
-    "by_difficulty": {
-      "easy": 24,
-      "medium": 24,
-      "hard": 12
-    },
+    "grade_level": "grade_2",
+    "subject": "science",
     "generated_at": "2025-12-02T14:30:00Z"
   }
 }

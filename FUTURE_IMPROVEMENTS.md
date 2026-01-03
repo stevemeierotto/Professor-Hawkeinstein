@@ -37,12 +37,12 @@ All data will be anonymized and published for education research purposes.
 ### Content Generator
 - [ ] Add multimedia content suggestions (images, videos)
 - [ ] Improve age-appropriate language detection
-- [ ] Add content difficulty adjustment based on student performance
+- [ ] Add student performance tracking for concept mastery
 
 ### Question Generator
 - [ ] Add more question types (matching, ordering, diagrams)
-- [ ] Implement adaptive difficulty
 - [ ] Add explanation generation for wrong answers
+- [ ] Improve rubric generation for essay questions
 
 ---
 
