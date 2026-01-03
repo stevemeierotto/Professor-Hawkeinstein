@@ -166,16 +166,16 @@ Standards (CSP) → Agent 5 → Agent 6 → Agent 18 → Agent 19 → Agent 22
 - `draft_lesson_content` - Lessons before approval
 - `units` - Approved course units
 - `lessons` - Approved individual lessons
-- `educational_content` - AI-generated + scraped content
+- `educational_content` - AI-generated content store
 
 ### Assessment
 - `quiz_questions` - Question pool (lesson/unit/final)
 - `quiz_configurations` - Admin-configurable quiz settings
 - `progress_tracking` - Student quiz attempts and scores
 
-### Knowledge Base
-- `scraped_content` - Web-scraped educational content (legacy)
-- `educational_content` - New unified content store
+### Standards & Reference
+- `scraped_content` - Educational standards from CSP API (legacy table)
+- `educational_content` - All AI-generated lesson content
 
 ---
 
@@ -246,8 +246,8 @@ docker exec phef-api env | grep DB_PORT
 
 **Issues Fixed:**
 - Relative path errors in course factory refactoring
-- Table schema mismatch (old `scraped_content` column names)
-- Agent service not finding content in new `educational_content` table
+- Table schema mismatch (content table column names)
+- Agent service not finding content in `educational_content` table
 
 **Status:** ✅ DEPLOYED, lessons saving correctly
 
@@ -263,10 +263,10 @@ docker exec phef-api env | grep DB_PORT
 
 ### Admins Can:
 ✅ Create/modify expert agents  
-✅ Scrape educational content (CSP API)  
+✅ Retrieve educational standards (CSP API)  
 ✅ Review content for accuracy  
 ✅ Configure quiz settings  
-✅ Generate course content with agents  
+✅ Generate course content with AI agents  
 ✅ Export training data for fine-tuning  
 ✅ Approve/reject course drafts  
 

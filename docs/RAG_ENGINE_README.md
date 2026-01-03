@@ -2,7 +2,9 @@
 
 ## Overview
 
-Complete Retrieval-Augmented Generation (RAG) engine for the Professor Hawkeinstein platform. Enables agents to answer questions using relevant context from scraped educational content.
+Complete Retrieval-Augmented Generation (RAG) engine for the Professor Hawkeinstein platform. Enables agents to answer questions using relevant context from AI-generated educational content and CSP standards.
+
+**Note:** This is a planned feature. Current implementation uses basic content injection, not vector embeddings.
 
 ## Architecture
 
@@ -20,7 +22,7 @@ Content Ingestion → Embedding Generation → Vector Storage → Similarity Sea
 
 2. **Storage** (`content_embeddings` table)
    - Stores text chunks with vector embeddings
-   - Links to `scraped_content` via `content_id`
+   - Links to `educational_content` via `content_id`
    - Supports multiple chunks per document
 
 3. **Retrieval API** (`api/agent/retrieve_context.php`)

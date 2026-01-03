@@ -125,7 +125,7 @@ require_once __DIR__ . '/../helpers/system_agent_helper.php';
 
 **File:** `/api/admin/generate_lesson_content.php` - Line 84
 
-**Problem:** INSERT statement used old column names from `scraped_content` table:
+**Problem:** INSERT statement used old column names from legacy content table:
 - `page_title` → should be `title`
 - `extracted_text` → should be `content_text`
 - `subject_area` → should be `subject`
@@ -138,26 +138,28 @@ require_once __DIR__ . '/../helpers/system_agent_helper.php';
 $stmt = $db->prepare("
   INSERT INTO educational_content 
   (url, title, content_type, content_html, content_text, 
-   credibility_score, scraped_by, review_status, grade_level, subject)
+   credibility_score, created_by, review_status, grade_level, subject)
   VALUES (?, ?, 'ai_generated', ?, ?, ?, 1, 'approved', ?, ?)
 ");
 ```
 
+**Note:** `created_by` field stores user ID who triggered generation (legacy field name).
+
 **Status:** ✅ DEPLOYED to production
 
-#### Issue 3: Agent Service Not Finding Content
+#### Issue 3: Agent Service Content Query
 
-**Problem:** C++ agent queried `scraped_content` table, but new content was in `educational_content`.
+**Problem:** C++ agent service needed to query content from correct table.
 
-**Solution:** Updated `cpp_agent/src/database.cpp` to query both tables:
+**Solution:** Updated `cpp_agent/src/database.cpp` to query `educational_content`:
 ```cpp
 std::string query = R"(
   SELECT content_text FROM educational_content 
-  WHERE content_type = 'ai_generated' 
-  UNION ALL
-  SELECT content_text FROM scraped_content
+  WHERE content_type = 'ai_generated'
 )";
 ```
+
+**Note:** All lesson content is AI-generated. Legacy `scraped_content` table only stores standards from CSP API.
 
 #### Debugging Commands
 

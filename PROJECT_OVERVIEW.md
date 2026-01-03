@@ -86,7 +86,7 @@ The project is organized as a **two-subsystem architecture**:
 - Embedding generation requires external setup
 
 **Course Content Pipeline**
-- Standards scraping from CSP API works
+- Standards retrieval from CSP API works
 - Course outline generation via LLM works
 - Lesson content generation partially implemented
 - Assessment generation API exists but needs testing
@@ -222,7 +222,7 @@ curl http://localhost:8080/health  # agent_service
 ## Configuration
 
 ### Environment Variables
-- `CSP_API_KEY` - Common Standards Project API key (for standards scraping)
+- `CSP_API_KEY` - Common Standards Project API key (for standards retrieval)
 - `MULTI_MODEL` - Set to 1 for multi-model mode
 - `ACTIVE_MODEL` - Model file to use in single-model mode
 
