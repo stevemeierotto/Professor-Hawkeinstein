@@ -44,7 +44,7 @@ try {
             SELECT ce.id, ce.content_id, ce.chunk_index, ce.text_chunk, ce.embedding_vector, 
                    sc.title, sc.subject, sc.grade_level
             FROM content_embeddings ce
-            JOIN scraped_content sc ON ce.content_id = sc.content_id
+            JOIN educational_content sc ON ce.content_id = sc.content_id
             LEFT JOIN agent_content_links acl ON sc.content_id = acl.content_id AND acl.agent_id = ?
             WHERE sc.has_embeddings = TRUE
             ORDER BY acl.relevance_score DESC
@@ -56,7 +56,7 @@ try {
             SELECT ce.id, ce.content_id, ce.chunk_index, ce.text_chunk, ce.embedding_vector,
                    sc.title, sc.subject, sc.grade_level
             FROM content_embeddings ce
-            JOIN scraped_content sc ON ce.content_id = sc.content_id
+            JOIN educational_content sc ON ce.content_id = sc.content_id
             WHERE sc.has_embeddings = TRUE
         ");
         $stmt->execute();

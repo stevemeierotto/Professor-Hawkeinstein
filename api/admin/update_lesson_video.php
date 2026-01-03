@@ -58,17 +58,17 @@ try {
     $contentId = $result['content_id'];
     
     // Check if video_url column exists
-    $checkStmt = $db->prepare("SHOW COLUMNS FROM scraped_content LIKE 'video_url'");
+    $checkStmt = $db->prepare("SHOW COLUMNS FROM educational_content LIKE 'video_url'");
     $checkStmt->execute();
     
     if ($checkStmt->rowCount() === 0) {
         // Add the column if it doesn't exist
-        $db->exec("ALTER TABLE scraped_content ADD COLUMN video_url VARCHAR(255) NULL AFTER content_html");
+        $db->exec("ALTER TABLE educational_content ADD COLUMN video_url VARCHAR(255) NULL AFTER content_html");
     }
     
-    // Update the video_url in scraped_content
+    // Update the video_url in educational_content
     $updateStmt = $db->prepare("
-        UPDATE scraped_content 
+        UPDATE educational_content 
         SET video_url = ?
         WHERE content_id = ?
     ");

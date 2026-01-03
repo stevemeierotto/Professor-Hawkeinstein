@@ -29,8 +29,9 @@ if (file_exists($envFile)) {
     }
 }
 
-// Database connection parameters
+// Database connection parameters - Docker MySQL on port 3307
 define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+define('DB_PORT', getenv('DB_PORT') ?: 3307);  // Docker MySQL port
 define('DB_NAME', getenv('DB_NAME') ?: 'professorhawkeinstein_platform');
 define('DB_USER', getenv('DB_USER') ?: 'professorhawkeinstein_user');
 define('DB_PASS', getenv('DB_PASS') ?: 'BT1716lit');
@@ -65,38 +66,41 @@ define('DEBUG_MODE', getenv('DEBUG_MODE') === 'true');
 /**
  * Get PDO database connection
  */
-function getDB() {
-    static $pdo = null;
-    
-    if ($pdo === null) {
-        try {
-            // Use DB_HOST from environment (supports both Docker and local setups)
-            // Docker: DB_HOST=database (container name)
-            // Local: DB_HOST=127.0.0.1 (localhost)
-            $dsn = sprintf(
-                'mysql:host=%s;port=%d;dbname=%s;charset=%s',
-                DB_HOST,
-                3306,
-                DB_NAME,
-                DB_CHARSET
-            );
-            
-            $options = [
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES => false,
-            ];
-            
-            $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
-        } catch (PDOException $e) {
-            error_log("Database connection failed: " . $e->getMessage());
-            http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'Database connection failed']);
-            exit;
-        }
+/**
+ * Get PDO database connection
+ * DEBUGGING: Static cache removed to verify actual DB connection
+ */
+function getDB($forceReconnect = false) {
+    // REMOVED static caching - create new connection every time
+    try {
+        $dsn = sprintf(
+            'mysql:host=%s;port=%d;dbname=%s;charset=%s',
+            DB_HOST,
+            DB_PORT,
+            DB_NAME,
+            DB_CHARSET
+        );
+        
+        $options = [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ];
+        
+        $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+        
+        // LOG ACTUAL DATABASE IMMEDIATELY
+        $result = $pdo->query('SELECT DATABASE() as db');
+        $actual_db = $result->fetch(PDO::FETCH_ASSOC)['db'];
+        error_log("[getDB] DSN dbname=" . DB_NAME . " | ACTUAL connected to: " . $actual_db);
+        
+        return $pdo;
+    } catch (PDOException $e) {
+        error_log("[getDB] Connection failed: " . $e->getMessage() . " | DSN dbname=" . DB_NAME);
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Database connection failed']);
+        exit;
     }
-    
-    return $pdo;
 }
 
 /**

@@ -9,7 +9,8 @@ AgentManager::AgentManager(Config& config) : config(config) {
     
     // Initialize llama.cpp clients for each configured model
     for (const auto& [modelName, modelConfig] : config.models) {
-        std::string serverUrl = "http://localhost:" + std::to_string(modelConfig.port);
+        // Use config.llamaServerUrl for Docker compatibility (llama-server hostname)
+        std::string serverUrl = config.llamaServerUrl;
         std::string modelPath = config.modelsBasePath + "/" + modelConfig.file;
         
         std::cout << "Registering model: " << modelName << " at " << serverUrl << std::endl;
@@ -129,8 +130,9 @@ std::string AgentManager::processMessage(int userId, int agentId, const std::str
         // Load agent configuration
         Agent agent = loadAgent(agentId);
         
-        // Skip RAG for now - context should be provided via processMessageWithContext
-        std::vector<std::string> context;
+        // Retrieve relevant context from RAG (searches educational_content table)
+        std::vector<std::string> context = retrieveRelevantContext(agentId, message);
+        std::cout << "[AgentManager] Retrieved " << context.size() << " RAG context items" << std::endl;
         
         // Build prompt with system prompt + context + user message
         std::string prompt = buildPrompt(agent, message, context);

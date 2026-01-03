@@ -1,7 +1,7 @@
 <?php
 // Approve standards for a course draft (Step 2 of wizard)
-require_once '../../config/database.php';
-require_once 'auth_check.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/auth_check.php';
 requireAdmin();
 header('Content-Type: application/json');
 

@@ -31,7 +31,7 @@ try {
     $db = getDB();
     
     // Delete the content
-    $stmt = $db->prepare("DELETE FROM scraped_content WHERE content_id = ?");
+    $stmt = $db->prepare("DELETE FROM educational_content WHERE content_id = ?");
     $result = $stmt->execute([$contentId]);
     
     if ($stmt->rowCount() === 0) {

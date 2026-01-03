@@ -221,7 +221,7 @@ class MemoryPolicyTests {
             
             $hasViolation = false;
             while ($fk = $fkStmt->fetch()) {
-                if (in_array($fk['TABLE_NAME'], ['scraped_content', 'agents'])) {
+                if (in_array($fk['TABLE_NAME'], ['educational_content', 'agents'])) {
                     // These should NOT reference student_advisors
                     $hasViolation = true;
                     $this->fail("Test 4a: VIOLATION - {$fk['TABLE_NAME']} has FK to student_advisors");
@@ -232,9 +232,9 @@ class MemoryPolicyTests {
                 $this->pass("Test 4a: No inappropriate FK relationships to student_advisors");
             }
             
-            // Verify scraped_content table does NOT have advisor_instance_id or student_id
+            // Verify educational_content table does NOT have advisor_instance_id or student_id
             $columnsStmt = $this->db->query("
-                SHOW COLUMNS FROM scraped_content
+                SHOW COLUMNS FROM educational_content
             ");
             
             $hasAdvisorColumn = false;
@@ -250,9 +250,9 @@ class MemoryPolicyTests {
             }
             
             if (!$hasAdvisorColumn && !$hasStudentColumn) {
-                $this->pass("Test 4b: scraped_content table isolated from student_advisors");
+                $this->pass("Test 4b: educational_content table isolated from student_advisors");
             } else {
-                $this->fail("Test 4b: POLICY VIOLATION - scraped_content has student/advisor columns");
+                $this->fail("Test 4b: POLICY VIOLATION - educational_content has student/advisor columns");
             }
             
         } catch (Exception $e) {

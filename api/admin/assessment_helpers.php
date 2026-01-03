@@ -280,7 +280,7 @@ function generateAllAssessments($courseId, $saveToMetadata = true) {
  * Internal function to call assessment API
  */
 function callAssessmentAPI($params) {
-    $apiUrl = 'http://localhost/basic_educational/api/admin/generate_assessment.php';
+    $apiUrl = 'http://localhost:8081/api/admin/generate_assessment.php';
     
     // Get admin token from session (if running in web context)
     // For CLI usage, this would need to be passed or configured

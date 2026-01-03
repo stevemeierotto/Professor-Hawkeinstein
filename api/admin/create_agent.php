@@ -82,7 +82,7 @@ try {
             $contentStmt = $db->prepare("
                 SELECT content_id, title, url, cleaned_text, content_text, 
                        grade_level, subject, credibility_score, metadata
-                FROM scraped_content 
+                FROM educational_content 
                 WHERE content_id = ? AND review_status = 'approved'
             ");
             $contentStmt->execute([$contentId]);
@@ -105,7 +105,7 @@ try {
                 $domain = isset($parsedUrl['host']) ? $parsedUrl['host'] : '';
                 
                 $metadata = json_encode([
-                    'scraped_content_id' => $contentId,
+                    'educational_content_id' => $contentId,
                     'domain' => $domain,
                     'credibility_score' => $content['credibility_score'],
                     'grade_level' => $content['grade_level'],
@@ -128,7 +128,7 @@ try {
                 ]);
                 
                 // Content successfully added to RAG for this agent
-                // No need to update scraped_content - content can be used by multiple agents
+                // No need to update educational_content - content can be used by multiple agents
             }
         }
     }

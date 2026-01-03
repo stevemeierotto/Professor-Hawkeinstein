@@ -540,7 +540,7 @@
             try {
                 const grade = agentData.gradeLevel || '';
                 const subject = agentData.subject || '';
-                const url = `api/admin/list_scraped_content.php?status=approved&grade_level=${grade}&subject_area=${subject}&limit=50`;
+                const url = `api/admin/list_educational_content.php?status=approved&grade_level=${grade}&subject_area=${subject}&limit=50`;
                 
                 const response = await fetch(url, {
                 });

@@ -43,7 +43,7 @@ if (!$draftId) {
 $db = getDb();
 
 try {
-    // Get lesson content from scraped_content
+    // Get lesson content from educational_content
     $stmt = $db->prepare("
         SELECT 
             sc.content_id,
@@ -53,7 +53,7 @@ try {
             sc.video_url,
             dlc.relevance_score
         FROM draft_lesson_content dlc
-        JOIN scraped_content sc ON dlc.content_id = sc.content_id
+        JOIN educational_content sc ON dlc.content_id = sc.content_id
         WHERE dlc.draft_id = ? AND dlc.unit_index = ? AND dlc.lesson_index = ?
         ORDER BY dlc.relevance_score DESC
         LIMIT 1

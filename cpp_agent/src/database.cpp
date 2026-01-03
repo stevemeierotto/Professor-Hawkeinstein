@@ -41,7 +41,7 @@ void Database::disconnect() {
 
 Agent Database::getAgent(int agentId) {
     std::ostringstream query;
-    query << "SELECT agent_id, agent_name, avatar_emoji, specialization, system_prompt, model_name, temperature, max_tokens "
+    query << "SELECT agent_id, agent_name, specialization, system_prompt, model_name, temperature, max_tokens "
           << "FROM agents WHERE agent_id = " << agentId;
     
     if (mysql_query(connection, query.str().c_str())) {
@@ -59,19 +59,19 @@ Agent Database::getAgent(int agentId) {
     if (row) {
         agent.id = std::stoi(row[0]);
         agent.name = row[1] ? row[1] : "";
-        agent.avatarEmoji = row[2] ? row[2] : "🎓";
-        agent.description = row[3] ? row[3] : "";
-        agent.systemPrompt = row[4] ? row[4] : "";
+        agent.avatarEmoji = "🎓";  // Default emoji, not from DB
+        agent.description = row[2] ? row[2] : "";
+        agent.systemPrompt = row[3] ? row[3] : "";
         
         // Model name from DB with fallback to default
         // Note: This is just the filename (e.g., "qwen2.5-1.5b-instruct-q4_k_m.gguf")
         // Full path construction happens in agent_manager or http_server
-        agent.modelName = row[5] && strlen(row[5]) > 0 ? row[5] : "qwen2.5-1.5b-instruct-q4_k_m.gguf";
+        agent.modelName = row[4] && strlen(row[4]) > 0 ? row[4] : "qwen2.5-1.5b-instruct-q4_k_m.gguf";
         std::cout << "[Database] Loaded agent " << agent.name << " with model: " << agent.modelName << std::endl;
         
         // Load temperature and max_tokens from database
-        agent.parameters["temperature"] = row[6] ? row[6] : "0.7";
-        agent.parameters["max_tokens"] = row[7] ? row[7] : "512";
+        agent.parameters["temperature"] = row[5] ? row[5] : "0.7";
+        agent.parameters["max_tokens"] = row[6] ? row[6] : "512";
         std::cout << "[Database] Agent parameters: temperature=" << agent.parameters["temperature"] 
                   << ", max_tokens=" << agent.parameters["max_tokens"] << std::endl;
     } else {
@@ -86,7 +86,7 @@ Agent Database::getAgent(int agentId) {
 std::vector<Agent> Database::getAllAgents() {
     std::vector<Agent> agents;
     
-    const char* query = "SELECT agent_id, agent_name, avatar_emoji, specialization, system_prompt, model_name, temperature, max_tokens FROM agents WHERE is_active = 1 AND visible_to_students = 1";
+    const char* query = "SELECT agent_id, agent_name, specialization, system_prompt, model_name, temperature, max_tokens FROM agents WHERE is_active = 1 AND visible_to_students = 1";
     
     if (mysql_query(connection, query)) {
         throw std::runtime_error("Failed to query agents: " + std::string(mysql_error(connection)));
@@ -102,17 +102,17 @@ std::vector<Agent> Database::getAllAgents() {
         Agent agent;
         agent.id = std::stoi(row[0]);
         agent.name = row[1] ? row[1] : "";
-        agent.avatarEmoji = row[2] ? row[2] : "🎓";
-        agent.description = row[3] ? row[3] : "";
-        agent.systemPrompt = row[4] ? row[4] : "";
+        agent.avatarEmoji = "🎓";  // Default emoji, not from DB
+        agent.description = row[2] ? row[2] : "";
+        agent.systemPrompt = row[3] ? row[3] : "";
         
         // Model name from DB with fallback to default
-        agent.modelName = row[5] && strlen(row[5]) > 0 ? row[5] : "qwen2.5-1.5b-instruct-q4_k_m.gguf";
+        agent.modelName = row[4] && strlen(row[4]) > 0 ? row[4] : "qwen2.5-1.5b-instruct-q4_k_m.gguf";
         std::cout << "[Database] Agent " << agent.name << " uses model: " << agent.modelName << std::endl;
         
         // Load temperature and max_tokens
-        agent.parameters["temperature"] = row[6] ? row[6] : "0.7";
-        agent.parameters["max_tokens"] = row[7] ? row[7] : "512";
+        agent.parameters["temperature"] = row[5] ? row[5] : "0.7";
+        agent.parameters["max_tokens"] = row[6] ? row[6] : "512";
         
         agents.push_back(agent);
     }
@@ -231,4 +231,55 @@ std::vector<float> Database::getEmbedding(int embeddingId) {
     
     mysql_free_result(result);
     return embedding;
+}
+
+std::vector<std::pair<std::string, std::string>> Database::searchEducationalContent(const std::string& query, int limit) {
+    std::vector<std::pair<std::string, std::string>> results;
+    
+    // Escape the search query
+    char* escapedQuery = new char[query.length() * 2 + 1];
+    mysql_real_escape_string(connection, escapedQuery, query.c_str(), query.length());
+    
+    // FULLTEXT search on educational_content table for generated lessons
+    std::ostringstream sql;
+    sql << "SELECT title, content_text, MATCH(title, content_text) AGAINST('" << escapedQuery 
+        << "' IN NATURAL LANGUAGE MODE) as relevance "
+        << "FROM educational_content "
+        << "WHERE content_type = 'educational' "
+        << "AND MATCH(title, content_text) AGAINST('" << escapedQuery << "' IN NATURAL LANGUAGE MODE) "
+        << "ORDER BY relevance DESC "
+        << "LIMIT " << limit;
+    
+    delete[] escapedQuery;
+    
+    std::cout << "[RAG] Searching educational content for: " << query << std::endl;
+    
+    if (mysql_query(connection, sql.str().c_str())) {
+        std::cerr << "[RAG] Search query failed: " << mysql_error(connection) << std::endl;
+        return results;
+    }
+    
+    MYSQL_RES* result = mysql_store_result(connection);
+    if (!result) {
+        std::cerr << "[RAG] Failed to store result" << std::endl;
+        return results;
+    }
+    
+    MYSQL_ROW row;
+    while ((row = mysql_fetch_row(result))) {
+        if (row[0] && row[1]) {
+            std::string title = row[0];
+            std::string content = row[1];
+            // Truncate content to avoid overwhelming the context
+            if (content.length() > 1500) {
+                content = content.substr(0, 1500) + "...";
+            }
+            results.push_back({title, content});
+            std::cout << "[RAG] Found: " << title << " (relevance: " << (row[2] ? row[2] : "?") << ")" << std::endl;
+        }
+    }
+    
+    mysql_free_result(result);
+    std::cout << "[RAG] Found " << results.size() << " relevant lessons" << std::endl;
+    return results;
 }

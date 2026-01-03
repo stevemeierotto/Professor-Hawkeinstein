@@ -74,6 +74,7 @@ services:
         condition: service_started
     environment:
       DB_HOST: database
+      DB_PORT: 3306  # Internal Docker port, not external 3307
       DB_USER: professorhawkeinstein_user
       DB_PASS: ${DB_PASSWORD:-BT1716lit}
       DB_NAME: professorhawkeinstein_platform

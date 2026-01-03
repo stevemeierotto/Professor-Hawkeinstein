@@ -19,9 +19,9 @@
  * Returns existing question banks for the lesson
  */
 
-require_once '../../config/database.php';
-require_once 'auth_check.php';
-require_once '../helpers/system_agent_helper.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/auth_check.php';
+require_once __DIR__ . '/../helpers/system_agent_helper.php';
 requireAdmin();
 
 header('Content-Type: application/json');
@@ -129,7 +129,7 @@ if (!$draft) {
 $stmt = $db->prepare("
     SELECT sc.title, sc.content_text
     FROM draft_lesson_content dlc
-    JOIN scraped_content sc ON dlc.content_id = sc.content_id
+    JOIN educational_content sc ON dlc.content_id = sc.content_id
     WHERE dlc.draft_id = ? AND dlc.unit_index = ? AND dlc.lesson_index = ?
     ORDER BY dlc.relevance_score DESC
     LIMIT 1

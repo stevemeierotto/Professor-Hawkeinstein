@@ -1,7 +1,7 @@
 <?php
 // Create a new course draft from metadata (Step 1 of wizard)
-require_once '../../config/database.php';
-require_once 'auth_check.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/auth_check.php';
 requireAdmin();
 header('Content-Type: application/json');
 

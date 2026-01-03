@@ -27,9 +27,9 @@ $totalStudents = $studentResult->fetch()['count'];
 
 // Get pending content reviews (if table exists)
 $pendingReviews = 0;
-$tableCheck = $db->query("SHOW TABLES LIKE 'scraped_content'");
+$tableCheck = $db->query("SHOW TABLES LIKE 'educational_content'");
 if ($tableCheck->fetch()) {
-    $reviewResult = $db->query("SELECT COUNT(*) as count FROM scraped_content WHERE review_status = 'pending'");
+    $reviewResult = $db->query("SELECT COUNT(*) as count FROM educational_content WHERE review_status = 'pending'");
     if ($reviewResult) {
         $pendingReviews = $reviewResult->fetch()['count'];
     }

@@ -41,6 +41,9 @@ public:
     std::vector<std::string> getRAGDocuments(int agentId, const std::vector<float>& embedding, int limit);
     void storeEmbedding(int documentId, const std::vector<float>& embedding);
     std::vector<float> getEmbedding(int embeddingId);
+    
+    // FULLTEXT search on educational_content table (generated lessons)
+    std::vector<std::pair<std::string, std::string>> searchEducationalContent(const std::string& query, int limit = 3);
 };
 
 #endif // DATABASE_H

@@ -10,8 +10,8 @@
  * GET /api/admin/get_lesson_content.php?draftId=X
  */
 
-require_once '../../config/database.php';
-require_once 'auth_check.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/auth_check.php';
 requireAdmin();
 
 header('Content-Type: application/json');
@@ -47,7 +47,7 @@ try {
                 sc.credibility_score,
                 sc.scraped_at
             FROM draft_lesson_content dlc
-            JOIN scraped_content sc ON dlc.content_id = sc.content_id
+            JOIN educational_content sc ON dlc.content_id = sc.content_id
             WHERE dlc.draft_id = ? AND dlc.unit_index = ? AND dlc.lesson_index = ?
             ORDER BY dlc.relevance_score DESC
         ");
@@ -73,7 +73,7 @@ try {
                 MAX(dlc.approved_at) as approved_at,
                 GROUP_CONCAT(sc.title SEPARATOR '|||') as titles
             FROM draft_lesson_content dlc
-            JOIN scraped_content sc ON dlc.content_id = sc.content_id
+            JOIN educational_content sc ON dlc.content_id = sc.content_id
             WHERE dlc.draft_id = ?
             GROUP BY dlc.unit_index, dlc.lesson_index
             ORDER BY dlc.unit_index, dlc.lesson_index

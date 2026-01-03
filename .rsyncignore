@@ -63,3 +63,4 @@ QUICK_START.txt
 sync_to_web.sh
 Makefile
 archive/
+course_factory/api/

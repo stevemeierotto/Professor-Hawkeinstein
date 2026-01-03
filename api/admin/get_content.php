@@ -36,7 +36,7 @@ $stmt = $db->prepare("
         review_status,
         metadata,
         scraped_at
-    FROM scraped_content 
+    FROM educational_content 
     WHERE content_id = ?
 ");
 

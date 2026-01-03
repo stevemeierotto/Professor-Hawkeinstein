@@ -35,7 +35,7 @@ try {
     $db = getDB();
     
     // Get content
-    $stmt = $db->prepare("SELECT content_id, title, content_text, has_embeddings FROM scraped_content WHERE content_id = ?");
+    $stmt = $db->prepare("SELECT content_id, title, content_text, has_embeddings FROM educational_content WHERE content_id = ?");
     $stmt->execute([$contentId]);
     $content = $stmt->fetch();
     
@@ -106,9 +106,9 @@ try {
             $embeddingsStored++;
         }
         
-        // Update scraped_content
+        // Update educational_content
         $updateStmt = $db->prepare("
-            UPDATE scraped_content 
+            UPDATE educational_content 
             SET has_embeddings = TRUE, 
                 embedding_count = ?,
                 last_embedded = NOW()

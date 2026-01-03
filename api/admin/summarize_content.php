@@ -32,7 +32,7 @@ try {
     $db = getDB();
     
     // Get content
-    $stmt = $db->prepare("SELECT content_text, title, subject, grade_level FROM scraped_content WHERE content_id = ?");
+    $stmt = $db->prepare("SELECT content_text, title, subject, grade_level FROM educational_content WHERE content_id = ?");
     $stmt->execute([$contentId]);
     $content = $stmt->fetch();
     
@@ -53,7 +53,7 @@ try {
     
     // Store both extracted content and summary
     $updateStmt = $db->prepare("
-        UPDATE scraped_content 
+        UPDATE educational_content 
         SET cleaned_text = ?, content_summary = ?
         WHERE content_id = ?
     ");

@@ -1,23 +1,17 @@
 {
   "llama_server_url": "http://llama-server:8090",
-  "model_name": "llama-2-7b-chat",
+  "model_name": "qwen2.5-1.5b-instruct-q4_k_m",
   "server_port": 8080,
   "models_base_path": "/app/models",
-  "default_model": "llama-2-7b-chat.Q4_0.gguf",
+  "default_model": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
   
-  "_comment_multi_model": "Set multi_model_enabled to true to load multiple models (requires more RAM)",
+  "_comment_multi_model": "Only ONE model - all agents use the same Qwen model on llama-server:8090",
   "multi_model_enabled": false,
   
   "models": {
     "qwen2.5-1.5b-instruct-q4_k_m.gguf": {
       "port": 8090,
       "file": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
-      "ctx_size": 4096,
-      "threads": 4
-    },
-    "llama-2-7b-chat.Q4_0.gguf": {
-      "port": 8090,
-      "file": "llama-2-7b-chat.Q4_0.gguf",
       "ctx_size": 4096,
       "threads": 4
     }

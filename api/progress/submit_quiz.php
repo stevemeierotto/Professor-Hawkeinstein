@@ -7,7 +7,7 @@
 // HARD-LOCKED PATHS - No relative path math
 define('APP_ROOT', '/var/www/html/basic_educational');
 define('API_ROOT', APP_ROOT . '/api');
-define('LOG_PATH', APP_ROOT . '/logs/quiz_debug.log');
+define('LOG_PATH', '/tmp/quiz_debug.log');
 
 require_once APP_ROOT . '/config/database.php';
 

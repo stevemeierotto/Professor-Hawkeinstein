@@ -2,6 +2,7 @@
 #include "../include/database.h"
 #include "../include/llamacpp_client.h"
 #include <iostream>
+#include <sstream>
 
 RAGEngine::RAGEngine(Database* db, LlamaCppClient* llamaClient) 
     : database(db), llamaClient_(llamaClient) {
@@ -12,18 +13,21 @@ RAGEngine::~RAGEngine() {
 }
 
 std::vector<std::string> RAGEngine::search(int agentId, const std::string& query, int topK) {
+    std::vector<std::string> results;
+    
     try {
-        // Generate embedding for the query
-        // TODO: Implement embeddings with llama.cpp
-        std::vector<float> queryEmbedding; // Placeholder
+        // Use FULLTEXT search on educational_content table
+        auto contentResults = database->searchEducationalContent(query, topK);
         
-        if (queryEmbedding.empty()) {
-            std::cerr << "Failed to generate query embedding" << std::endl;
-            return {};
+        // Format results for RAG context
+        for (const auto& pair : contentResults) {
+            std::ostringstream formatted;
+            formatted << "## " << pair.first << "\n" << pair.second;
+            results.push_back(formatted.str());
         }
         
-        // Search database using vector similarity
-        return database->getRAGDocuments(agentId, queryEmbedding, topK);
+        std::cout << "[RAGEngine] Returning " << results.size() << " context chunks" << std::endl;
+        return results;
         
     } catch (const std::exception& e) {
         std::cerr << "RAG search error: " << e.what() << std::endl;

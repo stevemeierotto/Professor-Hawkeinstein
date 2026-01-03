@@ -9,14 +9,11 @@ error_reporting(E_ALL);
 ini_set('log_errors', 1);
 ini_set('error_log', '/var/www/html/Professor_Hawkeinstein/logs/register_errors.log');
 
+require_once __DIR__ . '/../../config/database.php';
+
 try {
-    // Direct database connection with existing credentials
-    $db = new PDO(
-        'mysql:host=localhost;dbname=professorhawkeinstein_platform;charset=utf8mb4',
-        'professorhawkeinstein_user',
-        'BT1716lit'
-    );
-    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    // Use standard database connection
+    $db = getDb();
 
     // Get JSON input
     $input = json_decode(file_get_contents('php://input'), true);

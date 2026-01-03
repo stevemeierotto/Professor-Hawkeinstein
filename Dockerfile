@@ -9,6 +9,13 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 # Enable Apache modules
 RUN a2enmod rewrite headers
 
+# Configure Apache to pass environment variables to PHP
+RUN echo "PassEnv DB_NAME" >> /etc/apache2/conf-available/environment.conf && \
+    echo "PassEnv DB_USER" >> /etc/apache2/conf-available/environment.conf && \
+    echo "PassEnv DB_PASS" >> /etc/apache2/conf-available/environment.conf && \
+    echo "PassEnv DB_HOST" >> /etc/apache2/conf-available/environment.conf && \
+    a2enconf environment
+
 # Copy your PHP code
 COPY . /var/www/html/
 

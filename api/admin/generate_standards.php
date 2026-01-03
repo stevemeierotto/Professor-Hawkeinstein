@@ -23,9 +23,9 @@
  * }
  */
 
-require_once '../../config/database.php';
-require_once 'auth_check.php';
-require_once '../helpers/system_agent_helper.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/auth_check.php';
+require_once __DIR__ . '/../helpers/system_agent_helper.php';
 requireAdmin();
 
 header('Content-Type: application/json');
@@ -82,9 +82,23 @@ PROMPT;
     // Log for debugging
     error_log("[Generate Standards] Agent response: " . substr($rawResponse, 0, 500));
     
-    // Clean up response - remove any markdown code blocks
-    $rawResponse = preg_replace('/^```json?\s*/i', '', $rawResponse);
-    $rawResponse = preg_replace('/\s*```$/i', '', $rawResponse);
+    // Note: Timestamp and markdown cleaning now handled by cleanAgentResponse() in callSystemAgent()
+    
+    // Remove any title/header lines before JSON (e.g., "3rd Grade Science Standards")
+    // Look for lines that don't start with [ or {
+    $lines = explode("\n", $rawResponse);
+    $cleanedResponse = '';
+    $foundJson = false;
+    foreach ($lines as $line) {
+        $trimmedLine = trim($line);
+        if (!$foundJson && ($trimmedLine[0] === '[' || $trimmedLine[0] === '{')) {
+            $foundJson = true;
+        }
+        if ($foundJson) {
+            $cleanedResponse .= $line . "\n";
+        }
+    }
+    $rawResponse = trim($cleanedResponse ?: $rawResponse);
     
     // Parse the JSON response - agent should return JSON but may return plain text
     $parsed = json_decode($rawResponse, true);
@@ -103,14 +117,23 @@ PROMPT;
         }
     }
     
-    // Fallback: Parse plain text format (e.g., "6.1a: Students will be able to...")
+    // Fallback: Parse plain text format
     if (!is_array($parsed)) {
         error_log("[Generate Standards] Parsing as plain text...");
         $lines = array_filter(array_map('trim', explode("\n", $rawResponse)));
         $parsed = [];
+        $counter = 1;
         foreach ($lines as $line) {
+            // Match numbered list: "1. Description" or "1) Description"
+            if (preg_match('/^(\d+)[.)]\s*(.+)$/i', $line, $m)) {
+                $parsed[] = [
+                    'id' => 'S' . $m[1],
+                    'statement' => $m[2],
+                    'skills' => []
+                ];
+            }
             // Match patterns like "6.1a: Description" or "S1: Description"
-            if (preg_match('/^([A-Za-z0-9]+\.?[0-9]*[a-z]?):\s*(.+)$/i', $line, $m)) {
+            elseif (preg_match('/^([A-Za-z0-9]+\.?[0-9]*[a-z]?):\s*(.+)$/i', $line, $m)) {
                 $parsed[] = [
                     'id' => $m[1],
                     'statement' => $m[2],

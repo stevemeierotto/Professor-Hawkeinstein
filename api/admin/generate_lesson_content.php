@@ -15,10 +15,14 @@
  * }
  */
 
-require_once '../../config/database.php';
-require_once 'auth_check.php';
-require_once '../helpers/system_agent_helper.php';
+
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/auth_check.php';
+require_once __DIR__ . '/../helpers/system_agent_helper.php';
 requireAdmin();
+
+// DEBUG: Log start of script
+file_put_contents('/tmp/lesson_gen_debug.log', date('Y-m-d H:i:s') . " - Script started\n", FILE_APPEND);
 
 header('Content-Type: application/json');
 
@@ -29,6 +33,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $input = json_decode(file_get_contents('php://input'), true);
+
+// Log the request
+error_log("[generate_lesson_content] Request received: " . json_encode($input));
 
 // Validate required fields
 $required = ['draftId', 'unitIndex', 'lessonIndex', 'lessonTitle'];
@@ -45,7 +52,23 @@ $lessonIndex = (int)$input['lessonIndex'];
 $lessonTitle = $input['lessonTitle'];
 $lessonDescription = $input['lessonDescription'] ?? $lessonTitle;
 
-$db = getDb();
+
+// DEBUG: Log environment and constants
+error_log("[generate_lesson_content] Request for draftId=$draftId, unit=$unitIndex, lesson=$lessonIndex");
+
+try {
+    // Use standard database connection
+    $db = getDb();
+    
+    // Verify which database we're connected to
+    $debugCheck = $db->query('SELECT DATABASE() as current_db');
+    $currentDb = $debugCheck->fetch(PDO::FETCH_ASSOC)['current_db'];
+    error_log("[generate_lesson_content] Connected to database: " . $currentDb);
+} catch (Exception $e) {
+    error_log("[generate_lesson_content] DB connection error: " . $e->getMessage());
+    echo json_encode(['success' => false, 'message' => 'Database connection error']);
+    exit;
+}
 
 // Verify draft exists
 $stmt = $db->prepare("SELECT * FROM course_drafts WHERE draft_id = ?");
@@ -59,12 +82,16 @@ if (!$draft) {
 
 try {
     // Generate content using Content Creator agent
+    error_log("[generate_lesson_content] Calling generateLessonContent for draft $draftId, unit $unitIndex, lesson $lessonIndex");
     $result = generateLessonContent($lessonTitle, $lessonDescription, $draft['grade'], $draft['subject']);
     
     if (!$result['success']) {
+        error_log("[generate_lesson_content] Generation failed: " . ($result['message'] ?? 'unknown error'));
         echo json_encode($result);
         exit;
     }
+    
+    error_log("[generate_lesson_content] Content generated successfully, length: " . strlen($result['content']));
     
     // Check if content already exists for this lesson
     $stmt = $db->prepare("
@@ -74,11 +101,16 @@ try {
     $stmt->execute([$draftId, $unitIndex, $lessonIndex]);
     $existingContentIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
     
-    // Store generated content in scraped_content table
+    // Store generated content in educational_content table
+    // DEBUG: Log current database connection
+    $debugResult = $db->query('SELECT DATABASE() as db');
+    $debugRow = $debugResult->fetch(PDO::FETCH_ASSOC);
+    error_log("[generate_lesson_content] Connected to database: " . $debugRow['db']);
+    
     $stmt = $db->prepare("
-        INSERT INTO scraped_content 
-        (url, page_title, content_type, raw_content, extracted_text, credibility_score, domain, scraped_by, review_status, grade_level, subject_area)
-        VALUES (?, ?, 'ai_generated', ?, ?, ?, 'llm://generated', 1, 'approved', ?, ?)
+        INSERT INTO educational_content 
+        (url, title, content_type, content_html, content_text, credibility_score, scraped_by, review_status, grade_level, subject)
+        VALUES (?, ?, 'ai_generated', ?, ?, ?, 1, 'approved', ?, ?)
     ");
     
     $stmt->execute([
@@ -92,6 +124,7 @@ try {
     ]);
     
     $contentId = $db->lastInsertId();
+    error_log("[generate_lesson_content] Inserted into educational_content, content_id: $contentId");
     
     // Delete old content links if they exist
     if (!empty($existingContentIds)) {
@@ -111,6 +144,7 @@ try {
         ON DUPLICATE KEY UPDATE content_id = VALUES(content_id), relevance_score = VALUES(relevance_score)
     ");
     $stmt->execute([$draftId, $unitIndex, $lessonIndex, $contentId, $result['relevance']]);
+    error_log("[generate_lesson_content] Linked to draft_lesson_content successfully");
     
     echo json_encode([
         'success' => true,

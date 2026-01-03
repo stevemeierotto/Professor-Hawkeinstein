@@ -66,7 +66,7 @@ try {
               ($recommendation === 'reject' ? 'rejected' : 'needs_revision');
     
     $updateStmt = $db->prepare("
-        UPDATE scraped_content 
+        UPDATE educational_content 
         SET review_status = ?, reviewed_by = ?, reviewed_at = NOW()
         WHERE content_id = ?
     ");
@@ -76,7 +76,7 @@ try {
         // If approved, optionally add to RAG documents
     if ($recommendation === 'approve' && isset($input['add_to_rag']) && $input['add_to_rag']) {
         // Get content details
-        $contentStmt = $db->prepare("SELECT * FROM scraped_content WHERE content_id = ?");
+        $contentStmt = $db->prepare("SELECT * FROM educational_content WHERE content_id = ?");
         $contentStmt->execute([$contentId]);
         $content = $contentStmt->fetch();
         
@@ -90,7 +90,7 @@ try {
             ");
             
             $metadata = json_encode([
-                'scraped_content_id' => $contentId,
+                'educational_content_id' => $contentId,
                 'credibility_score' => $content['credibility_score'] ?? 0,
                 'grade_level' => $content['grade_level'] ?? '',
                 'subject' => $content['subject'] ?? ''
@@ -113,7 +113,7 @@ try {
                 ]);
                 
                 // Mark as added to RAG
-                $db->prepare("UPDATE scraped_content SET is_added_to_rag = TRUE WHERE content_id = ?")
+                $db->prepare("UPDATE educational_content SET is_added_to_rag = TRUE WHERE content_id = ?")
                    ->execute([$contentId]);
             } catch (Exception $ragError) {
                 // RAG document insertion failed, but review was successful

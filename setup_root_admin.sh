@@ -116,14 +116,14 @@ else
     exit 1
 fi
 
-# Create root superuser (password: root1234)
+# Create root superuser (password: Root1234)
 echo "👑 Creating root superuser..."
 
-# Password hash for 'root1234' (bcrypt)
+# Password hash for 'Root1234' (bcrypt)
 ROOT_HASH='$2y$10$YourHashHereForRoot1234'
 
 # Use PHP to generate proper bcrypt hash
-ROOT_HASH=$(php -r "echo password_hash('root1234', PASSWORD_BCRYPT);")
+ROOT_HASH=$(php -r "echo password_hash('Root1234', PASSWORD_BCRYPT);")
 
 mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" <<EOF
 -- Remove existing root user if exists
@@ -142,7 +142,7 @@ if [ $? -eq 0 ]; then
     echo "  ROOT CREDENTIALS"
     echo "═══════════════════════════════════════════"
     echo "  Username: root"
-    echo "  Password: root1234"
+    echo "  Password: Root1234"
     echo "═══════════════════════════════════════════"
     echo ""
 else
@@ -160,7 +160,7 @@ echo "✅ Setup complete!"
 echo ""
 echo "📋 Next steps:"
 echo "1. Navigate to: http://localhost/Professor_Hawkeinstein/admin_dashboard.html"
-echo "2. Login with root credentials (username: root, password: root1234)"
+echo "2. Login with root credentials (username: root, password: Root1234)"
 echo "3. Create admin users from the User Management panel"
 echo "4. Admins can then create and manage expert agents"
 echo ""

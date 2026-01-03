@@ -1,8 +1,8 @@
 <?php
 // Generate course outline for a draft (Step 3 of wizard)
-require_once '../../config/database.php';
-require_once 'auth_check.php';
-require_once '../helpers/system_agent_helper.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/auth_check.php';
+require_once __DIR__ . '/../helpers/system_agent_helper.php';
 requireAdmin();
 header('Content-Type: application/json');
 
@@ -63,7 +63,7 @@ function organizeStandardsIntoOutline($standards) {
             $desc = trim($std['description'] ?? '');
             if (!empty($desc)) {
                 $lessons[] = [
-                    'title' => ($code ? "$code: " : '') . substr($desc, 0, 60) . (strlen($desc) > 60 ? '...' : ''),
+                    'title' => ($code ? "$code: " : '') . $desc,  // Full description, no truncation
                     'description' => $desc,
                     'standard_code' => $code
                 ];
@@ -93,11 +93,11 @@ function organizeStandardsIntoOutline($standards) {
         } elseif ($code === 'N/A' && stripos($desc, 'should understand') !== false) {
             // Skip
         } elseif (preg_match('/^[K\d]-/', $code)) {
-            $pendingLessons[] = ['title' => "$code: " . substr($desc, 0, 60), 'description' => $desc, 'standard_code' => $code];
+            $pendingLessons[] = ['title' => "$code: " . $desc, 'description' => $desc, 'standard_code' => $code];
         } elseif (preg_match('/^\d+\)$/', $code)) {
-            $pendingLessons[] = ['title' => substr($desc, 0, 60), 'description' => $desc, 'standard_code' => $code];
+            $pendingLessons[] = ['title' => $desc, 'description' => $desc, 'standard_code' => $code];
         } elseif (!empty($desc) && $code !== 'N/A') {
-            $pendingLessons[] = ['title' => ($code ? "$code: " : '') . substr($desc, 0, 60), 'description' => $desc, 'standard_code' => $code];
+            $pendingLessons[] = ['title' => ($code ? "$code: " : '') . $desc, 'description' => $desc, 'standard_code' => $code];
         }
     }
     
