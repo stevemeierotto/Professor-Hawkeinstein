@@ -48,8 +48,8 @@ RewriteRule ^api/(.*)$ api/$1 [L]
     Header set X-XSS-Protection "1; mode=block"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
     
-    # CORS for API endpoints
-    <FilesMatch "\.(php)$">
+    # CORS for API endpoints and JSON files
+    <FilesMatch "\.(php|json)$">
         Header set Access-Control-Allow-Origin "*"
         Header set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
         Header set Access-Control-Allow-Headers "Content-Type, Authorization"

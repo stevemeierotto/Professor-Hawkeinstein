@@ -42,8 +42,8 @@ try {
             a.agent_type,
             a.system_prompt,
             a.temperature,
-            a.model,
-            a.rag_documents
+            a.model_name,
+            a.specialization
         FROM student_advisors sa
         JOIN agents a ON sa.advisor_type_id = a.agent_id
         WHERE sa.student_id = ? AND sa.is_active = 1

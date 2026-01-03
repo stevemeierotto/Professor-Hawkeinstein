@@ -69,7 +69,7 @@ function loadStudentInfo() {
 async function scanAvailableCourses() {
     try {
         // Fetch available courses from API
-        const response = await fetch('api/course/get_available_courses.php');
+        const response = await fetch('/api/course/get_available_courses.php');
         const data = await response.json();
         
         if (data.success && data.courses) {
@@ -99,18 +99,29 @@ async function scanAvailableCourses() {
 // ==========================================
 
 async function loadCourse(courseId) {
+    const url = `/api/course/courses/course_${courseId}.json`;
+    console.log('Loading course from:', url);
+    console.log('Absolute URL would be:', new URL(url, window.location.href).href);
+    
     try {
-        const response = await fetch(`api/course/courses/course_${courseId}.json`);
+        const response = await fetch(url);
+        console.log('Response received:', response.status, response.statusText);
+        console.log('Response OK:', response.ok);
+        
         if (!response.ok) {
-            throw new Error(`Course file not found: course_${courseId}.json`);
+            console.error('HTTP Error:', response.status, response.statusText);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
         const courseData = await response.json();
+        console.log('Course data loaded successfully:', courseData.courseName);
         AppState.currentCourseData = courseData;
         return courseData;
     } catch (error) {
-        console.error('Error loading course:', error);
-        throw error;
+        console.error('Error in loadCourse:', error.message);
+        console.error('Error type:', error.constructor.name);
+        console.error('Full error:', error);
+        throw new Error(`Course file not found: course_${courseId}.json`);
     }
 }
 
@@ -136,7 +147,7 @@ async function loadLesson(courseId, unitNumber, lessonNumber) {
         }
         
         // Fetch actual lesson content from database (convert to 0-based indexing)
-        const response = await fetch(`api/course/get_lesson_content.php?courseId=${courseId}&unitIndex=${unitNumber - 1}&lessonIndex=${lessonNumber - 1}`);
+        const response = await fetch(`/api/course/get_lesson_content.php?courseId=${courseId}&unitIndex=${unitNumber - 1}&lessonIndex=${lessonNumber - 1}`);
         
         if (!response.ok) {
             console.error('HTTP Error:', response.status, response.statusText);

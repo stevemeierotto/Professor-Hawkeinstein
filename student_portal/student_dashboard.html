@@ -278,7 +278,7 @@
         async function loadAdvisor() {
             try {
                 console.log('[Advisor] Loading advisor data from PHP backend...');
-                const ensureResponse = await fetch('api/student/ensure_advisor.php', {
+                const ensureResponse = await fetch('/api/student/ensure_advisor.php', {
                     method: 'GET',
                     headers: {
                         'Authorization': 'Bearer ' + (getStudentSession('token') || '')
@@ -314,12 +314,20 @@
         async function loadAgents() {
             try {
                 console.log('[Agents] Loading student advisor...');
-                const response = await fetch('api/student/get_advisor.php', {
+                const token = getStudentSession('token');
+                console.log('[Agents] Using token:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
+                const response = await fetch('/api/student/get_advisor.php', {
                     method: 'GET',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + (token || '')
+                    }
                 });
                 
+                console.log('[Agents] Response status:', response.status);
                 if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('[Agents] Error response:', errorText);
                     throw new Error(`HTTP ${response.status}`);
                 }
                 
@@ -401,7 +409,7 @@
             // Track agent selection on backend
             try {
                 console.log('[Agents] Recording agent selection on backend...');
-                const response = await fetch('api/agent/set_active.php', {
+                const response = await fetch('/api/agent/set_active.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -442,7 +450,7 @@
             const grid = document.getElementById('overviewCoursesGrid');
             
             try {
-                const response = await fetch('api/course/get_available_courses.php');
+                const response = await fetch('/api/course/get_available_courses.php');
                 const data = await response.json();
                 
                 if (!data.success || !data.courses || data.courses.length === 0) {
@@ -566,7 +574,7 @@
             
             console.log('Request data:', requestData);
             
-            fetch('api/student/update_advisor_data.php', {
+            fetch('/api/student/update_advisor_data.php', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -626,7 +634,7 @@
 
             const token = getStudentSession('token') || '';
 
-            fetch('api/agent/chat.php', {
+            fetch('/api/agent/chat.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -656,7 +664,7 @@
         }
 
         function storeAgentResponse(response) {
-            fetch('api/student/update_advisor_data.php', {
+            fetch('/api/student/update_advisor_data.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -720,7 +728,7 @@
             const grid = document.getElementById('dynamicCoursesGrid');
             
             try {
-                const response = await fetch('api/course/get_available_courses.php');
+                const response = await fetch('/api/course/get_available_courses.php');
                 const data = await response.json();
                 
                 if (!data.success || !data.courses || data.courses.length === 0) {

@@ -294,7 +294,7 @@
         </main>
     </div>
 
-    <script src="workbook_app.js"></script>
+    <script src="workbook_app.js?v=1767472013"></script>
     <script>
         // Agent Chat Bubble Functionality
         (function() {
@@ -343,5 +343,7 @@
             });
         })();
     </script>
-</body>
-</html>
+    <script>
+        // Force reload - cache buster
+        console.log('Workbook App loaded at:', new Date().toISOString());
+    </script>
