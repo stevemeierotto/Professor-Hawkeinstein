@@ -573,6 +573,7 @@
                         <div class="btn-group">
                             <button type="button" class="btn btn-secondary" onclick="goToStep(2)">← Back</button>
                             <button type="button" class="btn btn-secondary" onclick="generateOutline()" id="generateBtn">🤖 Generate Outline</button>
+                            <button type="button" class="btn btn-success" onclick="approveOutline()" id="approveOutlineBtn" disabled style="display:none;">✓ Approve Outline</button>
                             <button type="button" class="btn btn-primary" id="step3Btn" onclick="goToStep(4)" disabled>Generate Content →</button>
                         </div>
                     </div>
@@ -733,7 +734,26 @@
                 const res = await fetch(`api/admin/course_agent.php?action=status&draftId=${draftId}`, {
                     headers: { 'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}` }
                 });
-                const data = await res.json();
+                
+                // Check if response is ok
+                if (!res.ok) {
+                    const text = await res.text();
+                    console.error('HTTP Error:', res.status, text);
+                    showAlert(`Failed to load draft: HTTP ${res.status}`, 'error');
+                    return;
+                }
+                
+                // Try to parse JSON
+                const text = await res.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (parseError) {
+                    console.error('JSON Parse Error:', parseError);
+                    console.error('Response text:', text);
+                    showAlert('Failed to load draft: Invalid JSON response from server', 'error');
+                    return;
+                }
                 
                 if (data.success) {
                     draftData = data.draft;
@@ -753,9 +773,12 @@
                     
                     // Update agent message
                     updateAgent(data.workflow.nextAction, data.workflow.canAutoExecute);
+                } else {
+                    showAlert(data.message || 'Failed to load draft', 'error');
                 }
             } catch (error) {
                 console.error('Failed to load draft:', error);
+                showAlert(`Failed to load draft: ${error.message}`, 'error');
             }
         }
 
@@ -989,7 +1012,7 @@
             updateAgent('The Standards Analyzer Agent is creating educational standards for your course. This may take a moment...', false);
 
             try {
-                const res = await fetch('api/admin/generate_standards.php', {
+                const res = await fetch('../api/admin/generate_standards.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1080,9 +1103,12 @@
                 if (data.success && data.outline) {
                     generatedOutline = typeof data.outline === 'string' ? JSON.parse(data.outline) : data.outline;
                     renderOutline();
-                    document.getElementById('step3Btn').disabled = false;
+                    // Show approve button, disable content generation until approved
+                    document.getElementById('approveOutlineBtn').style.display = 'inline-block';
+                    document.getElementById('approveOutlineBtn').disabled = false;
+                    document.getElementById('step3Btn').disabled = true;
                     document.getElementById('generateBtn').textContent = '🔄 Regenerate';
-                    updateAgent('Outline ready! Review it and proceed to publish when satisfied.', false);
+                    updateAgent('Outline ready! Review it and click "Approve Outline" to proceed.', false);
                 } else {
                     document.getElementById('outlinePreview').innerHTML = '<div class="loading"><p>No outline yet. Click "Generate Outline".</p></div>';
                     updateAgent('Ready to generate the outline. Click the button or let me do it automatically.', true);
@@ -1150,6 +1176,37 @@
 
             btn.disabled = false;
             btn.textContent = '🔄 Regenerate';
+        }
+
+        async function approveOutline() {
+            const btn = document.getElementById('approveOutlineBtn');
+            btn.disabled = true;
+            
+            try {
+                const res = await fetch(`api/admin/approve_draft_outline.php`, {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ draftId })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    showAlert('Outline approved! You can now generate content.', 'success');
+                    document.getElementById('step3Btn').disabled = false;
+                    document.getElementById('approveOutlineBtn').style.display = 'none';
+                    enableStep(4);
+                    updateAgent('Outline approved! Ready to generate lesson content.', true);
+                } else {
+                    showAlert(data.message || 'Failed to approve outline', 'error');
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+                btn.disabled = false;
+            }
         }
 
         // STEP 4: Content Generation
@@ -1263,7 +1320,20 @@
                         lessonDescription: lessonDescription || lessonTitle
                     })
                 });
-                const data = await res.json();
+                
+                // Log response details for debugging
+                console.log('[generateLesson] Response status:', res.status);
+                const responseText = await res.text();
+                console.log('[generateLesson] Response text:', responseText);
+                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (e) {
+                    console.error('[generateLesson] JSON parse error:', e);
+                    showAlert('Server returned invalid response: ' + responseText.substring(0, 200), 'error');
+                    return;
+                }
 
                 if (data.success) {
                     showAlert(`✓ Generated: ${data.title}`, 'success');
@@ -1275,6 +1345,7 @@
                     showAlert(data.message || 'Generation failed', 'error');
                 }
             } catch (error) {
+                console.error('[generateLesson] Error:', error);
                 showAlert('Error: ' + error.message, 'error');
             }
         }
@@ -1640,9 +1711,20 @@
                         })
                     });
                     const data = await response.json();
+                    
+                    // Check if generation failed
+                    if (!data.success) {
+                        console.error(`Failed to generate ${type}:`, data.message);
+                        if (data.debug) console.error('Debug info:', data.debug);
+                        if (data.raw) console.log('Raw response:', data.raw);
+                        showAlert(`Failed to generate ${type} questions: ${data.message}`, 'error');
+                    } else {
+                        console.log(`✓ Generated ${type} questions successfully`);
+                    }
                     completed++;
                 } catch (error) {
                     console.error(`Error generating ${type}:`, error);
+                    showAlert(`Error generating ${type} questions: ${error.message}`, 'error');
                     completed++;
                 }
             }

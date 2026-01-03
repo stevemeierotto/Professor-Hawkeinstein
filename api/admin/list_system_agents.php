@@ -5,8 +5,8 @@
  * Returns all agents with agent_type = 'system' for course creation pipeline
  */
 
-require_once '../../config/database.php';
-require_once 'auth_check.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/auth_check.php';
 requireAdmin();
 
 header('Content-Type: application/json');
@@ -20,7 +20,7 @@ try {
             agent_id,
             agent_name,
             agent_type,
-            COALESCE(JSON_UNQUOTE(JSON_EXTRACT(personality_config, '$.role')), 'other') as agent_role,
+            COALESCE(purpose, 'other') as agent_role,
             specialization,
             model_name,
             system_prompt,
@@ -31,8 +31,7 @@ try {
         FROM agents 
         WHERE agent_type = 'system'
         ORDER BY 
-            FIELD(JSON_UNQUOTE(JSON_EXTRACT(personality_config, '$.role')), 
-                  'standards', 'outline', 'content', 'questions', 'quiz', 'unit_test', 'validator', 'other'),
+            FIELD(purpose, 'standards', 'outline', 'content', 'questions', 'quiz', 'unit_test', 'validator'),
             agent_name
     ");
     $stmt->execute();

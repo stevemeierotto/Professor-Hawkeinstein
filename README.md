@@ -334,6 +334,39 @@ mysql -u professorhawkeinstein_user -p professorhawkeinstein_platform
 4. **No WebSocket** - Frontend uses polling for updates
 5. **Multimedia placeholders** - Video/audio content not implemented
 
+## Design Philosophy
+
+### Grade-Based Difficulty System
+
+**Important:** This platform does not use traditional "beginner/intermediate/advanced" difficulty labels. 
+
+**The grade level IS the difficulty level.** A 2nd grade science lesson is inherently appropriate for 2nd graders, and a 10th grade physics lesson is appropriate for 10th graders. 
+
+Any references to "easy/medium/hard" difficulty in the codebase should be removed as they are redundant and potentially confusing when the grade level already indicates the appropriate complexity.
+
+## TODO: Pending Improvements
+
+### High Priority
+- [ ] **Remove difficulty_distribution from question banks** - Grade level is sufficient
+- [ ] **Remove difficulty field from question objects** - Not needed when grade determines complexity
+- [ ] **Implement Quiz Creator agent (ID 20)** - Assemble quizzes from question banks
+- [ ] **Implement Unit Test Creator agent (ID 21)** - Generate comprehensive unit assessments
+- [ ] **Implement Content Validator agent (ID 22)** - QA check for generated content
+- [ ] **Add course publishing workflow** - Final approval step before making courses live
+
+### Medium Priority
+- [ ] Implement true vector similarity search for RAG
+- [ ] Add WebSocket support for real-time LLM streaming
+- [ ] Support multiple LLM models per agent type
+- [ ] Add course versioning and rollback
+- [ ] Implement student progress analytics dashboard
+
+### Low Priority
+- [ ] Add multimedia content support (videos, audio)
+- [ ] Implement horizontal scaling with load balancing
+- [ ] Add collaborative course editing for multiple admins
+- [ ] Support for custom question types beyond fill-in/multiple-choice/essay
+
 ## Documentation
 
 | Document | Purpose |

@@ -152,6 +152,13 @@ function callSystemAgent($purpose, $userPrompt, $options = []) {
         'max_tokens' => $maxTokens
     ]);
     
+    error_log("[callSystemAgent] Purpose: $purpose, Agent: " . $agent['agent_name'] . ", Response: " . json_encode($response));
+    
+    // Clean timestamp prefix from response if present (LLM sometimes adds these)
+    if (!empty($response['response'])) {
+        $response['response'] = cleanAgentResponse($response['response']);
+    }
+    
     // Add agent info to response for debugging
     $response['_system_agent'] = [
         'purpose' => $purpose,
@@ -162,3 +169,24 @@ function callSystemAgent($purpose, $userPrompt, $options = []) {
     
     return $response;
 }
+
+/**
+ * Clean common artifacts from agent responses
+ * 
+ * @param string $response Raw agent response
+ * @return string Cleaned response
+ */
+function cleanAgentResponse($response) {
+    $cleaned = trim($response);
+    
+    // Remove timestamp prefix (e.g., "2018-03-16 11:30:00\n")
+    $cleaned = preg_replace('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\s*\n/', '', $cleaned);
+    
+    // Remove markdown code block markers
+    $cleaned = preg_replace('/^```json?\s*/i', '', $cleaned);
+    $cleaned = preg_replace('/\s*```$/i', '', $cleaned);
+    
+    // Remove common agent name prefixes
+    $cleaned = preg_replace('/^(Professor Hawkeinstein|Content Creator|Assistant|Agent):\s*/mi', '', $cleaned);
+    
+    return trim($cleaned);}
