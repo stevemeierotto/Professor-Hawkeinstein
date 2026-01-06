@@ -224,12 +224,21 @@
             }
 
             try {
-                const apiUrl = `${window.location.origin}${window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'))}/api/course/get_lesson_content.php?courseId=${courseId}&unitIndex=${unitIndex}&lessonIndex=${lessonIndex}`;
-                console.log('Fetching from:', apiUrl);
+                const apiUrl = `/api/course/get_lesson_content.php?courseId=${courseId}&unitIndex=${unitIndex}&lessonIndex=${lessonIndex}`;
+                console.log('Fetching quiz questions from:', apiUrl);
+                console.log('Full URL:', window.location.origin + apiUrl);
                 const response = await fetch(apiUrl);
                 
+                console.log('Response status:', response.status, response.statusText);
+                console.log('Response ok:', response.ok);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
                 const responseText = await response.text();
-                console.log('Raw API response:', responseText);
+                console.log('Raw API response length:', responseText.length);
+                console.log('First 200 chars:', responseText.substring(0, 200));
                 
                 let data;
                 try {
@@ -413,7 +422,7 @@
                 console.log('🔍 DEBUG - Token:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
                 
                 // Submit quiz for grading
-                const gradeUrl = `${window.location.origin}${window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'))}/api/progress/submit_quiz.php`;
+                const gradeUrl = `/api/progress/submit_quiz.php`;
                 console.log('🔍 DEBUG - Grade URL:', gradeUrl);
                 
                 const response = await fetch(gradeUrl, {

@@ -65,20 +65,13 @@ try {
     
     $courseIdNum = $draftId;
     
-    // Get grading agent - use agent_id 15 directly as fallback
+    // Get grading agent by type (dynamic lookup)
     $agentStmt = $db->prepare("SELECT agent_id, agent_name FROM agents WHERE agent_type = 'grading_agent' AND is_active = 1 LIMIT 1");
     $agentStmt->execute();
     $gradingAgent = $agentStmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$gradingAgent) {
-        // Fallback: Try fetching agent_id 15 directly
-        $fallbackStmt = $db->prepare("SELECT agent_id, agent_name FROM agents WHERE agent_id = 15 AND is_active = 1");
-        $fallbackStmt->execute();
-        $gradingAgent = $fallbackStmt->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$gradingAgent) {
-            sendJSON(['success' => false, 'message' => 'Grading agent not available'], 500);
-        }
+        sendJSON(['success' => false, 'message' => 'Grading agent not available'], 500);
     }
     
     $gradingAgentId = $gradingAgent['agent_id'];
