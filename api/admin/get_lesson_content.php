@@ -44,6 +44,7 @@ try {
                 sc.title,
                 sc.content_type,
                 sc.content_text,
+                sc.video_url,
                 sc.credibility_score,
                 sc.scraped_at
             FROM draft_lesson_content dlc

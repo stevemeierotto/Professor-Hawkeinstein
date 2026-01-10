@@ -174,7 +174,7 @@ Standards (CSP) → Agent 5 → Agent 6 → Agent 18 → Agent 19 → Agent 22
 - `progress_tracking` - Student quiz attempts and scores
 
 ### Standards & Reference
-- `scraped_content` - Educational standards from CSP API (legacy table)
+- `educational_content` - AI-generated lesson content and educational standards
 - `educational_content` - All AI-generated lesson content
 
 ---

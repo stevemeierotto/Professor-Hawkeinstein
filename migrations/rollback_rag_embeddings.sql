@@ -5,8 +5,8 @@
 -- Drop agent content links
 DROP TABLE IF EXISTS agent_content_links;
 
--- Remove columns from scraped_content
-ALTER TABLE scraped_content
+-- Remove columns from educational_content
+ALTER TABLE educational_content
 DROP COLUMN IF EXISTS last_embedded,
 DROP COLUMN IF EXISTS embedding_count,
 DROP COLUMN IF EXISTS has_embeddings;

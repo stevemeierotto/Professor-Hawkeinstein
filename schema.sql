@@ -9,7 +9,7 @@ DROP TABLE IF EXISTS lessons;
 DROP TABLE IF EXISTS units;
 DROP TABLE IF EXISTS training_exports;
 DROP TABLE IF EXISTS content_reviews;
-DROP TABLE IF EXISTS scraped_content;
+DROP TABLE IF EXISTS educational_content;
 DROP TABLE IF EXISTS admin_activity_log;
 DROP TABLE IF EXISTS progress_tracking;
 DROP TABLE IF EXISTS rag_documents;
@@ -224,18 +224,19 @@ CREATE TABLE admin_activity_log (
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Scraped Content: Store content from web scraping
-CREATE TABLE scraped_content (
+-- Educational Content: Store AI-generated and curated educational content
+CREATE TABLE educational_content (
     content_id INT AUTO_INCREMENT PRIMARY KEY,
-    source_url VARCHAR(2048) NOT NULL,
-    page_title VARCHAR(500),
-    content_type VARCHAR(50) DEFAULT 'educational',  -- 'educational', 'standard', 'lesson', 'reference'
-    raw_content LONGTEXT NOT NULL,  -- Full HTML/text content
-    extracted_text LONGTEXT,  -- Cleaned text content
+    url VARCHAR(2048) NOT NULL,
+    title VARCHAR(500),
+    content_type VARCHAR(50) DEFAULT 'educational',  -- 'educational', 'ai_generated', 'lesson', 'reference'
+    content_html LONGTEXT NOT NULL,  -- Full HTML content
+    content_text LONGTEXT,  -- Cleaned text content
+    video_url VARCHAR(255) DEFAULT NULL,  -- YouTube video ID or URL
     metadata TEXT,  -- JSON: author, date_published, keywords, etc.
     credibility_score DECIMAL(3,2) DEFAULT 0.00,  -- 0.00-1.00 rating
     domain VARCHAR(255),  -- Extracted domain name
-    scraped_by INT NOT NULL,  -- Admin user who initiated scrape
+    scraped_by INT NOT NULL,  -- Admin user who created/imported content
     scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     review_status ENUM('pending', 'approved', 'rejected', 'needs_revision') DEFAULT 'pending',
     reviewed_by INT NULL,  -- Admin user who reviewed
@@ -243,13 +244,14 @@ CREATE TABLE scraped_content (
     review_notes TEXT,  -- Feedback from reviewer
     is_added_to_rag BOOLEAN DEFAULT FALSE,  -- Whether content was added to RAG system
     grade_level VARCHAR(50),  -- e.g., 'grade_1', 'grade_2', 'high_school', 'college'
-    subject_area VARCHAR(100),  -- 'mathematics', 'science', 'language_arts', etc.
+    subject VARCHAR(100),  -- 'mathematics', 'science', 'language_arts', etc.
     FOREIGN KEY (scraped_by) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (reviewed_by) REFERENCES users(user_id) ON DELETE SET NULL,
-    INDEX idx_source_url (source_url(255)),
+    INDEX idx_url (url(255)),
     INDEX idx_review_status (review_status),
     INDEX idx_scraped_at (scraped_at),
-    INDEX idx_grade_subject (grade_level, subject_area)
+    INDEX idx_grade_subject (grade_level, subject),
+    INDEX idx_video_url (video_url)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Content Reviews: Detailed review records
@@ -266,7 +268,7 @@ CREATE TABLE content_reviews (
     recommendation ENUM('approve', 'reject', 'revise') NOT NULL,
     revision_needed TEXT,  -- Specific changes required
     reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (content_id) REFERENCES scraped_content(content_id) ON DELETE CASCADE,
+    FOREIGN KEY (content_id) REFERENCES educational_content(content_id) ON DELETE CASCADE,
     FOREIGN KEY (reviewer_id) REFERENCES users(user_id) ON DELETE CASCADE,
     INDEX idx_content_id (content_id),
     INDEX idx_reviewer_id (reviewer_id)
@@ -321,6 +323,7 @@ CREATE TABLE lessons (
     lesson_number INT NOT NULL,
     lesson_title VARCHAR(255) NOT NULL,
     lesson_content LONGTEXT NOT NULL,  -- Main lesson text/HTML
+    video_url VARCHAR(255) DEFAULT NULL,  -- YouTube video ID or URL
     lesson_objectives TEXT,  -- JSON array of specific objectives
     key_concepts TEXT,  -- JSON array of key concepts
     examples TEXT,  -- JSON with worked examples
@@ -329,7 +332,8 @@ CREATE TABLE lessons (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (unit_id) REFERENCES units(unit_id) ON DELETE CASCADE,
     UNIQUE KEY unique_unit_lesson (unit_id, lesson_number),
-    INDEX idx_unit_id (unit_id)
+    INDEX idx_unit_id (unit_id),
+    INDEX idx_video_url (video_url)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Quiz Questions: Questions for lessons, units, and finals

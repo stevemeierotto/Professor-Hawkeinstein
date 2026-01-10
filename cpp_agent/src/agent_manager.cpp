@@ -9,8 +9,8 @@ AgentManager::AgentManager(Config& config) : config(config) {
     
     // Initialize llama.cpp clients for each configured model
     for (const auto& [modelName, modelConfig] : config.models) {
-        // Use config.llamaServerUrl for Docker compatibility (llama-server hostname)
-        std::string serverUrl = config.llamaServerUrl;
+        // Use per-model URL for multi-model support
+        std::string serverUrl = modelConfig.url;
         std::string modelPath = config.modelsBasePath + "/" + modelConfig.file;
         
         std::cout << "Registering model: " << modelName << " at " << serverUrl << std::endl;

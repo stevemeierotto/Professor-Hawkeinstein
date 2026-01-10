@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS draft_lesson_content (
     relevance_score DECIMAL(3,2) DEFAULT 0.50,
     added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (draft_id) REFERENCES course_drafts(draft_id) ON DELETE CASCADE,
-    FOREIGN KEY (content_id) REFERENCES scraped_content(content_id) ON DELETE CASCADE,
+    FOREIGN KEY (content_id) REFERENCES educational_content(content_id) ON DELETE CASCADE,
     UNIQUE KEY unique_lesson_content (draft_id, unit_index, lesson_index, content_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -23,11 +23,13 @@ CREATE TABLE IF NOT EXISTS draft_lessons (
     lesson_index INT NOT NULL,
     lesson_title VARCHAR(255) NOT NULL,
     lesson_content LONGTEXT,
+    video_url VARCHAR(255) DEFAULT NULL,
     standard_codes TEXT,
     generated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     approved_at DATETIME,
     FOREIGN KEY (draft_id) REFERENCES course_drafts(draft_id) ON DELETE CASCADE,
-    UNIQUE KEY unique_draft_lesson (draft_id, unit_index, lesson_index)
+    UNIQUE KEY unique_draft_lesson (draft_id, unit_index, lesson_index),
+    INDEX idx_video_url (video_url)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Table for generated quiz/test questions
@@ -50,6 +52,3 @@ CREATE TABLE IF NOT EXISTS draft_questions (
     INDEX idx_draft_unit (draft_id, unit_index),
     INDEX idx_draft_lesson (draft_id, unit_index, lesson_index)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Add content_type column to scraped_content if it doesn't exist
--- (It should already exist based on the schema we saw)

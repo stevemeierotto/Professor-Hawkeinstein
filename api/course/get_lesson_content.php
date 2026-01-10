@@ -28,38 +28,56 @@ if (!$courseId || $unitIndex === null || $lessonIndex === null) {
     exit;
 }
 
-// Map courseId to draft_id (for now, hardcoded - should be in a mapping table)
-$courseIdToDraftId = [
-    '2nd_grade_science' => 9
-];
-
-$draftId = isset($courseIdToDraftId[$courseId]) ? $courseIdToDraftId[$courseId] : null;
-
-if (!$draftId) {
-    echo json_encode(['success' => false, 'message' => 'Course not found']);
-    exit;
-}
-
 $db = getDb();
 
 try {
-    // Get lesson content from educational_content
+    // First, try to get from published course (courses → units → lessons)
     $stmt = $db->prepare("
         SELECT 
-            sc.content_id,
-            sc.title,
-            sc.content_text,
-            sc.content_html,
-            sc.video_url,
-            dlc.relevance_score
-        FROM draft_lesson_content dlc
-        JOIN educational_content sc ON dlc.content_id = sc.content_id
-        WHERE dlc.draft_id = ? AND dlc.unit_index = ? AND dlc.lesson_index = ?
-        ORDER BY dlc.relevance_score DESC
+            l.lesson_id,
+            l.lesson_title as title,
+            l.lesson_content as content_text,
+            l.lesson_content as content_html,
+            l.video_url
+        FROM courses c
+        JOIN units u ON c.course_id = u.course_id
+        JOIN lessons l ON u.unit_id = l.unit_id
+        WHERE c.course_name LIKE ? AND u.unit_number = ? AND l.lesson_number = ?
         LIMIT 1
     ");
-    $stmt->execute([$draftId, $unitIndex, $lessonIndex]);
+    // Match course name from courseId (e.g., '2nd_grade_science' → '%2nd Grade Science%')
+    $courseName = '%' . str_replace('_', ' ', ucwords($courseId, '_')) . '%';
+    $stmt->execute([$courseName, $unitIndex + 1, $lessonIndex + 1]);
     $content = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    // If not found in published courses, try draft
+    if (!$content) {
+        // Map courseId to draft_id (for now, hardcoded - should be in a mapping table)
+        $courseIdToDraftId = [
+            '2nd_grade_science' => 9
+        ];
+        
+        $draftId = isset($courseIdToDraftId[$courseId]) ? $courseIdToDraftId[$courseId] : null;
+        
+        if ($draftId) {
+            $stmt = $db->prepare("
+                SELECT 
+                    sc.content_id,
+                    sc.title,
+                    sc.content_text,
+                    sc.content_html,
+                    sc.video_url,
+                    dlc.relevance_score
+                FROM draft_lesson_content dlc
+                JOIN educational_content sc ON dlc.content_id = sc.content_id
+                WHERE dlc.draft_id = ? AND dlc.unit_index = ? AND dlc.lesson_index = ?
+                ORDER BY dlc.relevance_score DESC
+                LIMIT 1
+            ");
+            $stmt->execute([$draftId, $unitIndex, $lessonIndex]);
+            $content = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+    }
     
     if (!$content) {
         echo json_encode([
@@ -70,19 +88,28 @@ try {
         exit;
     }
     
-    // Get questions for this lesson
-    $stmt = $db->prepare("
-        SELECT 
-            bank_id,
-            question_type,
-            questions,
-            question_count
-        FROM lesson_question_banks
-        WHERE draft_id = ? AND unit_index = ? AND lesson_index = ?
-        ORDER BY question_type
-    ");
-    $stmt->execute([$draftId, $unitIndex, $lessonIndex]);
-    $questionBanks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Get questions for this lesson (questions still stored in draft structure)
+    // Map courseId to draft_id for question lookup
+    $courseIdToDraftId = [
+        '2nd_grade_science' => 9
+    ];
+    $draftId = isset($courseIdToDraftId[$courseId]) ? $courseIdToDraftId[$courseId] : null;
+    
+    $questionBanks = [];
+    if ($draftId) {
+        $stmt = $db->prepare("
+            SELECT 
+                bank_id,
+                question_type,
+                questions,
+                question_count
+            FROM lesson_question_banks
+            WHERE draft_id = ? AND unit_index = ? AND lesson_index = ?
+            ORDER BY question_type
+        ");
+        $stmt->execute([$draftId, $unitIndex, $lessonIndex]);
+        $questionBanks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
     
     // Group questions by type and parse JSON
     $questionsByType = [

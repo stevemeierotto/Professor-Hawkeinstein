@@ -8,6 +8,7 @@
 
 struct ModelConfig {
     int port = 8090;
+    std::string url = "http://localhost:8090";
     std::string file;
     int ctxSize = 4096;
     int threads = 4;
@@ -83,6 +84,7 @@ struct Config {
                 ModelConfig mc;
                 auto m = modelsJson[modelName];
                 if (m.isMember("port")) mc.port = m["port"].asInt();
+                if (m.isMember("url")) mc.url = m["url"].asString();
                 if (m.isMember("file")) mc.file = m["file"].asString();
                 if (m.isMember("ctx_size")) mc.ctxSize = m["ctx_size"].asInt();
                 if (m.isMember("threads")) mc.threads = m["threads"].asInt();
@@ -97,7 +99,7 @@ struct Config {
     std::string getServerUrlForModel(const std::string& modelName) const {
         auto it = models.find(modelName);
         if (it != models.end()) {
-            return "http://localhost:" + std::to_string(it->second.port);
+            return it->second.url;
         }
         // Fallback to default
         return llamaServerUrl;

@@ -159,7 +159,7 @@ std::string query = R"(
 )";
 ```
 
-**Note:** All lesson content is AI-generated. Legacy `scraped_content` table only stores standards from CSP API.
+**Note:** All lesson content is AI-generated and stored in `educational_content` table.
 
 #### Debugging Commands
 
@@ -350,6 +350,81 @@ WHERE agent_id BETWEEN 16 AND 22;
 ```
 
 **Result:** ✅ All 7 system agents loaded successfully
+
+### **Problem: Empty Agent Responses Due to Context Size Limits**
+
+**Date Resolved:** January 9, 2026  
+**Symptom:** Outline Generator returns `success:true` but empty response, falls back to pattern-based organization
+
+### Root Cause Analysis
+
+The llama-server's context window was too small for complex agent prompts:
+
+**Logs showed:**
+```
+[LlamaCppClient] Generating response for prompt length: 10229 max_tokens: 2048 temperature: 0.4
+[LlamaCppClient] Response length: 0
+```
+
+**llama-server error:**
+```
+srv send_error: task id = 1722, error: the request exceeds the available context size
+srv log_server_r: request: POST /completion 172.19.0.4 400
+```
+
+The container was running with:
+- `--ctx-size 4096` (total context window)
+- `--n-predict 512` (max output tokens)
+- Actual slot size: `n_ctx_seq = 2048`
+
+**Problem:** System agent prompts (especially Outline Generator with 2000+ char system_prompt) plus RAG context plus user message exceeded 2048 tokens.
+
+### Fix Applied
+
+**File:** `docker-compose.yml`
+
+```yaml
+llama-server:
+  command: >
+    ./llama-server --host 0.0.0.0 --port 8090
+    --model /app/models/${MODEL_FILE:-qwen2.5-3b-instruct-q4_k_m.gguf}
+    --threads 4 --ctx-size 8192 --n-predict 4096  # INCREASED
+    --threads-batch 4 --cache-reuse 256
+    --parallel 2 --cont-batching
+```
+
+**Database updates:**
+```sql
+-- Increase max_tokens for content-generating agents
+UPDATE agents SET max_tokens = 4096 WHERE agent_id IN (5, 6, 18, 19, 21);
+
+-- Keep validators/quiz creators at 2048
+UPDATE agents SET max_tokens = 2048 WHERE agent_id IN (20, 22);
+```
+
+**CRITICAL:** After changing docker-compose.yml, you must recreate the container:
+```bash
+docker-compose down llama-server
+docker-compose up -d llama-server
+```
+
+Simple `docker-compose restart` won't pick up command changes!
+
+### Verification
+
+```bash
+# Check llama-server context size
+docker logs phef-llama 2>&1 | grep "n_ctx"
+# Should show: n_ctx = 8192, n_ctx_seq = 4096
+
+# Test agent response
+curl -X POST http://localhost:8080/agent/chat \
+  -H "Content-Type: application/json" \
+  -d '{"userId":0,"agentId":6,"message":"Test outline","max_tokens":4096}'
+# Should return non-empty response
+```
+
+**Result:** ✅ Outline Generator now produces full structured outlines with 3-5 units
 
 ### Verification
 

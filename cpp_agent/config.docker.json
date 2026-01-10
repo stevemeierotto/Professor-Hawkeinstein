@@ -1,16 +1,24 @@
 {
   "llama_server_url": "http://llama-server:8090",
-  "model_name": "qwen2.5-1.5b-instruct-q4_k_m",
+  "model_name": "qwen2.5-3b-instruct",
   "server_port": 8080,
   "models_base_path": "/app/models",
-  "default_model": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
+  "default_model": "qwen2.5-3b-instruct-q4_k_m.gguf",
   
-  "_comment_multi_model": "Only ONE model - all agents use the same Qwen model on llama-server:8090",
+  "_comment_multi_model": "All agents use the Qwen 3B model on llama-server:8090",
   "multi_model_enabled": false,
   
   "models": {
+    "qwen2.5-3b-instruct-q4_k_m.gguf": {
+      "port": 8090,
+      "url": "http://llama-server:8090",
+      "file": "qwen2.5-3b-instruct-q4_k_m.gguf",
+      "ctx_size": 4096,
+      "threads": 4
+    },
     "qwen2.5-1.5b-instruct-q4_k_m.gguf": {
       "port": 8090,
+      "url": "http://llama-server:8090",
       "file": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
       "ctx_size": 4096,
       "threads": 4

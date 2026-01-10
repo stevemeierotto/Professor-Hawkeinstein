@@ -3,20 +3,29 @@
   "model_name": "llama-2-7b-chat",
   "server_port": 8080,
   "models_base_path": "/home/steve/Professor_Hawkeinstein/models",
-  "default_model": "llama-2-7b-chat.Q4_0.gguf",
+  "default_model": "qwen2.5-3b-instruct-q4_k_m.gguf",
   
   "_comment_multi_model": "Set multi_model_enabled to true to load multiple models simultaneously (requires more RAM)",
   "multi_model_enabled": false,
   
   "models": {
+    "qwen2.5-3b-instruct-q4_k_m.gguf": {
+      "port": 8090,
+      "url": "http://localhost:8090",
+      "file": "qwen2.5-3b-instruct-q4_k_m.gguf",
+      "ctx_size": 4096,
+      "threads": 4
+    },
     "qwen2.5-1.5b-instruct-q4_k_m.gguf": {
       "port": 8090,
+      "url": "http://localhost:8090",
       "file": "qwen2.5-1.5b-instruct-q4_k_m.gguf",
       "ctx_size": 4096,
       "threads": 4
     },
     "llama-2-7b-chat.Q4_0.gguf": {
-      "port": 8090,
+      "port": 8091,
+      "url": "http://localhost:8091",
       "file": "llama-2-7b-chat.Q4_0.gguf",
       "ctx_size": 4096,
       "threads": 4

@@ -29,12 +29,16 @@ $stmt->execute([$draftId]);
 $standards = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Try LLM-based outline generation first (uses Outline Generator agent)
+file_put_contents('/tmp/outline_debug.log', date('Y-m-d H:i:s') . " - Starting outline generation for draft $draftId\n", FILE_APPEND);
 $outline = generateOutlineWithLLM($draft, $standards);
 
 // Fallback to pattern-based organization if LLM fails
 if (empty($outline)) {
+    file_put_contents('/tmp/outline_debug.log', date('Y-m-d H:i:s') . " - LLM generation failed, falling back\n", FILE_APPEND);
     error_log("[generate_draft_outline] LLM generation failed, falling back to pattern-based organization");
     $outline = organizeStandardsIntoOutline($standards);
+} else {
+    file_put_contents('/tmp/outline_debug.log', date('Y-m-d H:i:s') . " - LLM generated " . count($outline) . " units\n", FILE_APPEND);
 }
 
 $outlineJson = json_encode($outline, JSON_PRETTY_PRINT);
@@ -109,6 +113,8 @@ function organizeStandardsIntoOutline($standards) {
 }
 
 function generateOutlineWithLLM($draft, $standards) {
+    file_put_contents('/tmp/outline_debug.log', date('Y-m-d H:i:s') . " - generateOutlineWithLLM called\n", FILE_APPEND);
+    
     $standardsList = "";
     foreach ($standards as $std) {
         $standardsList .= "- " . ($std['standard_code'] ? $std['standard_code'] . ": " : "") . $std['description'] . "\n";

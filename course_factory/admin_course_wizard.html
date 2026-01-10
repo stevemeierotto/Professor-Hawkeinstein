@@ -1375,15 +1375,32 @@
                     <div id="reviewModalContent" style="flex:1;overflow:auto;padding:1.5rem;color:#374151;">
                         <p>Loading...</p>
                     </div>
-                    <div style="padding:1rem 1.5rem;border-top:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;gap:1rem;">
-                        <button class="btn btn-secondary" onclick="regenerateFromReview(${unitIndex}, ${lessonIndex}, '${escapeHtml(lessonTitle).replace(/'/g, "\\'")}')">
-                            🔄 Regenerate
-                        </button>
-                        <div style="display:flex;gap:0.5rem;">
-                            <button class="btn btn-secondary" onclick="document.getElementById('reviewModal').remove()">Close</button>
-                            <button class="btn btn-primary" onclick="approveLesson(${unitIndex}, ${lessonIndex})" id="approveBtn">
-                                ✅ Approve
+                    <div style="padding:1rem 1.5rem;border-top:1px solid #e5e7eb;">
+                        <div style="margin-bottom:1rem;">
+                            <label style="display:block;font-weight:600;margin-bottom:0.5rem;color:#374151;">
+                                🎥 YouTube Video URL or ID
+                            </label>
+                            <input type="text" 
+                                   id="lessonVideoUrl" 
+                                   placeholder="e.g., dQw4w9WgXcQ or https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                                   style="width:100%;padding:0.5rem;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;">
+                            <div style="font-size:0.8rem;color:#6b7280;margin-top:0.25rem;">
+                                Enter the YouTube video ID or full URL. This video will be embedded in the lesson.
+                            </div>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;">
+                            <button class="btn btn-secondary" onclick="regenerateFromReview(${unitIndex}, ${lessonIndex}, '${escapeHtml(lessonTitle).replace(/'/g, "\\'")}')">
+                                🔄 Regenerate
                             </button>
+                            <div style="display:flex;gap:0.5rem;">
+                                <button class="btn btn-secondary" onclick="saveLessonVideo(${unitIndex}, ${lessonIndex})">
+                                    💾 Save Video
+                                </button>
+                                <button class="btn btn-secondary" onclick="document.getElementById('reviewModal').remove()">Close</button>
+                                <button class="btn btn-primary" onclick="approveLesson(${unitIndex}, ${lessonIndex})" id="approveBtn">
+                                    ✅ Approve
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1449,11 +1466,18 @@
                 
                 const modalContent = document.getElementById('reviewModalContent');
                 if (data.success && data.content && data.content.length > 0) {
+                    // Load existing video URL if available
+                    const videoUrlInput = document.getElementById('lessonVideoUrl');
+                    if (videoUrlInput && data.content[0].video_url) {
+                        videoUrlInput.value = data.content[0].video_url;
+                    }
+                    
                     // Display all content items for this lesson
                     const contentHtml = data.content.map((item, idx) => `
                         <div style="background:#f9fafb;padding:1rem;border-radius:8px;margin-bottom:1rem;">
                             <div style="font-weight:600;margin-bottom:0.5rem;">${escapeHtml(item.title || 'Generated Content')}</div>
                             <div style="font-size:0.8rem;color:#6b7280;">Generated: ${item.scraped_at || 'Unknown'}</div>
+                            ${item.video_url ? `<div style="font-size:0.8rem;color:#059669;margin-top:0.25rem;">🎥 Video: ${escapeHtml(item.video_url)}</div>` : ''}
                         </div>
                         <div style="white-space:pre-wrap;line-height:1.6;padding:0 0.5rem;">${escapeHtml(item.content_text || 'No content available')}</div>
                         ${idx < data.content.length - 1 ? '<hr style="margin:1.5rem 0;border-color:#e5e7eb;">' : ''}
@@ -1464,6 +1488,39 @@
                 }
             } catch (error) {
                 document.getElementById('reviewModalContent').innerHTML = '<p style="color:#dc2626;">Error loading content.</p>';
+            }
+        }
+
+        async function saveLessonVideo(unitIndex, lessonIndex) {
+            const videoUrl = document.getElementById('lessonVideoUrl').value.trim();
+            const unit = generatedOutline[unitIndex];
+            const courseId = `${selectedGrade.toLowerCase()}_${selectedSubject.toLowerCase()}`.replace(/\s+/g, '_');
+            
+            try {
+                const res = await fetch('api/admin/update_lesson_video.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}`
+                    },
+                    body: JSON.stringify({
+                        courseId: courseId,
+                        unitIndex: unitIndex,
+                        lessonIndex: lessonIndex,
+                        video_url: videoUrl
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showAlert('✅ Video URL saved successfully!', 'success');
+                    // Refresh content to show updated video URL
+                    fetchLessonContent(unitIndex, lessonIndex);
+                } else {
+                    showAlert('❌ Failed to save video URL: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('❌ Error saving video URL: ' + error.message, 'error');
             }
         }
 

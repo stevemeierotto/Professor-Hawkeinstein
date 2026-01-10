@@ -72,3 +72,52 @@ function getModelInfo($modelName) {
         'exists' => true
     ];
 }
+
+// Handle direct HTTP requests (when called as API endpoint)
+if (basename($_SERVER['PHP_SELF']) === 'model_validation.php') {
+    header('Content-Type: application/json');
+    
+    $action = $_GET['action'] ?? 'list';
+    
+    if ($action === 'list') {
+        $models = getAvailableModels();
+        echo json_encode([
+            'success' => true,
+            'models' => $models,
+            'count' => count($models)
+        ]);
+    } elseif ($action === 'validate') {
+        $modelName = $_GET['model'] ?? '';
+        if (empty($modelName)) {
+            echo json_encode(['success' => false, 'error' => 'Model name required']);
+            exit;
+        }
+        
+        try {
+            $validModel = validateModelOrFallback($modelName);
+            echo json_encode([
+                'success' => true,
+                'model' => $validModel,
+                'info' => getModelInfo($validModel)
+            ]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+    } elseif ($action === 'info') {
+        $modelName = $_GET['model'] ?? '';
+        if (empty($modelName)) {
+            echo json_encode(['success' => false, 'error' => 'Model name required']);
+            exit;
+        }
+        
+        $info = getModelInfo($modelName);
+        if ($info) {
+            echo json_encode(['success' => true, 'info' => $info]);
+        } else {
+            echo json_encode(['success' => false, 'error' => 'Model not found']);
+        }
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Invalid action']);
+    }
+    exit;
+}

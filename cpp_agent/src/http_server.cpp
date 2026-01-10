@@ -195,7 +195,9 @@ void HTTPServer::handleClient(int clientSocket) {
                     model = config.defaultModel;  // Update model name for response
                 }
                 
-                LlamaCppClient llamaClient(config.llamaServerUrl, modelPath, 2048, temperature);
+                // Get model-specific URL from config
+                std::string serverUrl = config.getServerUrlForModel(model);
+                LlamaCppClient llamaClient(serverUrl, modelPath, 2048, temperature);
                 std::string agentResponse = llamaClient.generate(fullPrompt);
                 
                 Json::Value responseJson;
