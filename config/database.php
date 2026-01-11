@@ -288,6 +288,63 @@ function callAgentService($endpoint, $data) {
     }
 }
 
+/**
+ * Resolve course identifier to both course_id and draft_id
+ * Handles: numeric course_id, string courseId (like '2nd_grade_science'), or numeric draft_id
+ * 
+ * @param string|int $courseIdentifier
+ * @return array|null ['course_id' => int, 'draft_id' => int] or null if not found
+ */
+function resolveCourseIds($courseIdentifier) {
+    $db = getDB();
+    
+    // Case 1: Numeric input - check if it's a course_id or draft_id
+    if (is_numeric($courseIdentifier)) {
+        $courseIdentifier = (int)$courseIdentifier;
+        
+        // Try as course_id first
+        $stmt = $db->prepare("SELECT course_id, draft_id FROM courses WHERE course_id = :id");
+        $stmt->execute(['id' => $courseIdentifier]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($result) {
+            return [
+                'course_id' => (int)$result['course_id'],
+                'draft_id' => (int)$result['draft_id']
+            ];
+        }
+        
+        // Try as draft_id
+        $stmt = $db->prepare("SELECT course_id, draft_id FROM courses WHERE draft_id = :id");
+        $stmt->execute(['id' => $courseIdentifier]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($result) {
+            return [
+                'course_id' => (int)$result['course_id'],
+                'draft_id' => (int)$result['draft_id']
+            ];
+        }
+    }
+    
+    // Case 2: String input like '2nd_grade_science'
+    // Convert to readable format
+    $courseName = ucwords(str_replace('_', ' ', $courseIdentifier));
+    
+    $stmt = $db->prepare("SELECT course_id, draft_id FROM courses WHERE course_name = :name");
+    $stmt->execute(['name' => $courseName]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($result) {
+        return [
+            'course_id' => (int)$result['course_id'],
+            'draft_id' => (int)$result['draft_id']
+        ];
+    }
+    
+    return null;
+}
+
 // Initialize error logging
 if (DEBUG_MODE) {
     ini_set('display_errors', 1);

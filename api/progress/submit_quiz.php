@@ -25,48 +25,39 @@ $input = getJSONInput();
 $courseId = $input['courseId'] ?? null;
 $unitIndex = $input['unitIndex'] ?? null;
 $lessonIndex = $input['lessonIndex'] ?? null;
+$isUnitTest = $input['isUnitTest'] ?? false;
 $questions = $input['questions'] ?? [];
 $userAnswers = $input['userAnswers'] ?? [];
 
-if (empty($courseId) || $unitIndex === null || $lessonIndex === null) {
-    sendJSON(['success' => false, 'message' => 'Course and lesson information required'], 400);
+// Debug logging
+error_log("Quiz Submit DEBUG: courseId=$courseId, unitIndex=$unitIndex, lessonIndex=$lessonIndex, isUnitTest=$isUnitTest, questions=" . count($questions) . ", answers=" . count($userAnswers));
+
+// For unit tests, lessonIndex can be null
+if (empty($courseId) || $unitIndex === null || (!$isUnitTest && $lessonIndex === null)) {
+    error_log("Quiz Submit FAIL: Validation failed - courseId=" . ($courseId ?: 'NULL') . ", unitIndex=" . ($unitIndex ?? 'NULL') . ", lessonIndex=" . ($lessonIndex ?? 'NULL') . ", isUnitTest=" . ($isUnitTest ? 'true' : 'false'));
+    sendJSON(['success' => false, 'message' => 'Course and lesson information required', 'debug' => ['courseId' => $courseId, 'unitIndex' => $unitIndex, 'lessonIndex' => $lessonIndex, 'isUnitTest' => $isUnitTest]], 400);
 }
 
 if (empty($questions) || empty($userAnswers)) {
-    sendJSON(['success' => false, 'message' => 'Questions and answers required'], 400);
+    error_log("Quiz Submit FAIL: Empty questions or answers - questions=" . count($questions) . ", answers=" . count($userAnswers));
+    sendJSON(['success' => false, 'message' => 'Questions and answers required', 'debug' => ['questionCount' => count($questions), 'answerCount' => count($userAnswers)]], 400);
 }
 
 try {
     $db = getDB();
     
-    // Map courseId to draft_id (matches get_lesson_content.php mapping)
-    $courseIdToDraftId = [
-        '2nd_grade_science' => 9
-    ];
+    // Use new helper function to resolve course IDs
+    $courseIds = resolveCourseIds($courseId);
     
-    $draftId = isset($courseIdToDraftId[$courseId]) ? $courseIdToDraftId[$courseId] : null;
-    
-    if (!$draftId) {
-        // Try to find course by numeric ID as fallback
-        if (is_numeric($courseId)) {
-            $courseStmt = $db->prepare("SELECT course_id FROM courses WHERE course_id = :courseId");
-            $courseStmt->execute(['courseId' => $courseId]);
-            $course = $courseStmt->fetch();
-            
-            if ($course) {
-                $draftId = $course['course_id'];
-            }
-        }
-        
-        if (!$draftId) {
-            sendJSON(['success' => false, 'message' => 'Course not found'], 404);
-        }
+    if (!$courseIds) {
+        sendJSON(['success' => false, 'message' => 'Course not found', 'courseId' => $courseId], 404);
     }
     
-    $courseIdNum = $draftId;
+    $courseIdNum = $courseIds['course_id'];
+    $draftId = $courseIds['draft_id'];
     
-    // Get grading agent by type (dynamic lookup)
-    $agentStmt = $db->prepare("SELECT agent_id, agent_name FROM agents WHERE agent_type = 'grading_agent' AND is_active = 1 LIMIT 1");
+    // Get grading agent by purpose (updated to match new schema)
+    $agentStmt = $db->prepare("SELECT agent_id, agent_name FROM agents WHERE purpose = 'grading' AND is_active = 1 LIMIT 1");
     $agentStmt->execute();
     $gradingAgent = $agentStmt->fetch(PDO::FETCH_ASSOC);
     
@@ -125,14 +116,25 @@ try {
             }
         } elseif ($questionType === 'short_essay') {
             // Use grading agent for short answer evaluation
-            $gradeResult = gradeShortAnswer($userAnswer, $correctAnswer, $gradingAgentId);
-            $result['grade'] = $gradeResult['grade'];
-            $result['points'] = $gradeResult['points'];
-            
-            if ($gradeResult['grade'] === 'Correct') {
-                $correctCount++;
-            } elseif ($gradeResult['grade'] === 'Partially Correct') {
-                $partialCount++;
+            try {
+                error_log("Calling grading agent for short essay question $index");
+                $questionText = $question['question'] ?? '';
+                $gradeResult = gradeShortAnswer($questionText, $correctAnswer, $userAnswer, $gradingAgentId);
+                $result['grade'] = $gradeResult['grade'];
+                $result['points'] = $gradeResult['points'];
+                
+                if ($gradeResult['grade'] === 'Correct') {
+                    $correctCount++;
+                } elseif ($gradeResult['grade'] === 'Partially Correct') {
+                    $partialCount++;
+                }
+                error_log("Grading agent returned: {$gradeResult['grade']} ({$gradeResult['points']} points)");
+            } catch (Exception $e) {
+                error_log("Grading agent failed for question $index: " . $e->getMessage());
+                // Fallback: mark as incorrect if agent fails
+                $result['grade'] = 'Not Graded (Agent Error)';
+                $result['points'] = 0;
+                $result['error'] = $e->getMessage();
             }
         }
         
@@ -243,10 +245,17 @@ try {
 
 /**
  * Grade short answer using AI agent
+ * @param string $questionText The question being asked
+ * @param string $correctAnswer The expected correct answer
+ * @param string $userAnswer The student's submitted answer
+ * @param int $agentId The grading agent ID
+ * @return array ['grade' => string, 'points' => float]
  */
-function gradeShortAnswer($userAnswer, $correctAnswer, $agentId) {
-    // Build prompt for grading agent
-    $prompt = "Student Answer: {$userAnswer}\n\nExpected Answer: {$correctAnswer}\n\nEvaluate the student's answer.";
+function gradeShortAnswer($questionText, $correctAnswer, $userAnswer, $agentId) {
+    error_log("gradeShortAnswer called with agentId=$agentId");
+    
+    // Build structured prompt for grading agent
+    $prompt = "QUESTION: {$questionText}\n\nCORRECT ANSWER: {$correctAnswer}\n\nSTUDENT ANSWER: {$userAnswer}\n\nGrade this answer.";
     
     // Call agent service with correct signature: callAgentService($endpoint, $data)
     $agentResponse = callAgentService('/agent/chat', [
@@ -256,12 +265,22 @@ function gradeShortAnswer($userAnswer, $correctAnswer, $agentId) {
         'context' => []
     ]);
     
-    if (!$agentResponse || empty($agentResponse['response'])) {
-        // Fallback if agent fails
-        return ['grade' => 'Incorrect', 'points' => 0];
+    error_log("gradeShortAnswer agent response: " . json_encode($agentResponse));
+    
+    // Check if agent call failed
+    if (!$agentResponse || !isset($agentResponse['success']) || $agentResponse['success'] === false) {
+        $errorMsg = isset($agentResponse['message']) ? $agentResponse['message'] : 'Agent service unavailable';
+        error_log("gradeShortAnswer: Agent call failed - $errorMsg");
+        throw new Exception("Grading agent failed: $errorMsg");
+    }
+    
+    if (empty($agentResponse['response'])) {
+        error_log("gradeShortAnswer: Empty response from agent");
+        throw new Exception("Grading agent returned empty response");
     }
     
     $responseText = trim($agentResponse['response']);
+    error_log("gradeShortAnswer: Agent evaluated as: $responseText");
     
     // Parse agent response (expecting: Correct, Partially Correct, or Incorrect)
     if (stripos($responseText, 'Correct') !== false) {

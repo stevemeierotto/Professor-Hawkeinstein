@@ -15,8 +15,8 @@ WAIT_SCRIPT="$SCRIPT_DIR/scripts/wait_for_services.sh"
 
 # Configuration - change these to switch models
 MULTI_MODEL=${MULTI_MODEL:-0}  # Set to 1 to enable multi-model mode
-ACTIVE_MODEL="llama-2-7b-chat.Q4_0.gguf"  # Model to use in single-model mode
-# ACTIVE_MODEL="qwen2.5-1.5b-instruct-q4_k_m.gguf"  # Uncomment to use Qwen instead
+# ACTIVE_MODEL="llama-2-7b-chat.Q4_0.gguf"  # Model to use in single-model mode
+ACTIVE_MODEL="qwen2.5-1.5b-instruct-q4_k_m.gguf"  # Uncomment to use Qwen instead
 
 echo "=== Starting Professor Hawkeinstein Educational Platform Services ==="
 echo

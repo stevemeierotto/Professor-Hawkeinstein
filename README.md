@@ -134,6 +134,75 @@ Professor_Hawkeinstein/
 └── llama.cpp/                  # llama.cpp build
 ```
 
+## Deployment Options
+
+**There are TWO different ways to run this system:**
+
+| Method | Use Case | Model Config | Services |
+|--------|----------|--------------|----------|
+| **Docker** | Recommended for production, isolated, portable | `docker-compose.yml` line 39 | `docker compose up -d` |
+| **Native** | Development, debugging, direct access | `start_services.sh` line 18 | `./start_services.sh` |
+| **Hybrid** | Current local dev setup | Mix of both | See below |
+
+**⚠️ Important:** These methods are independent. Do not mix them. Choose one method and use it consistently.
+
+### Current Local Deployment (Hybrid)
+
+The current development environment uses a **HYBRID setup**:
+
+**What's Native:**
+- Apache web server on port 80 (professorhawkeinstein.local)
+- Web files in `/var/www/html/basic_educational` (PROD)
+- PHP executed by native Apache
+
+**What's Docker:**
+- Database (MariaDB) on port 3307
+- LLM Server (llama-server) on port 8090
+- Agent Service (C++) on port 8080
+
+**How it works:**
+1. Browser requests `http://professorhawkeinstein.local/student_portal/workbook.html`
+2. Native Apache serves HTML/CSS/JS from `/var/www/html/basic_educational`
+3. JavaScript calls PHP APIs at same domain
+4. PHP connects to Docker services (DB at localhost:3307, Agent at localhost:8080)
+
+**Important sync workflow:**
+```bash
+# 1. Edit files in DEV
+nano /home/steve/Professor_Hawkeinstein/student_portal/unit_test.html
+
+# 2. Sync to PROD
+make sync-web
+
+# 3. Hard refresh browser (Ctrl+Shift+R or disable cache in DevTools)
+```
+
+**⚠️ CRITICAL: Avoid Native Backend Conflicts**
+```bash
+# These should NOT be running (causes port conflicts with Docker)
+ps aux | grep llama-server | grep -v docker  # Should be empty
+ps aux | grep agent_service | grep -v docker # Should be empty
+
+# If found, kill them:
+pkill llama-server
+pkill agent_service
+```
+
+### Model Configuration
+
+**Docker method:** Edit `docker-compose.yml` line 39
+```yaml
+environment:
+  - MODEL_FILE=qwen2.5-1.5b-instruct-q4_k_m.gguf  # Change model here
+```
+
+**Native method:** Edit `start_services.sh` line 18
+```bash
+ACTIVE_MODEL="qwen2.5-1.5b-instruct-q4_k_m.gguf"  # Change model here
+```
+
+**Hybrid method:** Uses Docker model (see docker-compose.yml)
+
 ## Quick Start
 
 ### Prerequisites
@@ -196,7 +265,20 @@ curl http://localhost:8080/health  # agent-service
 
 ### Option 2: Native Deployment (Advanced)
 
-**⚠️ Warning:** Native deployment is more complex. Docker deployment is recommended for testing.
+**⚠️ Warning:** Native deployment is more complex and requires pre-installed services (Apache, PHP, MariaDB). Docker is recommended for testing and production.
+
+**When to use native deployment:**
+- Active development and debugging
+- Need direct access to logs and processes
+- Testing agent service changes without rebuilding containers
+- Working on C++ agent code
+
+**Pre-requisites:**
+- Apache with PHP 8.0+ configured and running
+- MariaDB installed and running (port 3306)
+- llama.cpp compiled in `llama.cpp/build/bin/`
+- C++ agent service compiled at `cpp_agent/build/bin/agent_service`
+- Web root at `/var/www/html/basic_educational`
 
 1. **Install dependencies:**
    ```bash

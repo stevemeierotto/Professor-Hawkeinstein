@@ -466,6 +466,18 @@ async function showLessonView(unitNumber) {
                 `;
             }).join('')}
         </div>
+        
+        <!-- Unit Test Button -->
+        <div style="margin-top: 2rem; padding: 1.5rem; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 12px; text-align: center;">
+            <h3 style="color: white; margin: 0 0 0.5rem 0;">🎯 Ready to test your knowledge?</h3>
+            <p style="color: rgba(255,255,255,0.9); margin: 0 0 1rem 0; font-size: 0.9rem;">
+                Take the unit test to assess your understanding of all lessons
+            </p>
+            <button class="btn" id="openUnitTestBtn" style="background: white; color: #f5576c; font-weight: 600; padding: 0.75rem 2rem; font-size: 1rem;" 
+                    onclick="openUnitTest()">
+                📝 Take Unit Test
+            </button>
+        </div>
     `;
 }
 
@@ -697,6 +709,31 @@ function showError(title, message) {
             </button>
         </div>
     `;
+}
+
+// ==========================================
+// UNIT TEST FUNCTIONALITY
+// ==========================================
+
+function openUnitTest() {
+    if (!AppState.currentCourseData || !AppState.selectedUnit) {
+        alert('Please select a unit first');
+        return;
+    }
+
+    const courseData = AppState.currentCourseData;
+    const unit = courseData.units.find(u => u.unitNumber === AppState.selectedUnit);
+    
+    // Build unit test URL with parameters
+    const unitTestUrl = `unit_test.html?` +
+        `courseId=${encodeURIComponent(AppState.selectedCourse)}` +
+        `&unitIndex=${AppState.selectedUnit - 1}` +
+        `&courseName=${encodeURIComponent(courseData.courseName || courseData.title)}` +
+        `&unitTitle=${encodeURIComponent(unit.unitTitle)}` +
+        `&lessonCount=${unit.lessons.length}`;
+    
+    // Open unit test in new window
+    window.open(unitTestUrl, 'unit_test_window', 'width=1000,height=800,scrollbars=yes,resizable=yes');
 }
 
 // ==========================================

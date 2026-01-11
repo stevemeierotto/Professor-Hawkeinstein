@@ -21,6 +21,25 @@ This system uses a **strict Dev vs Production separation**. Violating this contr
 - **Web Server:** This is the **ONLY** directory served by Apache
 - **Browser Access:** All PHP endpoints accessed by the browser **MUST** exist here
 
+### CURRENT DEPLOYMENT: HYBRID ARCHITECTURE
+
+**⚠️ The local environment uses a HYBRID setup:**
+
+| Component | Location | Notes |
+|-----------|----------|-------|
+| Web Files | PROD (`/var/www/html/basic_educational`) | Served by native Apache |
+| Database | Docker (phef-database:3307) | Must sync from DEV to PROD |
+| LLM Server | Docker (phef-llama:8090) | Backend services in Docker |
+| Agent Service | Docker (phef-agent:8080) | Backend services in Docker |
+
+**This means:**
+- Edit files in **DEV** (`/home/steve/Professor_Hawkeinstein`)
+- Deploy to **PROD** using `make sync-web`
+- Native Apache at `professorhawkeinstein.local` serves PROD files
+- PROD PHP connects to Docker backend services
+
+**Never run native backend services** (llama-server, agent_service) - causes port conflicts!
+
 ---
 
 ## 📋 THE MENTAL MODEL (What Agents Must Believe)

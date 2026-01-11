@@ -1,5 +1,62 @@
 # Professor Hawkeinstein – System Architecture Overview
 
+## Deployment Architecture (Current Setup)
+
+**⚠️ HYBRID DEPLOYMENT WARNING**
+
+The current **local development** setup uses a HYBRID architecture:
+
+| Component | Runtime | Access | Notes |
+|-----------|---------|--------|-------|
+| Web Server | Native Apache | professorhawkeinstein.local:80 | Serves from /var/www/html/basic_educational |
+| Database | Docker (phef-database) | localhost:3307 | MariaDB 10.11 |
+| LLM Inference | Docker (phef-llama) | localhost:8090 | Qwen 2.5 1.5B model |
+| Agent Service | Docker (phef-agent) | localhost:8080 | C++ microservice |
+| PHP API Container | Docker (phef-api) | localhost:8081 | **Not actively used** |
+
+**Important Notes:**
+- Native Apache PHP code connects to Docker backend services
+- Native `llama-server` and `agent_service` processes should NOT run (causes port conflicts)
+- The `phef-api` Docker container is running but not actively used
+- Web file changes must be synced: DEV → PROD via `make sync-web`
+
+**To verify correct state:**
+```bash
+# Should show 4 containers running
+docker compose ps
+
+# Should return empty (no native backend)
+ps aux | grep -E "llama-server|agent_service" | grep -v docker | grep -v grep
+```
+
+### Future Cloud Deployment (AWS/Production)
+
+**⚠️ The hybrid setup is LOCAL ONLY and should NOT be used in cloud deployment.**
+
+For AWS production, use one of these architectures:
+
+**Option 1: Fully Containerized (Recommended)**
+- All services in Docker containers on ECS/Fargate or EKS
+- Application Load Balancer for routing
+- RDS for MariaDB (managed database)
+- EC2/Fargate with GPU instances for LLM inference
+- No native Apache - use nginx or Apache in container
+
+**Option 2: AWS-Native Services**
+- Frontend: CloudFront + S3 (static assets) + Lambda@Edge
+- API: API Gateway + Lambda (PHP via Bref) or ECS
+- Database: RDS MariaDB
+- LLM: EC2 with GPU or SageMaker
+- Agent Service: ECS/Fargate
+
+**Why not hybrid in cloud?**
+- Harder to scale (can't scale native Apache separately)
+- Complicates deployment and rollbacks
+- Makes auto-scaling impossible
+- Violates cloud-native principles
+
+---
+
 ## Purpose of This Document
 
 This document defines the **intentional architectural split** of the Professor Hawkeinstein platform into two independent but related subsystems:
