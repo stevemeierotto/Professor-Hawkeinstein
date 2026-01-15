@@ -165,11 +165,9 @@ int main() {
     }
     
     std::cout << "==================================\n";
-    std::cout << "Simple Agent Service Started\n";
+    std::cout << "*** DEPRECATED BINARY - DO NOT USE ***\n";
+    std::cout << "*** Use bin/agent_service instead ***\n";
     std::cout << "Port: 8080\n";
-    std::cout << "Endpoints:\n";
-    std::cout << "  GET  /health\n";
-    std::cout << "  POST /api/chat\n";
     std::cout << "==================================\n";
     
     while (true) {
@@ -196,18 +194,14 @@ int main() {
         
         try {
             if (path == "/health" && method == "GET") {
-                std::cout << "[INFO] Health check requested\n";
-                response = createHTTPResponse(200, "{\"status\":\"ok\"}");
+                std::cerr << "[FATAL] Deprecated binary simple_agent called - use agent_service instead\n";
+                response = createHTTPResponse(410, "{\"error\":\"Deprecated binary\",\"message\":\"simple_agent is deprecated. Use agent_service instead.\"}");
             }
             else if (path == "/api/chat" && method == "POST") {
-                std::cout << "[INFO] Chat request received\n";
-                std::cout << "[DEBUG] Request body length: " << body.length() << "\n";
-                
-                std::string jsonBody = extractJSON(body);
-                if (jsonBody.empty()) {
-                    response = createHTTPResponse(400, "{\"error\":\"Invalid JSON\"}");
-                } else {
-                    std::string messagesArray = getJSONValue(jsonBody, "messages");
+                std::cerr << "[FATAL] Deprecated endpoint /api/chat called in deprecated binary\n";
+                response = createHTTPResponse(410, "{\"error\":\"Endpoint removed\",\"message\":\"/api/chat is deprecated. Use /agent/chat in agent_service instead.\"}");
+            }
+            else {
                     std::string prompt = getLastMessageContent(messagesArray);
                     
                     if (prompt.empty()) {

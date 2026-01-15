@@ -92,22 +92,14 @@ int main() {
         
         try {
             if (path == "/health" && method == "GET") {
-                response = createHTTPResponse(200, "{\"status\":\"ok\"}");
+                std::cerr << "[FATAL] Deprecated binary simple_server called - use agent_service instead\n";
+                response = createHTTPResponse(410, "{\"error\":\"Deprecated binary\",\"message\":\"simple_server is deprecated. Use agent_service instead.\"}");
             }
             else if (path == "/api/chat" && method == "POST") {
-                Json::Value requestJson;
-                Json::CharReaderBuilder builder;
-                std::stringstream ss(body);
-                std::string errs;
-                
-                if (!Json::parseFromStream(builder, ss, &requestJson, &errs)) {
-                    response = createHTTPResponse(400, "{\"error\":\"Invalid JSON\"}");
-                } else {
-                    std::string model = requestJson.get("model", "llama-2-7b-chat").asString();
-                    std::string systemPrompt = requestJson.get("system_prompt", "").asString();
-                    float temperature = requestJson.get("temperature", 0.7).asFloat();
-                    
-                    std::string fullPrompt = systemPrompt + "\n\n";
+                std::cerr << "[FATAL] Deprecated endpoint /api/chat called in deprecated binary\n";
+                response = createHTTPResponse(410, "{\"error\":\"Endpoint removed\",\"message\":\"/api/chat is deprecated. Use /agent/chat in agent_service instead.\"}");
+            }
+            else {
                     if (requestJson.isMember("messages") && requestJson["messages"].isArray()) {
                         for (const auto& msg : requestJson["messages"]) {
                             std::string role = msg.get("role", "user").asString();

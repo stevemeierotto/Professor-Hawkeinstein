@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Platform Metrics - Professor Hawkeinstein</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+        }
+        
+        .header h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .metric-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        .metric-value {
+            font-size: 42px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .metric-label {
+            font-size: 14px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .info-section {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 40px;
+        }
+        
+        .info-section h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+        
+        .info-section p {
+            font-size: 16px;
+            line-height: 1.8;
+            color: #555;
+        }
+        
+        .subjects-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .subject-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .activity-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #27ae60;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+        
+        .privacy-notice {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 50px;
+            opacity: 0.8;
+            font-size: 14px;
+        }
+        
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 18px;
+            padding: 40px;
+        }
+        
+        .trend-mini {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            font-size: 12px;
+            color: #888;
+        }
+        
+        .trend-bar {
+            width: 30px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            height: 40px;
+            position: relative;
+        }
+        
+        .trend-fill {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: #667eea;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 Platform Statistics</h1>
+            <p>Real-time aggregate metrics from the Professor Hawkeinstein learning platform</p>
+            <p style="margin-top: 10px;"><span class="activity-indicator"></span> Live Data</p>
+        </div>
+        
+        <div id="loading" class="loading">Loading metrics...</div>
+        
+        <div id="content" style="display: none;">
+            <div class="metrics-grid" id="metricsGrid"></div>
+            
+            <div class="info-section">
+                <h2>📊 Recent Activity</h2>
+                <p>
+                    <strong id="users24h">-</strong> active learners in the last 24 hours completed 
+                    <strong id="lessons24h">-</strong> lessons, demonstrating continuous engagement 
+                    with our progress-based learning system.
+                </p>
+                
+                <div class="trend-mini" id="trendMini"></div>
+            </div>
+            
+            <div class="info-section">
+                <h2>🌟 Popular Learning Areas</h2>
+                <p>Our platform serves learners across diverse subjects, with active participation in:</p>
+                <div class="subjects-list" id="subjectsList"></div>
+            </div>
+            
+            <div class="info-section">
+                <h2>📈 About Our Metrics</h2>
+                <p>
+                    Professor Hawkeinstein is a privacy-first, progress-based educational platform. 
+                    We believe in measuring mastery, not grades. All metrics displayed here are 
+                    fully aggregated platform-wide statistics. We never display individual student 
+                    data publicly.
+                </p>
+                
+                <p style="margin-top: 20px;">
+                    <strong>Key Principles:</strong>
+                </p>
+                <ul style="margin-left: 20px; margin-top: 10px; line-height: 2;">
+                    <li>🔒 Privacy by design - no PII in public metrics</li>
+                    <li>📊 Mastery over grades - we track competency, not comparison</li>
+                    <li>🎯 Progress-based learning - students advance when ready</li>
+                    <li>🤖 AI-powered tutoring - personalized learning paths</li>
+                    <li>🌍 Open-source curriculum - transparent and community-driven</li>
+                </ul>
+                
+                <div class="privacy-notice">
+                    <strong>Privacy Notice:</strong> All data displayed is aggregated and anonymized. 
+                    No individual student information is visible. This platform is designed with 
+                    FERPA and COPPA compliance in mind, prioritizing student privacy above all else.
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Last updated: <span id="lastUpdated">-</span></p>
+            <p style="margin-top: 10px;">Professor Hawkeinstein Educational Platform</p>
+        </div>
+    </div>
+    
+    <script>
+        // Load public metrics on page load
+        document.addEventListener('DOMContentLoaded', loadMetrics);
+        
+        // Auto-refresh every 60 seconds
+        setInterval(loadMetrics, 60000);
+        
+        async function loadMetrics() {
+            try {
+                const response = await fetch('/api/public/metrics.php');
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error('Failed to load metrics');
+                }
+                
+                renderMetrics(data);
+                
+                // Hide loading, show content
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+                document.getElementById('loading').textContent = 'Unable to load metrics. Please try again later.';
+            }
+        }
+        
+        function renderMetrics(data) {
+            const grid = document.getElementById('metricsGrid');
+            grid.innerHTML = '';
+            
+            // Icon mapping
+            const icons = {
+                'total_learners': '👨‍🎓',
+                'avg_mastery_improvement': '📈',
+                'course_completion_rate': '✅',
+                'total_study_hours': '⏱️',
+                'active_courses': '📚',
+                'lessons_completed': '🎯',
+                'avg_quiz_score': '💯',
+                'platform_uptime': '🚀'
+            };
+            
+            // Render metric cards
+            data.metrics.forEach(metric => {
+                if (metric.key === 'schema_version') return; // Skip internal metrics
+                
+                const card = document.createElement('div');
+                card.className = 'metric-card';
+                
+                let value = metric.value;
+                if (metric.type === 'percentage') {
+                    value = parseFloat(value).toFixed(1) + '%';
+                } else if (metric.type === 'number') {
+                    value = parseInt(value).toLocaleString();
+                }
+                
+                card.innerHTML = `
+                    <div class="metric-icon">${icons[metric.key] || '📊'}</div>
+                    <div class="metric-value">${value}</div>
+                    <div class="metric-label">${metric.label}</div>
+                `;
+                
+                grid.appendChild(card);
+            });
+            
+            // Recent activity
+            document.getElementById('users24h').textContent = data.recentActivity.users24h.toLocaleString();
+            document.getElementById('lessons24h').textContent = data.recentActivity.lessons24h.toLocaleString();
+            
+            // Render mini trend
+            renderTrendMini(data.weeklyTrend);
+            
+            // Popular subjects
+            const subjectsList = document.getElementById('subjectsList');
+            subjectsList.innerHTML = '';
+            
+            data.popularSubjects.forEach(subject => {
+                const badge = document.createElement('div');
+                badge.className = 'subject-badge';
+                badge.textContent = `${subject.subject_area} (${subject.student_count} learners)`;
+                subjectsList.appendChild(badge);
+            });
+            
+            // Last updated
+            document.getElementById('lastUpdated').textContent = new Date(data.lastUpdated).toLocaleString();
+        }
+        
+        function renderTrendMini(trend) {
+            const container = document.getElementById('trendMini');
+            container.innerHTML = '<span>Last 7 days activity:</span>';
+            
+            if (!trend || trend.length === 0) return;
+            
+            const maxUsers = Math.max(...trend.map(d => d.total_active_users));
+            
+            trend.forEach(day => {
+                const bar = document.createElement('div');
+                bar.className = 'trend-bar';
+                
+                const fill = document.createElement('div');
+                fill.className = 'trend-fill';
+                fill.style.height = `${(day.total_active_users / maxUsers) * 100}%`;
+                
+                bar.appendChild(fill);
+                container.appendChild(bar);
+            });
+        }
+    </script>
+</body>
+</html>

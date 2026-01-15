@@ -112,6 +112,22 @@ void HTTPServer::handleClient(int clientSocket) {
                 std::string message = requestJson["message"].asString();
                 std::string ragContext = requestJson.get("ragContext", "").asString();
                 
+                // DIAGNOSTIC LOGGING: Log exact message received before processing
+                std::cout << "\n===== AGENT SERVICE RECEIVED MESSAGE START =====" << std::endl;
+                std::cout << "userId: " << userId << std::endl;
+                std::cout << "agentId: " << agentId << std::endl;
+                std::cout << "RAW MESSAGE:\n" << message << std::endl;
+                std::cout << "===== AGENT SERVICE RECEIVED MESSAGE END =====" << std::endl;
+                
+                // Also write to file for easy inspection
+                std::ofstream logFile("/tmp/last_agent_message.txt");
+                logFile << "===== AGENT SERVICE RECEIVED MESSAGE START =====" << std::endl;
+                logFile << "userId: " << userId << std::endl;
+                logFile << "agentId: " << agentId << std::endl;
+                logFile << "RAW MESSAGE:\n" << message << std::endl;
+                logFile << "===== AGENT SERVICE RECEIVED MESSAGE END =====" << std::endl;
+                logFile.close();
+                
                 // Process through agent manager with RAG context
                 std::string agentResponse;
                 if (!ragContext.empty()) {
@@ -147,68 +163,15 @@ void HTTPServer::handleClient(int clientSocket) {
                 response = createHTTPResponse(400, "{\"error\":\"Invalid agent ID\"}");
             }
         } else if (path == "/api/chat" && method == "POST") {
-            // New endpoint format for dashboard compatibility
-            Json::Value requestJson;
-            Json::CharReaderBuilder builder;
-            std::stringstream ss(body);
-            std::string errs;
-            
-            if (!Json::parseFromStream(builder, ss, &requestJson, &errs)) {
-                response = createHTTPResponse(400, "{\"error\":\"Invalid JSON\"}");
-            } else {
-                int agentId = requestJson.get("agent_id", 1).asInt();
-                std::string model = requestJson.get("model", "llama-2-7b-chat").asString();
-                std::string systemPrompt = requestJson.get("system_prompt", "").asString();
-                float temperature = requestJson.get("temperature", 0.7).asFloat();
-                
-                // Get agent details for proper role labeling
-                Json::Value agentData = agentManager.getAgent(agentId);
-                std::string agentName = agentData.get("name", "Advisor").asString();
-                
-                // Extract messages array
-                std::string fullPrompt = systemPrompt + "\n\n";
-                if (requestJson.isMember("messages") && requestJson["messages"].isArray()) {
-                    for (const auto& msg : requestJson["messages"]) {
-                        std::string role = msg.get("role", "user").asString();
-                        std::string content = msg.get("content", "").asString();
-                        
-                        if (role == "user") {
-                            fullPrompt += "Student: " + content + "\n";
-                        } else if (role == "assistant" || role == "advisor") {
-                            fullPrompt += agentName + ": " + content + "\n";
-                        }
-                    }
-                }
-                fullPrompt += agentName + ": ";
-                
-                // Use LlamaCppClient with dynamic model path from config
-                // Construct full model path: base path + model filename
-                std::string modelPath = config.modelsBasePath + "/" + model;
-                std::cout << "[Chat] Attempting to use model: " << modelPath << std::endl;
-                
-                // Validate model file exists, fallback to default if not found
-                std::ifstream modelFile(modelPath);
-                if (!modelFile.good()) {
-                    std::string fallbackPath = config.modelsBasePath + "/" + config.defaultModel;
-                    std::cout << "[Chat] WARNING: Model not found, falling back to: " << fallbackPath << std::endl;
-                    modelPath = fallbackPath;
-                    model = config.defaultModel;  // Update model name for response
-                }
-                
-                // Get model-specific URL from config
-                std::string serverUrl = config.getServerUrlForModel(model);
-                LlamaCppClient llamaClient(serverUrl, modelPath, 2048, temperature);
-                std::string agentResponse = llamaClient.generate(fullPrompt);
-                
-                Json::Value responseJson;
-                responseJson["response"] = agentResponse;
-                responseJson["model"] = model;
-                
-                Json::StreamWriterBuilder writerBuilder;
-                std::string jsonResponse = Json::writeString(writerBuilder, responseJson);
-                
-                response = createHTTPResponse(200, jsonResponse);
-            }
+            // DEPRECATED: /api/chat endpoint removed - use /agent/chat instead
+            std::cerr << "[FATAL] Deprecated endpoint /api/chat called - this should never happen" << std::endl;
+            Json::Value errorJson;
+            errorJson["error"] = "Endpoint removed";
+            errorJson["message"] = "/api/chat is deprecated and has been removed. Use /agent/chat instead.";
+            errorJson["status"] = 410;
+            Json::StreamWriterBuilder writerBuilder;
+            std::string jsonResponse = Json::writeString(writerBuilder, errorJson);
+            response = createHTTPResponse(410, jsonResponse);
         } else if (path == "/health" && method == "GET") {
             response = createHTTPResponse(200, "{\"status\":\"ok\"}");
         } else if (method == "OPTIONS") {

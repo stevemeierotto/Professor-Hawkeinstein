@@ -33,45 +33,16 @@ void HttpServer::run() {
 		res.set_content("{\"status\":\"ok\"}", "application/json");
 	});
 
-	// POST /api/chat - Main endpoint for agent responses
-	svr.Post("/api/chat", [this](const Request& req, Response& res) {
-		try {
-			auto j = json::parse(req.body);
-			
-			std::string systemPrompt = j.value("system_prompt", "You are Professor Hawkeinstein, an expert advisor.");
-			std::string model = j.value("model", "qwen2.5:latest");
-			float temperature = j.value("temperature", 0.7f);
-			
-			// Get messages array
-			std::string userMessage;
-			if (j.contains("messages") && j["messages"].is_array()) {
-				auto messages = j["messages"];
-				if (!messages.empty()) {
-					userMessage = messages[messages.size() - 1]["content"].get<std::string>();
-				}
-			}
-			
-			if (userMessage.empty()) {
-				res.status = 400;
-				res.set_content("{\"error\":\"No message provided\"}", "application/json");
-				return;
-			}
-			
-			// Call llama.cpp for response
-			std::string response = agentManager_.generateResponse(systemPrompt, userMessage, temperature);
-			
-			json responseJson = {
-				{"response", response},
-				{"model", "llama-2-7b-chat"}
-			};
-			
-			res.set_content(responseJson.dump(), "application/json");
-			
-		} catch (const std::exception& e) {
-			res.status = 500;
-			json errorJson = {{"error", e.what()}};
-			res.set_content(errorJson.dump(), "application/json");
-		}
+	// DEPRECATED FILE - DO NOT USE
+	// POST /api/chat - REMOVED - Use /agent/chat in src/http_server.cpp instead
+	svr.Post("/api/chat", [](const Request& req, Response& res) {
+		res.status = 410;
+		json errorJson = {
+			{"error", "Endpoint removed"},
+			{"message", "/api/chat is deprecated. Use /agent/chat instead."},
+			{"status", 410}
+		};
+		res.set_content(errorJson.dump(), "application/json");
 	});
 
 	// GET /advisor?student_id=#

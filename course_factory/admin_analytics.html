@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="auth_storage.js"></script>
+    <script src="admin_auth.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Platform Analytics - Professor Hawkeinstein</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        .analytics-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .metric-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .metric-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .metric-change {
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .metric-change.positive {
+            color: #27ae60;
+        }
+        
+        .metric-change.negative {
+            color: #e74c3c;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .chart-container h2 {
+            margin: 0 0 20px 0;
+            font-size: 18px;
+            color: #2c3e50;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+        }
+        
+        .filters {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .filter-group label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .filter-group select,
+        .filter-group input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .btn-refresh {
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            align-self: flex-end;
+        }
+        
+        .btn-refresh:hover {
+            background: #2980b9;
+        }
+        
+        .btn-export {
+            padding: 10px 20px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        
+        .btn-export:hover {
+            background: #229954;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .tab.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+            font-weight: 600;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-badge.high {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-badge.medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-badge.low {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <h1>📊 Platform Analytics</h1>
+        <div class="nav-links">
+            <a href="admin_dashboard.html">Dashboard</a>
+            <a href="admin_courses.html">Courses</a>
+            <a href="admin_analytics.html" class="active">Analytics</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </nav>
+
+    <div class="analytics-container">
+        <!-- Filters -->
+        <div class="filters">
+            <div class="filter-group">
+                <label>Start Date</label>
+                <input type="date" id="startDate" value="">
+            </div>
+            <div class="filter-group">
+                <label>End Date</label>
+                <input type="date" id="endDate" value="">
+            </div>
+            <div class="filter-group">
+                <label>Period</label>
+                <select id="periodSelect">
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </div>
+            <button class="btn-refresh" onclick="refreshAnalytics()">🔄 Refresh Data</button>
+            <button class="btn-export" onclick="exportData()">📥 Export Data</button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('overview')">Overview</button>
+            <button class="tab" onclick="switchTab('courses')">Courses</button>
+            <button class="tab" onclick="switchTab('trends')">Trends</button>
+            <button class="tab" onclick="switchTab('agents')">Agents</button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overview-tab" class="tab-content active">
+            <h2>Platform Health</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <h3>Total Students</h3>
+                    <div class="metric-value" id="totalStudents">-</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Active Courses</h3>
+                    <div class="metric-value" id="activeCourses">-</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Weekly Active Users</h3>
+                    <div class="metric-value" id="weeklyActiveUsers">-</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Average Mastery</h3>
+                    <div class="metric-value" id="avgMastery">-</div>
+                </div>
+            </div>
+
+            <h2>Engagement Metrics</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <h3>Lessons Completed</h3>
+                    <div class="metric-value" id="lessonsCompleted">-</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Quizzes Passed</h3>
+                    <div class="metric-value" id="quizzesPassed">-</div>
+                </div>
+                <div class="metric-card">
+                    <h3>Study Hours</h3>
+                    <div class="metric-value" id="studyHours">-</div>
+                </div>
+                <div class="metric-card">
+                    <h3>High Achievers (90%+)</h3>
+                    <div class="metric-value" id="highAchievers">-</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h2>Mastery Distribution</h2>
+                <div class="chart-wrapper">
+                    <canvas id="masteryChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h2>Top Performing Courses</h2>
+                <table class="data-table" id="topCoursesTable">
+                    <thead>
+                        <tr>
+                            <th>Course Name</th>
+                            <th>Average Mastery</th>
+                            <th>Completion Rate</th>
+                            <th>Total Enrolled</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Courses Tab -->
+        <div id="courses-tab" class="tab-content">
+            <div class="chart-container">
+                <h2>Course Performance Metrics</h2>
+                <div class="loading" id="coursesLoading">Loading course data...</div>
+                <table class="data-table" id="coursesTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Course Name</th>
+                            <th>Difficulty</th>
+                            <th>Enrolled</th>
+                            <th>Active</th>
+                            <th>Completed</th>
+                            <th>Completion Rate</th>
+                            <th>Avg Mastery</th>
+                            <th>Avg Study Time</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Trends Tab -->
+        <div id="trends-tab" class="tab-content">
+            <div class="chart-container">
+                <h2>User Activity Trend</h2>
+                <div class="chart-wrapper">
+                    <canvas id="activityTrendChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h2>Mastery Score Trend</h2>
+                <div class="chart-wrapper">
+                    <canvas id="masteryTrendChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h2>Engagement Trend</h2>
+                <div class="chart-wrapper">
+                    <canvas id="engagementTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agents Tab -->
+        <div id="agents-tab" class="tab-content">
+            <div class="chart-container">
+                <h2>Agent Performance</h2>
+                <table class="data-table" id="agentsTable">
+                    <thead>
+                        <tr>
+                            <th>Agent Name</th>
+                            <th>Total Interactions</th>
+                            <th>Unique Users</th>
+                            <th>Student Avg Mastery</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin_analytics.js"></script>
+</body>
+</html>

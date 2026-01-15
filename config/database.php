@@ -30,7 +30,9 @@ if (file_exists($envFile)) {
 }
 
 // Database connection parameters - Docker MySQL on port 3307
-define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+// CRITICAL: Use 127.0.0.1 (not 'localhost') to force TCP connection to Docker
+// localhost can resolve to Unix socket or local system DB instead of Docker container
+define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
 define('DB_PORT', getenv('DB_PORT') ?: 3307);  // Docker MySQL port
 define('DB_NAME', getenv('DB_NAME') ?: 'professorhawkeinstein_platform');
 define('DB_USER', getenv('DB_USER') ?: 'professorhawkeinstein_user');

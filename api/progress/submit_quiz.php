@@ -257,6 +257,16 @@ function gradeShortAnswer($questionText, $correctAnswer, $userAnswer, $agentId) 
     // Build structured prompt for grading agent
     $prompt = "QUESTION: {$questionText}\n\nCORRECT ANSWER: {$correctAnswer}\n\nSTUDENT ANSWER: {$userAnswer}\n\nGrade this answer.";
     
+    // DIAGNOSTIC LOGGING: Log the exact prompt being sent to the model
+    $diagnosticLog = "\n===== GRADING PROMPT START =====\n";
+    $diagnosticLog .= "QUESTION: {$questionText}\n\n";
+    $diagnosticLog .= "CORRECT ANSWER: {$correctAnswer}\n\n";
+    $diagnosticLog .= "STUDENT ANSWER: {$userAnswer}\n\n";
+    $diagnosticLog .= "FULL PROMPT:\n{$prompt}\n";
+    $diagnosticLog .= "===== GRADING PROMPT END =====\n";
+    error_log($diagnosticLog);
+    file_put_contents('/tmp/last_grading_prompt.txt', $diagnosticLog);
+    
     // Call agent service with correct signature: callAgentService($endpoint, $data)
     $agentResponse = callAgentService('/agent/chat', [
         'userId' => 1, // System user for grading

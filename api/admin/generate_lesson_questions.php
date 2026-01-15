@@ -605,7 +605,7 @@ function parseQuestionsFromResponse($type, $response) {
                 $questions[] = [
                     'id' => 'essay_' . ($i + 1),
                     'question' => $questionText,
-                    'suggested_answer' => $answerText,
+                    'correct_answer' => $answerText,
                     'rubric' => ['keywords' => []],
                     'difficulty' => 'medium'
                 ];

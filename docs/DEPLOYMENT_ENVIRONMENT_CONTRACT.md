@@ -248,6 +248,111 @@ mysql -u professorhawkeinstein_user -p professorhawkeinstein_platform -e \
 
 4. **Question the diagnosis, not the environment**
    - If Apache DocumentRoot is `/var/www/html/basic_educational`, believe it
+
+---
+
+## 🔴 CRISIS 2: localhost vs 127.0.0.1 Database Connection
+
+**Date:** January 14, 2026  
+**Symptom:** PHP scripts see different tables than mysql CLI  
+**Duration:** ~30 minutes of confusion
+
+### What Happened
+
+During analytics deployment, migrations ran successfully via mysql CLI:
+```bash
+mysql -h localhost -P 3307 -u professorhawkeinstein_user -p < migrations/004_analytics_tables.sql
+# Created 9 analytics tables successfully
+```
+
+But PHP scripts immediately failed:
+```php
+// SQLSTATE[42S02]: Table 'professorhawkeinstein_platform.analytics_daily_rollup' doesn't exist
+```
+
+### The Investigation
+
+1. **Verified tables exist in CLI:**
+   ```bash
+   mysql -h localhost -P 3307 -u professorhawkeinstein_user -p -e "SHOW TABLES LIKE 'analytics_%';"
+   # Result: 9 tables found
+   ```
+
+2. **Verified tables missing in PHP:**
+   ```php
+   $pdo->query('SHOW TABLES')->fetchAll();
+   // Result: 31 tables, ZERO analytics tables
+   ```
+
+3. **Checked MariaDB versions:**
+   - PHP PDO: `10.11.13-MariaDB-0ubuntu0.24.04.1` (local system)
+   - Docker: `10.11.15-MariaDB-ubu2204` (phef-database container)
+   - **Different versions = different database instances!**
+
+4. **Counted tables in each:**
+   - Local system DB: 31 tables (no analytics)
+   - Docker container DB: 40 tables (includes 9 analytics)
+
+### Root Cause
+
+**`localhost` resolution ambiguity:**
+- When connecting to `localhost:3307`, PHP/MySQL client prefers Unix socket or local system DB
+- Ubuntu system has native MariaDB 10.11.13 installation
+- `localhost` was connecting to **system MariaDB** instead of **Docker container**
+- mysql CLI `-h localhost` happened to work, but PHP PDO `localhost` connected differently
+
+**`127.0.0.1` forces TCP:**
+- Explicitly uses TCP/IP protocol
+- Port forwarding `0.0.0.0:3307 → Docker:3306` only works over TCP
+- Guarantees connection to Docker container
+
+### The Fix
+
+```php
+// config/database.php
+// ❌ WRONG - ambiguous, can connect to local system DB
+define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+
+// ✅ CORRECT - forces TCP to Docker container
+define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
+```
+
+### Verification After Fix
+
+```bash
+# PHP should now see 40 tables including analytics
+php -r "require 'config/database.php'; 
+  \$pdo = getDB(); 
+  \$count = \$pdo->query('SHOW TABLES')->fetchAll(); 
+  echo count(\$count) . ' tables found';"
+# Expected: 40 tables found
+
+# Run aggregation script
+php scripts/aggregate_analytics.php
+# Expected: Success
+```
+
+### Prevention Rules
+
+1. **ALWAYS use `127.0.0.1` for Docker database connections**
+   - Never use `localhost` in config files
+   - Environment variable `DB_HOST=127.0.0.1` in `.env`
+
+2. **Verify MySQL version matches Docker**
+   ```bash
+   # Should be 10.11.15 (Docker version)
+   php -r "require 'config/database.php'; echo getDB()->query('SELECT VERSION()')->fetchColumn();"
+   ```
+
+3. **Count tables to confirm correct database**
+   - Docker container has 40+ tables
+   - Local system DB has 31 tables
+   - If PHP sees 31 tables, it's connected to wrong DB
+
+4. **Test inside Docker container for ground truth**
+   ```bash
+   docker exec phef-database mysql -u professorhawkeinstein_user -p -e "SHOW TABLES;"
+   ```
    - Don't create alternative paths hoping they'll work
 
 ---
