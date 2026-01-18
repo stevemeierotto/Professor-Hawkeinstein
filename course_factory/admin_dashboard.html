@@ -214,17 +214,66 @@
     </div>
 
     <script>
-        // Check admin authentication
-        const user = getAdminSession('user' || '{}');
+        // CRITICAL: Handle OAuth callback FIRST before any auth checks
+        // This must run synchronously before the page renders
+        (function handleOAuthCallback() {
+            if (!window.location.hash) return;
+            
+            const hash = window.location.hash.substring(1);
+            const params = new URLSearchParams(hash);
+            
+            if (params.get('oauth_success') === 'true') {
+                const token = params.get('token');
+                const userId = params.get('user_id');
+                const username = params.get('username');
+                const role = params.get('role');
+                
+                console.log('[OAuth] Login successful:', { userId, username, role });
+                
+                // Verify admin/root role
+                if (role !== 'admin' && role !== 'root') {
+                    alert('Access Denied: Admin privileges required. Your account has role: ' + role);
+                    window.location.replace('admin_login.html');
+                    throw new Error('Non-admin role detected'); // Stop execution
+                }
+                
+                // Store in sessionStorage
+                console.log('[OAuth] Storing credentials in sessionStorage');
+                setAdminSession('token', token);
+                setAdminSession('userId', userId);
+                setAdminSession('username', username);
+                setAdminSession('userRole', role);
+                setAdminSession('user', JSON.stringify({ 
+                    user_id: userId, 
+                    username: username, 
+                    role: role,
+                    name: username
+                }));
+                
+                // Remove hash from URL without reloading
+                console.log('[OAuth] Removing hash from URL');
+                history.replaceState(null, null, ' ');
+            }
+        })();
+        
+        // Check admin authentication AFTER OAuth handler
+        console.log('[Auth] Checking authentication...');
+        const userJson = getAdminSession('user') || '{}';
+        const user = typeof userJson === 'string' ? JSON.parse(userJson) : userJson;
+        
+        console.log('[Auth] User from session:', user);
         
         if (!user.username) {
-            window.location.href = 'login.html';
+            console.log('[Auth] No username found, redirecting to login');
+            window.location.replace('admin_login.html');
         } else if (user.role !== 'admin' && user.role !== 'root') {
+            console.log('[Auth] Invalid role:', user.role);
             alert('Access Denied: Admin privileges required');
-            window.location.href = 'student_dashboard.html';
+            window.location.replace('admin_login.html');
         } else {
+            console.log('[Auth] Authentication successful');
             const roleLabel = user.role === 'root' ? 'Root' : 'Admin';
-            document.getElementById('adminName').textContent = user.name + ' (' + roleLabel + ')';
+            document.getElementById('adminName').textContent = (user.name || user.username) + ' (' + roleLabel + ')';
         }
 
         // Logout functionality

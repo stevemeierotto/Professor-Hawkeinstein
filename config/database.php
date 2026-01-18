@@ -52,6 +52,11 @@ define('SESSION_NAME', 'PROFESSORHAWKEINSTEIN_SESSION');
 define('JWT_SECRET', getenv('JWT_SECRET') ?: 'your_jwt_secret_key_here_change_in_production');
 define('PASSWORD_PEPPER', getenv('PASSWORD_PEPPER') ?: 'additional_security_pepper_change_in_production');
 
+// Google OAuth 2.0 Configuration
+define('GOOGLE_CLIENT_ID', getenv('GOOGLE_CLIENT_ID') ?: '');
+define('GOOGLE_CLIENT_SECRET', getenv('GOOGLE_CLIENT_SECRET') ?: '');
+define('GOOGLE_REDIRECT_URI', getenv('GOOGLE_REDIRECT_URI') ?: 'http://localhost/api/auth/google/callback.php');
+
 // Biometric settings removed for liability reasons
 define('VOICE_RECOGNITION_THRESHOLD', 0.80);
 define('CHEATING_FLAG_LIMIT', 3); // Number of failed verifications before alert
@@ -366,4 +371,265 @@ if (!is_dir($logsDir)) {
 // Create media directory if it doesn't exist
 if (!is_dir(MEDIA_PATH)) {
     mkdir(MEDIA_PATH, 0755, true);
+}
+
+/**
+ * Generate a cryptographically secure OAuth state token
+ * @return string 64-character hex string
+ */
+function generateOAuthState() {
+    return bin2hex(random_bytes(32));
+}
+
+/**
+ * Store OAuth state token in database with expiration
+ * @param string $state State token
+ * @param int $expiryMinutes Minutes until expiration (default 10)
+ * @return bool Success
+ */
+function storeOAuthState($state, $expiryMinutes = 10) {
+    try {
+        $db = getDB();
+        $expiresAt = date('Y-m-d H:i:s', time() + ($expiryMinutes * 60));
+        
+        $stmt = $db->prepare("
+            INSERT INTO oauth_states (state_token, expires_at) 
+            VALUES (:state, :expires)
+        ");
+        
+        return $stmt->execute([
+            'state' => $state,
+            'expires' => $expiresAt
+        ]);
+    } catch (Exception $e) {
+        error_log("Error storing OAuth state: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Validate and consume OAuth state token (one-time use)
+ * @param string $state State token to validate
+ * @return bool Valid and not expired
+ */
+function validateOAuthState($state) {
+    try {
+        $db = getDB();
+        
+        // Check if state exists and not expired
+        $stmt = $db->prepare("
+            SELECT state_token FROM oauth_states 
+            WHERE state_token = :state 
+            AND expires_at > NOW()
+        ");
+        $stmt->execute(['state' => $state]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$result) {
+            error_log("OAuth state validation failed: state not found or expired");
+            return false;
+        }
+        
+        // Delete state token (one-time use)
+        $deleteStmt = $db->prepare("DELETE FROM oauth_states WHERE state_token = :state");
+        $deleteStmt->execute(['state' => $state]);
+        
+        // Clean up expired states
+        $cleanupStmt = $db->prepare("DELETE FROM oauth_states WHERE expires_at <= NOW()");
+        $cleanupStmt->execute();
+        
+        return true;
+    } catch (Exception $e) {
+        error_log("Error validating OAuth state: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Log authentication event for audit trail
+ * @param int|null $userId User ID (null for failed attempts)
+ * @param string $eventType Event type (login_success, login_failed, oauth_link, etc.)
+ * @param string $authMethod Authentication method (local, google)
+ * @param array|null $metadata Additional context
+ */
+function logAuthEvent($userId, $eventType, $authMethod, $metadata = null) {
+    try {
+        $db = getDB();
+        
+        $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
+        $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+        
+        $stmt = $db->prepare("
+            INSERT INTO auth_events 
+            (user_id, event_type, auth_method, ip_address, user_agent, metadata)
+            VALUES (:user_id, :event_type, :auth_method, :ip_address, :user_agent, :metadata)
+        ");
+        
+        $stmt->execute([
+            'user_id' => $userId,
+            'event_type' => $eventType,
+            'auth_method' => $authMethod,
+            'ip_address' => $ipAddress,
+            'user_agent' => $userAgent,
+            'metadata' => $metadata ? json_encode($metadata) : null
+        ]);
+        
+        return true;
+    } catch (Exception $e) {
+        error_log("Error logging auth event: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Find user by Google provider ID (sub claim)
+ * @param string $googleId Google's unique user identifier (sub)
+ * @return array|null User data if found
+ */
+function findUserByGoogleId($googleId) {
+    try {
+        $db = getDB();
+        
+        $stmt = $db->prepare("
+            SELECT u.* 
+            FROM users u
+            INNER JOIN auth_providers ap ON u.user_id = ap.user_id
+            WHERE ap.provider_type = 'google' 
+            AND ap.provider_user_id = :google_id
+            AND u.is_active = 1
+        ");
+        
+        $stmt->execute(['google_id' => $googleId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        error_log("Error finding user by Google ID: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Link Google account to existing user
+ * @param int $userId User ID
+ * @param string $googleId Google sub claim
+ * @param string $googleEmail Email from Google
+ * @return bool Success
+ */
+function linkGoogleAccount($userId, $googleId, $googleEmail) {
+    try {
+        $db = getDB();
+        
+        // Check if Google account already linked to another user
+        $checkStmt = $db->prepare("
+            SELECT user_id FROM auth_providers 
+            WHERE provider_type = 'google' 
+            AND provider_user_id = :google_id
+        ");
+        $checkStmt->execute(['google_id' => $googleId]);
+        $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($existing && $existing['user_id'] != $userId) {
+            error_log("Google account already linked to different user");
+            return false;
+        }
+        
+        // Link Google account
+        $stmt = $db->prepare("
+            INSERT INTO auth_providers 
+            (user_id, provider_type, provider_user_id, provider_email, is_primary, last_used)
+            VALUES (:user_id, 'google', :google_id, :google_email, FALSE, NOW())
+            ON DUPLICATE KEY UPDATE 
+                provider_email = :google_email,
+                last_used = NOW()
+        ");
+        
+        $success = $stmt->execute([
+            'user_id' => $userId,
+            'google_id' => $googleId,
+            'google_email' => $googleEmail
+        ]);
+        
+        if ($success) {
+            logAuthEvent($userId, 'oauth_link', 'google', ['email' => $googleEmail]);
+        }
+        
+        return $success;
+    } catch (Exception $e) {
+        error_log("Error linking Google account: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Create new user from Google OAuth
+ * @param string $googleId Google sub claim
+ * @param string $email Email from Google
+ * @param string $fullName Full name from Google
+ * @return array|null User data if created successfully
+ */
+function createUserFromGoogle($googleId, $email, $fullName) {
+    try {
+        $db = getDB();
+        $db->beginTransaction();
+        
+        // Generate unique username from email
+        $username = explode('@', $email)[0];
+        $baseUsername = $username;
+        $counter = 1;
+        
+        // Check for username conflicts
+        while (true) {
+            $checkStmt = $db->prepare("SELECT user_id FROM users WHERE username = :username");
+            $checkStmt->execute(['username' => $username]);
+            if (!$checkStmt->fetch()) {
+                break;
+            }
+            $username = $baseUsername . $counter;
+            $counter++;
+        }
+        
+        // Create user (no password for OAuth-only accounts)
+        $stmt = $db->prepare("
+            INSERT INTO users 
+            (username, email, password_hash, full_name, role, email_verified)
+            VALUES (:username, :email, NULL, :full_name, 'student', TRUE)
+        ");
+        
+        $stmt->execute([
+            'username' => $username,
+            'email' => $email,
+            'full_name' => $fullName
+        ]);
+        
+        $userId = $db->lastInsertId();
+        
+        // Link Google provider
+        $providerStmt = $db->prepare("
+            INSERT INTO auth_providers 
+            (user_id, provider_type, provider_user_id, provider_email, is_primary)
+            VALUES (:user_id, 'google', :google_id, :google_email, TRUE)
+        ");
+        
+        $providerStmt->execute([
+            'user_id' => $userId,
+            'google_id' => $googleId,
+            'google_email' => $email
+        ]);
+        
+        $db->commit();
+        
+        // Fetch created user
+        $userStmt = $db->prepare("SELECT * FROM users WHERE user_id = :user_id");
+        $userStmt->execute(['user_id' => $userId]);
+        $user = $userStmt->fetch(PDO::FETCH_ASSOC);
+        
+        logAuthEvent($userId, 'login_success', 'google', ['new_account' => true]);
+        
+        return $user;
+    } catch (Exception $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        error_log("Error creating user from Google: " . $e->getMessage());
+        return null;
+    }
 }
