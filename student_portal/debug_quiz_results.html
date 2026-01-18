@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚠️ DEBUG: Assessment Grading Results Inspector</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .debug-banner {
+            background: #ff6b6b;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            font-weight: bold;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .header h1 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        
+        .summary-item {
+            background: #f8f9ff;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .summary-item label {
+            display: block;
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+        
+        .summary-item .value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .question-item {
+            background: #f8f9ff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .question-number {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1rem;
+        }
+        
+        .question-type {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .grade-badge {
+            display: inline-block;
+            padding: 0.35rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .grade-correct {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .grade-partial {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .grade-incorrect {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .answer-field {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: white;
+            border-radius: 6px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .answer-field.correct {
+            border-left-color: #28a745;
+            background: #f1f8f5;
+        }
+        
+        .answer-field.incorrect {
+            border-left-color: #dc3545;
+            background: #fdf3f4;
+        }
+        
+        .answer-label {
+            font-weight: 600;
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+        
+        .answer-text {
+            color: #333;
+            line-height: 1.6;
+            word-wrap: break-word;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: white;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 1rem;
+        }
+        
+        button:hover {
+            background: #5568d3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="debug-banner">
+            ⚠️ DEBUG PAGE - Temporary Assessment Grading Results Inspector (Quiz & Unit Test)
+        </div>
+        
+        <div class="card">
+            <div class="header">
+                <h1>Assessment Grading Verification</h1>
+                <p style="color: #666; margin-top: 0.5rem;">This page displays the inputs and outputs of the most recent assessment (quiz or unit test).</p>
+            </div>
+            
+            <div id="content">
+                <div class="loading">Loading quiz results...</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        async function loadAssessmentResults() {
+            try {
+                const response = await fetch('/api/progress/debug_quiz_results.php?debug=true');
+                const data = await response.json();
+                
+                if (!response.ok || !data.success) {
+                    document.getElementById('content').innerHTML = `
+                        <div class="info">
+                            <strong>No Data Available</strong>
+                            <p>${data.message || 'Take a quiz or unit test first to see grading results.'}</p>
+                            <button onclick="location.href='/'">Go Back</button>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                displayResults(data);
+            } catch (error) {
+                document.getElementById('content').innerHTML = `
+                    <div class="error">
+                        <strong>Error Loading Results</strong>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function displayResults(data) {
+            let html = `
+                <div class="info">
+                    <strong>Assessment Type:</strong> ${data.assessment_type} | 
+                    <strong>${data.milestone}:</strong> ${data.score}% | 
+                    <strong>Time:</strong> ${new Date(data.timestamp).toLocaleString()}
+                </div>
+                
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <label>Total Questions</label>
+                        <div class="value">${data.summary.total_questions}</div>
+                    </div>
+                    <div class="summary-item">
+                        <label>Correct</label>
+                        <div class="value" style="color: #28a745;">${data.summary.correct}</div>
+                    </div>
+                    <div class="summary-item">
+                        <label>Partial</label>
+                        <div class="value" style="color: #ffc107;">${data.summary.partial}</div>
+                    </div>
+                    <div class="summary-item">
+                        <label>Incorrect</label>
+                        <div class="value" style="color: #dc3545;">${data.summary.incorrect}</div>
+                    </div>
+                </div>
+            `;
+            
+            // Display each question with its grading details
+            html += '<h3 style="margin-top: 2rem; margin-bottom: 1rem; color: #333;">Question-by-Question Grading Details</h3>';
+            
+            data.questions.forEach((q, idx) => {
+                const gradeClass = q.grade === 'Correct' ? 'correct' : 
+                                 q.grade === 'Partially Correct' ? 'partial' : 'incorrect';
+                const gradeStyle = q.grade === 'Correct' ? 'grade-correct' : 
+                                 q.grade === 'Partially Correct' ? 'grade-partial' : 'grade-incorrect';
+                
+                html += `
+                    <div class="question-item">
+                        <div class="question-header">
+                            <div>
+                                <span class="question-number">Q${q.index + 1}</span>
+                                <span class="question-type">${q.type}</span>
+                            </div>
+                            <span class="grade-badge ${gradeStyle}">
+                                ${q.grade} (${q.points} pts)
+                            </span>
+                        </div>
+                        
+                        <div style="margin-bottom: 1rem;">
+                            <div class="answer-label">📋 Question:</div>
+                            <div class="answer-text">${escapeHtml(q.question)}</div>
+                        </div>
+                        
+                        <div class="answer-field ${gradeClass}">
+                            <div class="answer-label">✓ Correct Answer (From Database):</div>
+                            <div class="answer-text">${escapeHtml(q.correct_answer || '(empty)')}</div>
+                        </div>
+                        
+                        <div class="answer-field">
+                            <div class="answer-label">✍️ Student Answer:</div>
+                            <div class="answer-text">${escapeHtml(q.student_answer)}</div>
+                        </div>
+                        
+                        <div style="background: #f0f4ff; padding: 1rem; border-radius: 6px; margin-top: 1rem;">
+                            <div class="answer-label">🤖 Grading Agent Result:</div>
+                            <div class="answer-text"><strong>${q.grade}</strong> (${q.points} point${q.points !== 1 ? 's' : ''})</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                <div style="text-align: center; margin-top: 2rem;">
+                    <button onclick="location.reload()">Refresh Latest Results</button>
+                    <button onclick="location.href='/'" style="background: #6c757d; margin-left: 0.5rem;">Back to Home</button>
+                </div>
+            `;
+            
+            document.getElementById('content').innerHTML = html;
+        }
+        
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+        
+        // Load results when page loads
+        loadAssessmentResults();
+    </script>
+</body>
+</html>
