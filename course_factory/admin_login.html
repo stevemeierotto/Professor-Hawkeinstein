@@ -82,18 +82,15 @@
     <script>
         // Handle OAuth callback on page load
         window.addEventListener('DOMContentLoaded', () => {
-            // Check for OAuth success in URL hash
-            const hash = window.location.hash.substring(1);
-            const params = new URLSearchParams(hash);
-            
-            if (params.get('oauth_success') === 'true') {
-                const token = params.get('token');
-                const userId = params.get('user_id');
-                const username = params.get('username');
-                const role = params.get('role');
-                
+            // Check for OAuth success in URL query params (not hash)
+            const urlParams = new URLSearchParams(window.location.search);
+            const oauthSuccess = urlParams.get('oauth_success');
+            const userId = urlParams.get('user_id');
+            const username = urlParams.get('username');
+            const role = urlParams.get('role');
+
+            if (oauthSuccess === 'true') {
                 console.log('OAuth login successful:', { userId, username, role });
-                
                 // Verify admin role
                 if (role === 'admin' || role === 'root') {
                     const userData = {
@@ -101,28 +98,23 @@
                         userId: parseInt(userId),
                         role: role
                     };
-                    
-                    setAdminSession('token', token);
+                    // Only set user info in sessionStorage (token is in httpOnly cookie)
                     setAdminSession('user', userData);
-                    
-                    // Clear hash from URL
-                    history.replaceState(null, null, ' ');
-                    
-                    // Redirect to admin dashboard
-                    window.location.href = 'admin_dashboard.html';
+                    // Clear query params from URL
+                    window.location.replace('admin_dashboard.html');
                 } else {
                     alert('Access Denied: This Google account does not have admin privileges.');
-                    history.replaceState(null, null, ' ');
+                    window.location.replace('admin_login.html');
                 }
+                return;
             }
-            
+
             // Check for OAuth error
-            const urlParams = new URLSearchParams(window.location.search);
             const oauthError = urlParams.get('oauth_error');
             if (oauthError) {
                 alert('Google sign-in failed: ' + oauthError);
                 // Clear error from URL
-                history.replaceState(null, null, window.location.pathname);
+                window.location.replace('admin_login.html');
             }
         });
 
@@ -197,6 +189,8 @@
                         
                         setAdminSession('token', data.token);
                         setAdminSession('user', userData);
+                        // Also store token in localStorage for reload fallback
+                        localStorage.setItem('adminToken', data.token);
                         
                         console.log('Stored admin session:', {
                             token: getAdminSession('token'),

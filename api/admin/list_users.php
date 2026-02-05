@@ -8,8 +8,8 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/auth_check.php';
 require_once __DIR__ . '/../../config/database.php';
 
-// Require admin authorization
-$currentUser = requireAdmin();
+// Require admin authorization (server-side, never trust client role)
+$currentUser = requireAdmin(); // 401 if not authenticated, 403 if not admin/root
 
 $db = getDB();
 

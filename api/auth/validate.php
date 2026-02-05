@@ -3,9 +3,11 @@
  * Token Validation API Endpoint
  */
 
-require_once '../../config/database.php';
 
-setCORSHeaders();
+require_once __DIR__ . '/../helpers/security_headers.php';
+set_api_security_headers();
+
+
 
 $userData = requireAuth();
 

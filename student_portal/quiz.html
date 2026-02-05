@@ -198,6 +198,8 @@
     </div>
 
     <script>
+        // Development mode flag for logging
+        const devMode = false; // Set to true for debugging only
         // Get quiz parameters from URL
         const urlParams = new URLSearchParams(window.location.search);
         const courseId = urlParams.get('courseId');
@@ -213,40 +215,57 @@
         // Load quiz data
         async function loadQuiz() {
             if (!courseId || unitIndex === null || lessonIndex === null) {
-                document.getElementById('quizContent').innerHTML = `
-                    <div class="error-message">
-                        <h3>⚠️ Invalid Quiz Parameters</h3>
-                        <p>Missing required course or lesson information.</p>
-                        <button class="btn btn-outline" onclick="window.close()">Close Window</button>
-                    </div>
-                `;
+                const quizContent = document.getElementById('quizContent');
+                quizContent.textContent = '';
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                const h3 = document.createElement('h3');
+                h3.textContent = '⚠️ Invalid Quiz Parameters';
+                const p = document.createElement('p');
+                p.textContent = 'Missing required course or lesson information.';
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-outline';
+                btn.textContent = 'Close Window';
+                btn.onclick = () => window.close();
+                errorDiv.appendChild(h3);
+                errorDiv.appendChild(p);
+                errorDiv.appendChild(btn);
+                quizContent.appendChild(errorDiv);
                 return;
             }
 
             try {
                 const apiUrl = `/api/course/get_lesson_content.php?courseId=${courseId}&unitIndex=${unitIndex}&lessonIndex=${lessonIndex}`;
-                console.log('Fetching quiz questions from:', apiUrl);
-                console.log('Full URL:', window.location.origin + apiUrl);
+                if (devMode) {
+                    console.log('Fetching quiz questions from:', apiUrl);
+                    console.log('Full URL:', window.location.origin + apiUrl);
+                }
                 const response = await fetch(apiUrl);
                 
-                console.log('Response status:', response.status, response.statusText);
-                console.log('Response ok:', response.ok);
+                if (devMode) {
+                    console.log('Response status:', response.status, response.statusText);
+                    console.log('Response ok:', response.ok);
+                }
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
                 
                 const responseText = await response.text();
-                console.log('Raw API response length:', responseText.length);
-                console.log('First 200 chars:', responseText.substring(0, 200));
+                if (devMode) {
+                    console.log('Raw API response length:', responseText.length);
+                    console.log('First 200 chars:', responseText.substring(0, 200));
+                }
                 
                 let data;
                 try {
                     data = JSON.parse(responseText);
                 } catch (parseError) {
-                    console.error('JSON parse error:', parseError);
-                    console.error('Response was:', responseText.substring(0, 500));
-                    throw new Error(`JSON.parse: ${parseError.message}`);
+                    if (devMode) {
+                        console.error('JSON parse error:', parseError);
+                        // Do not log full response in production
+                    }
+                    throw new Error('Quiz data could not be loaded.');
                 }
 
                 if (data.success && data.questions) {
@@ -265,13 +284,22 @@
                     questions = shuffleArray([...selectedMC, ...selectedFIB, ...selectedEssay]);
 
                     if (questions.length === 0) {
-                        document.getElementById('quizContent').innerHTML = `
-                            <div class="error-message">
-                                <h3>No Questions Available</h3>
-                                <p>This lesson doesn't have any quiz questions yet.</p>
-                                <button class="btn btn-outline" onclick="window.close()">Close Window</button>
-                            </div>
-                        `;
+                        const quizContent = document.getElementById('quizContent');
+                        quizContent.textContent = '';
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'error-message';
+                        const h3 = document.createElement('h3');
+                        h3.textContent = 'No Questions Available';
+                        const p = document.createElement('p');
+                        p.textContent = "This lesson doesn't have any quiz questions yet.";
+                        const btn = document.createElement('button');
+                        btn.className = 'btn btn-outline';
+                        btn.textContent = 'Close Window';
+                        btn.onclick = () => window.close();
+                        errorDiv.appendChild(h3);
+                        errorDiv.appendChild(p);
+                        errorDiv.appendChild(btn);
+                        quizContent.appendChild(errorDiv);
                         return;
                     }
 
@@ -288,14 +316,25 @@
                     throw new Error('Failed to load quiz data');
                 }
             } catch (error) {
-                console.error('Quiz load error:', error);
-                document.getElementById('quizContent').innerHTML = `
-                    <div class="error-message">
-                        <h3>⚠️ Error Loading Quiz</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-outline" onclick="window.close()">Close Window</button>
-                    </div>
-                `;
+                if (devMode) {
+                    console.error('Quiz load error:', error);
+                }
+                const quizContent = document.getElementById('quizContent');
+                quizContent.textContent = '';
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                const h3 = document.createElement('h3');
+                h3.textContent = '⚠️ Error Loading Quiz';
+                const p = document.createElement('p');
+                p.textContent = error.message;
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-outline';
+                btn.textContent = 'Close Window';
+                btn.onclick = () => window.close();
+                errorDiv.appendChild(h3);
+                errorDiv.appendChild(p);
+                errorDiv.appendChild(btn);
+                quizContent.appendChild(errorDiv);
             }
         }
 
@@ -308,41 +347,69 @@
             const questionType = answerOptions ? 'Multiple Choice' : 
                                 question.hint ? 'Fill in the Blank' : 'Short Answer';
 
-            let html = `
-                <div class="question-card">
-                    <div class="question-header">
-                        <span class="question-number">Question ${index + 1} of ${questions.length}</span>
-                        <span class="question-type">${questionType}</span>
-                    </div>
-                    <div class="question-text">${question.question || question.question_text}</div>
-            `;
+            const quizContent = document.getElementById('quizContent');
+            quizContent.textContent = '';
+            const card = document.createElement('div');
+            card.className = 'question-card';
+            const header = document.createElement('div');
+            header.className = 'question-header';
+            const numSpan = document.createElement('span');
+            numSpan.className = 'question-number';
+            numSpan.textContent = `Question ${index + 1} of ${questions.length}`;
+            const typeSpan = document.createElement('span');
+            typeSpan.className = 'question-type';
+            typeSpan.textContent = questionType;
+            header.appendChild(numSpan);
+            header.appendChild(typeSpan);
+            card.appendChild(header);
+            const qText = document.createElement('div');
+            qText.className = 'question-text';
+            qText.textContent = question.question || question.question_text;
+            card.appendChild(qText);
 
             if (answerOptions) {
                 // Multiple choice
-                html += '<div class="answer-options">';
+                const optionsDiv = document.createElement('div');
+                optionsDiv.className = 'answer-options';
                 answerOptions.forEach((choice, i) => {
                     const isSelected = userAnswers[index] === choice;
-                    html += `
-                        <label class="answer-option ${isSelected ? 'selected' : ''}" data-index="${index}" data-answer="${choice}">
-                            <input type="radio" name="q${index}" value="${choice}" ${isSelected ? 'checked' : ''}>
-                            <span class="answer-text">${choice}</span>
-                        </label>
-                    `;
+                    const label = document.createElement('label');
+                    label.className = 'answer-option' + (isSelected ? ' selected' : '');
+                    label.dataset.index = index;
+                    label.dataset.answer = choice;
+                    const input = document.createElement('input');
+                    input.type = 'radio';
+                    input.name = `q${index}`;
+                    input.value = choice;
+                    if (isSelected) input.checked = true;
+                    const span = document.createElement('span');
+                    span.className = 'answer-text';
+                    span.textContent = choice;
+                    label.appendChild(input);
+                    label.appendChild(span);
+                    optionsDiv.appendChild(label);
                 });
-                html += '</div>';
+                card.appendChild(optionsDiv);
             } else {
                 // Short answer or fill in blank
                 const savedAnswer = userAnswers[index] || '';
-                html += `
-                    <textarea class="short-answer-input" data-index="${index}" rows="4" placeholder="Type your answer here...">${savedAnswer}</textarea>
-                `;
+                const textarea = document.createElement('textarea');
+                textarea.className = 'short-answer-input';
+                textarea.dataset.index = index;
+                textarea.rows = 4;
+                textarea.placeholder = 'Type your answer here...';
+                textarea.value = savedAnswer;
+                card.appendChild(textarea);
                 if (question.hint) {
-                    html += `<p style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-light);">💡 Hint: ${question.hint}</p>`;
+                    const hintP = document.createElement('p');
+                    hintP.style.marginTop = '0.5rem';
+                    hintP.style.fontSize = '0.9rem';
+                    hintP.style.color = 'var(--text-light)';
+                    hintP.textContent = `💡 Hint: ${question.hint}`;
+                    card.appendChild(hintP);
                 }
             }
-
-            html += '</div>';
-            document.getElementById('quizContent').innerHTML = html;
+            quizContent.appendChild(card);
 
             // Add event listeners
             document.querySelectorAll('.answer-option').forEach(option => {
@@ -419,11 +486,16 @@
                              sessionStorage.getItem('student_token') || 
                              localStorage.getItem('authToken') || '';
                 
-                console.log('🔍 DEBUG - Token:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
+                if (devMode) {
+                    // Only log token presence, not value
+                    console.log('🔍 DEBUG - Token present:', !!token);
+                }
                 
                 // Submit quiz for grading
                 const gradeUrl = `/api/progress/submit_quiz.php`;
-                console.log('🔍 DEBUG - Grade URL:', gradeUrl);
+                if (devMode) {
+                    console.log('🔍 DEBUG - Grade URL:', gradeUrl);
+                }
                 
                 const response = await fetch(gradeUrl, {
                     method: 'POST',
@@ -444,26 +516,33 @@
                 });
 
                 // Debug: Log response details
-                console.log('Grade response status:', response.status);
-                console.log('Grade response headers:', [...response.headers.entries()]);
+                if (devMode) {
+                    console.log('Grade response status:', response.status);
+                    console.log('Grade response headers:', [...response.headers.entries()]);
+                }
                 
                 // Check HTTP status before parsing
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('Grade API error:', response.status, errorText);
+                    if (devMode) {
+                        console.error('Grade API error:', response.status);
+                    }
                     throw new Error(`Grading request failed (${response.status})`);
                 }
 
                 const responseText = await response.text();
-                console.log('Grade API response:', responseText);
+                if (devMode) {
+                    console.log('Grade API response received.');
+                }
                 
                 let data;
                 try {
                     data = JSON.parse(responseText);
                 } catch (parseError) {
-                    console.error('JSON parse error:', parseError);
-                    console.error('Response was:', responseText.substring(0, 500));
-                    throw new Error(`JSON.parse: ${parseError.message}`);
+                    if (devMode) {
+                        console.error('JSON parse error:', parseError);
+                    }
+                    throw new Error('Quiz grading failed.');
                 }
 
                 if (data.success) {
@@ -473,14 +552,25 @@
                     throw new Error(data.message || 'Grading failed');
                 }
             } catch (error) {
-                console.error('Grading error:', error);
-                document.getElementById('quizContent').innerHTML = `
-                    <div class="error-message">
-                        <h3>⚠️ Grading Error</h3>
-                        <p>${error.message}</p>
-                        <button class="btn btn-outline" onclick="window.close()">Close Window</button>
-                    </div>
-                `;
+                if (devMode) {
+                    console.error('Grading error:', error);
+                }
+                const quizContent = document.getElementById('quizContent');
+                quizContent.textContent = '';
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                const h3 = document.createElement('h3');
+                h3.textContent = '⚠️ Grading Error';
+                const p = document.createElement('p');
+                p.textContent = error.message;
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-outline';
+                btn.textContent = 'Close Window';
+                btn.onclick = () => window.close();
+                errorDiv.appendChild(h3);
+                errorDiv.appendChild(p);
+                errorDiv.appendChild(btn);
+                quizContent.appendChild(errorDiv);
             }
         }
 

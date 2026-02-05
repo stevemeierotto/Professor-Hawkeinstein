@@ -11,6 +11,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     sendJSON(['success' => false, 'message' => 'Method not allowed'], 405);
 }
 
+
+// Require authentication and always use authenticated userId (never trust client userId)
 $userData = requireAuth();
 
 try {

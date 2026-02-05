@@ -1,5 +1,7 @@
 <?php
-header('Content-Type: application/json');
+
+require_once __DIR__ . '/../helpers/security_headers.php';
+set_api_security_headers();
 
 // Enable error reporting for debugging
 ini_set('display_errors', 0);
@@ -82,29 +84,28 @@ try {
 
     $userId = $db->lastInsertId();
 
-    // Log registration
-    error_log("New user registered: ID=$userId, Username=$username, Email=$email");
+    // Log registration (do not log sensitive data)
+    error_log("New user registered: ID=$userId");
 
-    // Return success response
+    // Return success response (no userId)
     echo json_encode([
         'success' => true,
-        'message' => 'Account created successfully',
-        'userId' => $userId
+        'message' => 'Account created successfully'
     ]);
 
 } catch (PDOException $e) {
-    error_log('Database error: ' . $e->getMessage());
+    error_log('Database error occurred');
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'message' => 'Database error: ' . $e->getMessage()
+        'message' => 'A server error occurred. Please try again later.'
     ]);
 } catch (Exception $e) {
-    error_log('Registration error: ' . $e->getMessage());
+    error_log('Registration error occurred');
     http_response_code(400);
     echo json_encode([
         'success' => false,
-        'message' => $e->getMessage()
+        'message' => 'Registration failed. Please check your input.'
     ]);
 }
 ?>

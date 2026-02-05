@@ -5,10 +5,12 @@
  * Routes to C++ agent service with instance-specific memory
  */
 
-header('Content-Type: application/json');
+
+require_once __DIR__ . '/../helpers/security_headers.php';
+set_api_security_headers();
 require_once __DIR__ . '/../../config/database.php';
 
-setCORSHeaders();
+
 
 $user = requireAuth();
 $userId = $user['userId'];

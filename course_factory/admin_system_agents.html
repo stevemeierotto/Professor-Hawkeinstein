@@ -250,26 +250,39 @@
 
     <!-- Main Content -->
     <div class="container" style="max-width: 1400px; margin-top: 2rem;">
+
         <div class="page-header">
             <div>
                 <h1>⚙️ System Agents</h1>
-                <p style="color: var(--text-light); margin-top: 0.5rem;">Configure AI agents used in course creation pipeline</p>
+                <p style="color: var(--text-light); margin-top: 0.5rem;">View, create, and manage all AI agents (system, grading, student-facing, admin, pipeline) from a single page.</p>
             </div>
-            <button class="btn btn-primary" onclick="createNewAgent()">➕ Add System Agent</button>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <select id="agentTypeFilter" class="btn btn-secondary" style="min-width: 180px;">
+                    <option value="">All Types</option>
+                    <option value="system">System</option>
+                    <option value="grading">Grading</option>
+                    <option value="student">Student-Facing</option>
+                    <option value="admin">Admin</option>
+                    <option value="pipeline">Pipeline</option>
+                    <option value="other">Other</option>
+                </select>
+                <button class="btn btn-primary" onclick="openAgentFactory()">➕ Create New Agent</button>
+            </div>
         </div>
 
         <div class="info-box">
-            <p>💡 System agents power the course creation pipeline. Each agent has a specialized role and prompt optimized for its task. Adjust temperature and context limits to fine-tune behavior.</p>
+            <p>💡 All agents are now managed here. Use the filter to view by type/role. Per-agent actions (edit, configure, view prompt, activate/deactivate) are available on each card. Use "Create New Agent" to launch the Agent Factory wizard.</p>
         </div>
 
         <!-- Agent Cards Grid -->
         <div class="agent-grid" id="agentGrid">
             <!-- Cards will be populated by JavaScript -->
+
             <div style="text-align: center; padding: 3rem; color: var(--text-light);">
-                Loading system agents...
+                Loading agents...
             </div>
         </div>
-    </div>
+
 
     <!-- Edit Modal -->
     <div class="modal" id="editModal">
@@ -321,14 +334,14 @@
 
                 <div class="form-group">
                     <label for="systemPrompt">System Prompt</label>
-                    <textarea id="systemPrompt" placeholder="Enter the system prompt that defines this agent's behavior..."></textarea>
-                    <p class="form-help">This prompt is sent before every request to establish the agent's role and behavior.</p>
+                    <textarea id="systemPrompt" placeholder="Enter the system prompt that defines this agent's behavior..." readonly></textarea>
+                    <p class="form-help">(Read-only: prompt editing not supported in this UI)</p>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label for="modelName">Model</label>
-                        <input type="text" id="modelName" value="default" placeholder="Model name or 'default'">
+                        <input type="text" id="modelName" value="default" placeholder="Model name or 'default'" readonly>
                     </div>
                     <div class="form-group">
                         <label for="isActive">Status</label>
@@ -344,11 +357,32 @@
                 <button class="btn btn-primary" onclick="saveAgent()">💾 Save Changes</button>
             </div>
         </div>
-    </div>
+
 
     <script>
-        const token = sessionStorage.getItem('admin_token');
+        // Ensure a valid admin_token is present before loading agents
+        let token = sessionStorage.getItem('admin_token');
         let systemAgents = [];
+
+        async function ensureToken() {
+            token = sessionStorage.getItem('admin_token');
+            if (token) return token;
+            // Try to fetch user info and token from backend
+            try {
+                const resp = await fetch('api/auth/me.php');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.success && data.token) {
+                        sessionStorage.setItem('admin_token', data.token);
+                        token = data.token;
+                        return token;
+                    }
+                }
+            } catch (e) {}
+            // If still no token, force logout
+            clearAdminSession && clearAdminSession();
+            window.location.href = 'admin_login.html';
+        }
 
         // Agent role configurations with icons and colors
         const roleConfig = {
@@ -362,23 +396,28 @@
             'other': { icon: '⚙️', color: '#6b7280', label: 'Other' }
         };
 
-        // Load system agents on page load
-        document.addEventListener('DOMContentLoaded', loadSystemAgents);
+        // Load system agents on page load, ensuring token is present
+        document.addEventListener('DOMContentLoaded', async function() {
+            await ensureToken();
+            loadSystemAgents();
+        });
 
         async function loadSystemAgents() {
             try {
-                const res = await fetch('api/admin/list_system_agents.php', {
+                token = sessionStorage.getItem('admin_token');
+                if (!token) { await ensureToken(); }
+                const res = await fetch('api/admin/list_agents.php', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const data = await res.json();
 
-                if (data.success) {
+                if (data.agents && Array.isArray(data.agents)) {
                     systemAgents = data.agents;
                     renderAgentCards();
                 } else {
                     document.getElementById('agentGrid').innerHTML = `
                         <div style="text-align: center; padding: 3rem; color: var(--text-light);">
-                            Error loading agents: ${data.message}
+                            Error loading agents: ${data.message || 'Unknown error'}
                         </div>
                     `;
                 }
@@ -386,32 +425,44 @@
                 console.error('Error:', error);
                 document.getElementById('agentGrid').innerHTML = `
                     <div style="text-align: center; padding: 3rem; color: var(--text-light);">
-                        Failed to load system agents. Please try again.
+                        Failed to load agents. Please try again.
                     </div>
                 `;
             }
         }
 
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         function renderAgentCards() {
             const grid = document.getElementById('agentGrid');
-
-            if (systemAgents.length === 0) {
+            const filter = document.getElementById('agentTypeFilter').value;
+            let filtered = systemAgents;
+            if (filter) {
+                filtered = systemAgents.filter(agent => {
+                    // agent_type or agent_role may be used depending on backend
+                    return (agent.agent_type && agent.agent_type.toLowerCase() === filter) ||
+                           (agent.agent_role && agent.agent_role.toLowerCase() === filter);
+                });
+            }
+            if (filtered.length === 0) {
                 grid.innerHTML = `
                     <div style="text-align: center; padding: 3rem; color: var(--text-light); grid-column: 1/-1;">
                         <p style="font-size: 3rem; margin-bottom: 1rem;">⚙️</p>
-                        <p>No system agents configured yet.</p>
-                        <p>Click "Add System Agent" to create one.</p>
+                        <p>No agents found for this filter.</p>
                     </div>
                 `;
                 return;
             }
-
-            grid.innerHTML = systemAgents.map(agent => {
+            grid.innerHTML = filtered.map(agent => {
                 const role = roleConfig[agent.agent_role] || roleConfig['other'];
                 const promptPreview = agent.system_prompt ? 
                     agent.system_prompt.substring(0, 100) + (agent.system_prompt.length > 100 ? '...' : '') : 
                     'No prompt configured';
-
                 return `
                     <div class="agent-card">
                         <div class="agent-header" style="background: linear-gradient(135deg, ${role.color}, ${role.color}dd);">
@@ -444,10 +495,10 @@
                             </p>
                             <div class="agent-actions">
                                 <button class="btn btn-primary btn-sm" onclick="editAgent(${agent.agent_id})">
-                                    ✏️ Edit
+                                    ✏️ Edit / Configure
                                 </button>
-                                <button class="btn btn-secondary btn-sm" onclick="testAgent(${agent.agent_id})">
-                                    🧪 Test
+                                <button class="btn btn-secondary btn-sm" onclick="toggleAgentActive(${agent.agent_id})">
+                                    ${agent.is_active ? '⏸️ Deactivate' : '▶️ Activate'}
                                 </button>
                             </div>
                         </div>
@@ -456,10 +507,50 @@
             }).join('');
         }
 
-        function editAgent(agentId) {
+        // Contextual action handlers (must be top-level, not inside renderAgentCards)
+        function viewPrompt(agentId) {
             const agent = systemAgents.find(a => a.agent_id === agentId);
             if (!agent) return;
+            alert('System Prompt for ' + agent.agent_name + ':\n\n' + (agent.system_prompt || '[None]'));
+        }
 
+        function viewModelConfig(agentId) {
+            const agent = systemAgents.find(a => a.agent_id === agentId);
+            if (!agent) return;
+            alert('Model Config for ' + agent.agent_name + ':\n\nModel: ' + (agent.model_name || 'default') + '\nTemperature: ' + (agent.temperature || '0.7') + '\nMax Tokens: ' + (agent.max_tokens || '2048'));
+        }
+
+        async function toggleAgentActive(agentId) {
+            const agent = systemAgents.find(a => a.agent_id === agentId);
+            if (!agent) return;
+            const newStatus = agent.is_active ? 0 : 1;
+            if (!confirm((newStatus ? 'Activate' : 'Deactivate') + ' agent "' + agent.agent_name + '"?')) return;
+            try {
+                const res = await fetch('api/admin/update_agent.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ agent_id: agentId, is_active: newStatus })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    loadSystemAgents();
+                } else {
+                    alert('Failed to update agent status: ' + (result.message || 'Unknown error'));
+                }
+            } catch (e) {
+                alert('Error updating agent status');
+            }
+        }
+        </script>
+
+        function editAgent(agentId) {
+            const agent = systemAgents.find(a => a.agent_id === agentId);
+            if (!agent) {
+                console.log('editAgent called but agent not found:', agentId);
+                return;
+            }
+
+            console.log('editAgent called for agent:', agent);
             document.getElementById('modalTitle').textContent = 'Edit System Agent';
             document.getElementById('agentId').value = agent.agent_id;
             document.getElementById('agentName').value = agent.agent_name || '';
@@ -472,6 +563,7 @@
             document.getElementById('isActive').value = agent.is_active ? '1' : '0';
 
             document.getElementById('editModal').classList.add('active');
+            console.log('editModal .active class added');
         }
 
         function createNewAgent() {
@@ -497,12 +589,8 @@
             const agentId = document.getElementById('agentId').value;
             const data = {
                 agent_name: document.getElementById('agentName').value,
-                agent_role: document.getElementById('agentRole').value,
-                specialization: document.getElementById('agentDescription').value,
                 temperature: parseFloat(document.getElementById('temperature').value),
-                max_tokens: parseInt(document.getElementById('maxTokens').value),
-                system_prompt: document.getElementById('systemPrompt').value,
-                model_name: document.getElementById('modelName').value,
+                specialization: document.getElementById('agentDescription').value,
                 is_active: document.getElementById('isActive').value === '1'
             };
 
@@ -511,13 +599,14 @@
                 return;
             }
 
-            try {
-                const url = agentId ? 
-                    'api/admin/update_system_agent.php' : 
-                    'api/admin/create_system_agent.php';
 
+            try {
+                let url;
                 if (agentId) {
                     data.agent_id = parseInt(agentId);
+                    url = 'api/admin/update_agent.php';
+                } else {
+                    url = 'api/admin/create_agent.php';
                 }
 
                 const res = await fetch(url, {
@@ -596,6 +685,15 @@
         document.getElementById('editModal').addEventListener('click', (e) => {
             if (e.target === document.getElementById('editModal')) closeModal();
         });
+    }
+    // Add filter logic and Agent Factory launcher
+    document.getElementById('agentTypeFilter').addEventListener('change', function() {
+        renderAgentCards();
+    });
+
+    function openAgentFactory() {
+        window.location.href = 'admin_agent_factory.html';
+    }
     </script>
 </body>
 </html>

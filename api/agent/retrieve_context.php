@@ -5,11 +5,12 @@
  * Used by agent chat to inject RAG context
  */
 
-header('Content-Type: application/json');
+require_once __DIR__ . '/../helpers/security_headers.php';
+set_api_security_headers();
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../helpers/embedding_generator.php';
 
-setCORSHeaders();
+
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);

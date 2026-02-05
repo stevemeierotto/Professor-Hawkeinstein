@@ -1,3 +1,8 @@
+// Require authentication (never trust client userId)
+require_once __DIR__ . '/../helpers/auth_helpers.php';
+require_once __DIR__ . '/../helpers/security_headers.php';
+set_api_security_headers();
+$userData = requireAuth();
 <?php
 /**
  * Get Unit Test Questions (All lessons in a unit)
@@ -9,10 +14,7 @@
 
 require_once '../../config/database.php';
 
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);

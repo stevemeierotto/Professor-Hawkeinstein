@@ -4,7 +4,9 @@
  * Removes content from the database
  */
 
-header('Content-Type: application/json');
+
+require_once __DIR__ . '/../helpers/security_headers.php';
+set_api_security_headers();
 require_once __DIR__ . '/auth_check.php';
 require_once __DIR__ . '/../../config/database.php';
 

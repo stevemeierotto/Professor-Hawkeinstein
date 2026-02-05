@@ -4,18 +4,22 @@
  * Proxies messages to C++ Agent Microservice
  */
 
-require_once '../../config/database.php';
 
-setCORSHeaders();
+require_once __DIR__ . '/../helpers/security_headers.php';
+set_api_security_headers();
+
+
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendJSON(['success' => false, 'message' => 'Method not allowed'], 405);
 }
 
-// Require authentication for all requests
+
+// Require authentication for all requests (never trust client userId)
 $userData = requireAuth();
 
 $input = getJSONInput();
+
 
 $agentId = $input['agentId'] ?? null;
 $message = $input['message'] ?? '';
@@ -28,14 +32,16 @@ if (empty($agentId) || empty($message)) {
 try {
     $db = getDB();
     
+
     // Verify agent exists and is active
     $agentStmt = $db->prepare("SELECT * FROM agents WHERE agent_id = :agentId AND is_active = 1");
     $agentStmt->execute(['agentId' => $agentId]);
     $agent = $agentStmt->fetch();
-    
     if (!$agent) {
         sendJSON(['success' => false, 'message' => 'Agent not found'], 404);
     }
+    // Optionally: If agent-user mapping exists, check ownership here
+    // Only allow access to agents the user owns/is assigned to (future-proof)
     
     // Get recent conversation history for context
     $historyStmt = $db->prepare("

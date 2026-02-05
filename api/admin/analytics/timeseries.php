@@ -53,6 +53,22 @@ try {
         $stmt->execute(['start_date' => $startDate, 'end_date' => $endDate]);
         $data = $stmt->fetchAll();
         
+        // If no rollup data, generate stub data to prevent frontend errors
+        if (empty($data)) {
+            $data = [[
+                'date' => date('Y-m-d'),
+                'total_active_users' => 0,
+                'new_users' => 0,
+                'active_course_enrollments' => 0,
+                'lessons_completed' => 0,
+                'quizzes_passed' => 0,
+                'total_study_time_minutes' => 0,
+                'avg_mastery_score' => 0,
+                'mastery_90_plus_count' => 0,
+                'total_agent_messages' => 0
+            ]];
+        }
+        
         sendJSON([
             'success' => true,
             'period' => 'daily',

@@ -1,3 +1,6 @@
+// Require authentication (never trust client userId)
+require_once __DIR__ . '/../helpers/auth_helpers.php';
+$userData = requireAuth();
 <?php
 /**
  * Get Lesson Content for Workbook (Student Access)
@@ -32,6 +35,7 @@ $db = getDb();
 
 try {
     // First, try to get from published course (courses → units → lessons)
+    // Try by numeric course_id first
     $stmt = $db->prepare("
         SELECT 
             l.lesson_id,
@@ -42,13 +46,33 @@ try {
         FROM courses c
         JOIN units u ON c.course_id = u.course_id
         JOIN lessons l ON u.unit_id = l.unit_id
-        WHERE c.course_name LIKE ? AND u.unit_number = ? AND l.lesson_number = ?
+        WHERE c.course_id = ? AND u.unit_number = ? AND l.lesson_number = ?
         LIMIT 1
     ");
-    // Match course name from courseId (e.g., '2nd_grade_science' → '%2nd Grade Science%')
-    $courseName = '%' . str_replace('_', ' ', ucwords($courseId, '_')) . '%';
-    $stmt->execute([$courseName, $unitIndex + 1, $lessonIndex + 1]);
+    $stmt->execute([$courseId, $unitIndex + 1, $lessonIndex + 1]);
     $content = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    // If not found by numeric ID, try by course_name pattern
+    if (!$content) {
+        // Convert courseId: '2nd_grade_science' → '2nd Grade Science'
+        $courseName = ucwords(str_replace('_', ' ', $courseId));
+        
+        $stmt = $db->prepare("
+            SELECT 
+                l.lesson_id,
+                l.lesson_title as title,
+                l.lesson_content as content_text,
+                l.lesson_content as content_html,
+                l.video_url
+            FROM courses c
+            JOIN units u ON c.course_id = u.course_id
+            JOIN lessons l ON u.unit_id = l.unit_id
+            WHERE c.course_name LIKE ? AND u.unit_number = ? AND l.lesson_number = ?
+            LIMIT 1
+        ");
+        $stmt->execute(['%' . $courseName . '%', $unitIndex + 1, $lessonIndex + 1]);
+        $content = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
     
     // If not found in published courses, try draft
     if (!$content) {
@@ -135,6 +159,7 @@ try {
         'unitIndex' => $unitIndex,
         'lessonIndex' => $lessonIndex,
         'content' => [
+            'contentId' => $content['lesson_id'] ?? $content['content_id'] ?? null,
             'title' => $content['title'],
             'text' => $content['content_text'],
             'html' => $content['content_html'],

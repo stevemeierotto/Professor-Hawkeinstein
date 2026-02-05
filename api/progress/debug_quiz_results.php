@@ -1,4 +1,10 @@
 <?php
+// PHASE 5: DISABLE DEBUG ENDPOINT IN PRODUCTION
+if (!getenv('DEBUG_API_ENABLED')) {
+    http_response_code(404);
+    echo json_encode(['error' => 'Not Found']);
+    exit;
+}
 /**
  * DEBUG ONLY - Assessment Grading Results Inspector
  * 
@@ -13,9 +19,11 @@
  * Returns JSON with the most recent assessment attempt details
  */
 
-require_once __DIR__ . '/../../config/database.php';
 
-header('Content-Type: application/json');
+require_once __DIR__ . '/../helpers/security_headers.php';
+set_api_security_headers();
+
+
 
 // Simple auth - require ?debug=true in production
 $debugKey = $_GET['debug'] ?? '';

@@ -16,9 +16,16 @@ function setAdminSession(key, value) {
 
 function getAdminSession(key) {
     const namespacedKey = `admin_${key}`;
-    const value = sessionStorage.getItem(namespacedKey);
+    let value = sessionStorage.getItem(namespacedKey);
+    // Fallback: if token missing in sessionStorage, try localStorage (for legacy or reload cases)
+    if (!value && key === 'token') {
+        value = localStorage.getItem('adminToken');
+        if (value) {
+            // Sync to sessionStorage for current session
+            sessionStorage.setItem(namespacedKey, value);
+        }
+    }
     if (!value) return null;
-    
     // Try to parse as JSON, return raw value if parsing fails
     try {
         return JSON.parse(value);

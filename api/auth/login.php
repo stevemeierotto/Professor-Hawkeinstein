@@ -3,7 +3,9 @@
  * User Login API Endpoint
  */
 
-header('Content-Type: application/json');
+
+require_once __DIR__ . '/../helpers/security_headers.php';
+set_api_security_headers();
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 ini_set('log_errors', 1);
@@ -68,11 +70,30 @@ try {
 
     // Generate JWT token with role
     $token = generateToken($user['user_id'], $user['username'], $user['role']);
-    
-    // Log successful login
-    error_log("User logged in successfully: ID={$user['user_id']}, Username={$user['username']}, Role={$user['role']}");
 
-    // Return success with user data and JWT token
+    // --- Phase 2 Security: Environment-aware cookie settings ---
+        // ENV detection: Use ENV or APP_ENV environment variable, default to 'production'.
+        // In production: secure=true, httpOnly=true, SameSite=Strict.
+        // In development: secure=false allowed for localhost, httpOnly=true, SameSite=Strict.
+        // If Strict breaks login, fallback to Lax only for affected flows (see OAuth callback).
+    $env = getenv('ENV') ?: (getenv('APP_ENV') ?: 'production');
+    $isProd = ($env === 'production');
+    $isSecure = $isProd ? true : (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    $sameSite = 'Strict';
+
+    // If Strict breaks login (e.g., for OAuth or cross-site flows), fallback to Lax below (see OAuth callback)
+    setcookie('auth_token', $token, [
+        'expires' => time() + SESSION_LIFETIME,
+        'path' => '/',
+        'secure' => $isSecure, // Always true in production, false allowed in dev for localhost
+        'httponly' => true,
+        'samesite' => $sameSite
+    ]);
+
+    // Log successful login and cookie policy
+    error_log("User logged in successfully: ID={$user['user_id']}, Username={$user['username']}, Role={$user['role']}, Cookie secure={$isSecure}, SameSite={$sameSite}, ENV={$env}");
+
+    // Return success with user data and JWT token (also in response for backward compatibility)
     http_response_code(200);
     echo json_encode([
         'success' => true,

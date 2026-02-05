@@ -11,8 +11,8 @@
 require_once __DIR__ . '/auth_check.php';
 require_once __DIR__ . '/../../config/database.php';
 
-// Require admin authentication
-$adminUser = requireAdmin();
+// Require admin authentication (server-side, never trust client role)
+$adminUser = requireAdmin(); // 401 if not authenticated, 403 if not admin/root
 
 header('Content-Type: application/json');
 

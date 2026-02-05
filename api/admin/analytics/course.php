@@ -29,6 +29,7 @@ try {
     // ========================================================================
     
     if (!$courseId) {
+        // Try analytics_course_metrics first, fallback to direct calculation
         $coursesStmt = $db->query("
             SELECT 
                 c.course_id,
@@ -55,6 +56,33 @@ try {
         ");
         
         $courses = $coursesStmt->fetchAll();
+        
+        // If no analytics data, calculate directly
+        if (empty($courses) || (count($courses) > 0 && empty($courses[0]['total_enrolled']))) {
+            $directCoursesStmt = $db->query("
+                SELECT 
+                    c.course_id,
+                    c.course_name,
+                    c.difficulty_level,
+                    c.subject_area,
+                    COUNT(DISTINCT ca.user_id) as total_enrolled,
+                    COUNT(DISTINCT CASE WHEN ca.status = 'in_progress' THEN ca.user_id END) as active_students,
+                    COUNT(DISTINCT CASE WHEN ca.status = 'completed' THEN ca.user_id END) as completed_students,
+                    (COUNT(DISTINCT CASE WHEN ca.status = 'completed' THEN ca.user_id END) * 100.0 / 
+                     NULLIF(COUNT(DISTINCT ca.user_id), 0)) as completion_rate,
+                    AVG(CASE WHEN pt.metric_type = 'mastery' THEN pt.metric_value END) as avg_mastery_score,
+                    AVG(CASE WHEN pt.metric_type = 'time_spent' THEN pt.metric_value END) / 60 as avg_study_time_hours,
+                    NULL as avg_completion_time_days,
+                    CURDATE() as calculation_date
+                FROM courses c
+                LEFT JOIN course_assignments ca ON c.course_id = ca.course_id
+                LEFT JOIN progress_tracking pt ON c.course_id = pt.course_id
+                WHERE c.is_active = 1
+                GROUP BY c.course_id, c.course_name, c.difficulty_level, c.subject_area
+                ORDER BY c.course_name
+            ");
+            $courses = $directCoursesStmt->fetchAll();
+        }
         
         sendJSON([
             'success' => true,

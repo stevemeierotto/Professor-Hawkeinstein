@@ -1,3 +1,27 @@
+/**
+ * Check resource ownership (IDOR prevention)
+ *
+ * Usage: Call in endpoints that accept user_id, agent_id, course_id, etc.
+ *
+ * @param int|string $resourceOwnerId The owner/user_id from the resource (DB)
+ * @param array $userData The authenticated user data from JWT
+ * @param string $fieldName (optional) Field name for error messages
+ * @param bool $allowAdmin (optional) If true, admin/root can access any resource
+ * @return void (exits with 403/404 if not owner)
+ */
+function require_ownership($resourceOwnerId, $userData, $fieldName = 'user', $allowAdmin = true) {
+    // Allow admin/root to access any resource if allowed
+    if ($allowAdmin && isset($userData['role']) && in_array($userData['role'], ['admin', 'root'], true)) {
+        return;
+    }
+    if (!isset($userData['userId']) || $userData['userId'] != $resourceOwnerId) {
+        // Hide resource existence if not owner
+        http_response_code(404);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'error' => ucfirst($fieldName) . ' not found']);
+        exit;
+    }
+}
 <?php
 /**
  * Shared Authentication Middleware

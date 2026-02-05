@@ -1388,15 +1388,23 @@
                                 Enter the YouTube video ID or full URL. This video will be embedded in the lesson.
                             </div>
                         </div>
-                        <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;">
-                            <button class="btn btn-secondary" onclick="regenerateFromReview(${unitIndex}, ${lessonIndex}, '${escapeHtml(lessonTitle).replace(/'/g, "\\'")}')">
-                                🔄 Regenerate
-                            </button>
-                            <div style="display:flex;gap:0.5rem;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
+                            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                                <button class="btn btn-secondary" onclick="regenerateFromReview(${unitIndex}, ${lessonIndex}, '${escapeHtml(lessonTitle).replace(/'/g, "\\'")}')">
+                                    🔄 Regenerate
+                                </button>
+                                <button id="editLessonBtn" class="btn btn-secondary" onclick="toggleEditMode(${unitIndex}, ${lessonIndex})">
+                                    ✏️ Edit Mode
+                                </button>
+                            </div>
+                            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                                <button id="saveLessonBtn" class="btn btn-primary" onclick="saveLessonEdits(${unitIndex}, ${lessonIndex})" style="display:none;">
+                                    💾 Save Changes
+                                </button>
                                 <button class="btn btn-secondary" onclick="saveLessonVideo(${unitIndex}, ${lessonIndex})">
                                     💾 Save Video
                                 </button>
-                                <button class="btn btn-secondary" onclick="document.getElementById('reviewModal').remove()">Close</button>
+                                <button class="btn btn-secondary" onclick="document.getElementById('reviewModal').remove();editMode=false;">Close</button>
                                 <button class="btn btn-primary" onclick="approveLesson(${unitIndex}, ${lessonIndex})" id="approveBtn">
                                     ✅ Approve
                                 </button>
@@ -1457,6 +1465,10 @@
             renderOutlineWithContent();
         }
 
+        // Store loaded content for editing
+        let currentLessonContent = null;
+        let editMode = false;
+
         async function fetchLessonContent(unitIndex, lessonIndex) {
             try {
                 const res = await fetch(`api/admin/get_lesson_content.php?draftId=${draftId}&unitIndex=${unitIndex}&lessonIndex=${lessonIndex}`, {
@@ -1466,28 +1478,139 @@
                 
                 const modalContent = document.getElementById('reviewModalContent');
                 if (data.success && data.content && data.content.length > 0) {
+                    // Store content for editing
+                    currentLessonContent = data.content;
+                    
                     // Load existing video URL if available
                     const videoUrlInput = document.getElementById('lessonVideoUrl');
                     if (videoUrlInput && data.content[0].video_url) {
                         videoUrlInput.value = data.content[0].video_url;
                     }
                     
-                    // Display all content items for this lesson
-                    const contentHtml = data.content.map((item, idx) => `
-                        <div style="background:#f9fafb;padding:1rem;border-radius:8px;margin-bottom:1rem;">
-                            <div style="font-weight:600;margin-bottom:0.5rem;">${escapeHtml(item.title || 'Generated Content')}</div>
-                            <div style="font-size:0.8rem;color:#6b7280;">Generated: ${item.scraped_at || 'Unknown'}</div>
-                            ${item.video_url ? `<div style="font-size:0.8rem;color:#059669;margin-top:0.25rem;">🎥 Video: ${escapeHtml(item.video_url)}</div>` : ''}
-                        </div>
-                        <div style="white-space:pre-wrap;line-height:1.6;padding:0 0.5rem;">${escapeHtml(item.content_text || 'No content available')}</div>
-                        ${idx < data.content.length - 1 ? '<hr style="margin:1.5rem 0;border-color:#e5e7eb;">' : ''}
-                    `).join('');
-                    modalContent.innerHTML = contentHtml;
+                    renderLessonContent(unitIndex, lessonIndex);
                 } else {
                     modalContent.innerHTML = '<p style="color:#dc2626;">No content found for this lesson. Try generating it first.</p>';
                 }
             } catch (error) {
                 document.getElementById('reviewModalContent').innerHTML = '<p style="color:#dc2626;">Error loading content.</p>';
+            }
+        }
+        
+        function renderLessonContent(unitIndex, lessonIndex) {
+            const modalContent = document.getElementById('reviewModalContent');
+            if (!currentLessonContent || currentLessonContent.length === 0) {
+                modalContent.innerHTML = '<p style="color:#dc2626;">No content available.</p>';
+                return;
+            }
+            
+            if (editMode) {
+                // Editable mode
+                const contentHtml = currentLessonContent.map((item, idx) => `
+                    <div style="background:#fffbeb;padding:1rem;border-radius:8px;margin-bottom:1rem;border:2px solid #fbbf24;">
+                        <div style="margin-bottom:0.5rem;">
+                            <label style="display:block;font-weight:600;margin-bottom:0.25rem;color:#374151;">Title:</label>
+                            <input type="text" 
+                                   id="contentTitle_${idx}" 
+                                   value="${escapeHtml(item.title || '')}" 
+                                   style="width:100%;padding:0.5rem;border:1px solid #d1d5db;border-radius:4px;font-size:0.9rem;">
+                        </div>
+                        <div style="font-size:0.8rem;color:#6b7280;margin-bottom:0.5rem;">Generated: ${item.scraped_at || 'Unknown'}</div>
+                        <div>
+                            <label style="display:block;font-weight:600;margin-bottom:0.25rem;color:#374151;">Content:</label>
+                            <textarea id="contentText_${idx}" 
+                                      style="width:100%;min-height:300px;padding:0.75rem;border:1px solid #d1d5db;border-radius:4px;font-family:inherit;font-size:0.9rem;line-height:1.6;resize:vertical;">${escapeHtml(item.content_text || '')}</textarea>
+                        </div>
+                    </div>
+                    ${idx < currentLessonContent.length - 1 ? '<hr style="margin:1.5rem 0;border-color:#e5e7eb;">' : ''}
+                `).join('');
+                modalContent.innerHTML = `
+                    <div style="background:#fef3c7;padding:0.75rem;border-radius:4px;margin-bottom:1rem;font-size:0.9rem;color:#92400e;">
+                        ✏️ <strong>Edit Mode:</strong> Make changes to the content below and click "Save Changes" to update.
+                    </div>
+                    ${contentHtml}
+                `;
+            } else {
+                // Read-only mode
+                const contentHtml = currentLessonContent.map((item, idx) => `
+                    <div style="background:#f9fafb;padding:1rem;border-radius:8px;margin-bottom:1rem;">
+                        <div style="font-weight:600;margin-bottom:0.5rem;">${escapeHtml(item.title || 'Generated Content')}</div>
+                        <div style="font-size:0.8rem;color:#6b7280;">Generated: ${item.scraped_at || 'Unknown'}</div>
+                        ${item.video_url ? `<div style="font-size:0.8rem;color:#059669;margin-top:0.25rem;">🎥 Video: ${escapeHtml(item.video_url)}</div>` : ''}
+                    </div>
+                    <div style="white-space:pre-wrap;line-height:1.6;padding:0 0.5rem;">${escapeHtml(item.content_text || 'No content available')}</div>
+                    ${idx < currentLessonContent.length - 1 ? '<hr style="margin:1.5rem 0;border-color:#e5e7eb;">' : ''}
+                `).join('');
+                modalContent.innerHTML = contentHtml;
+            }
+            
+            // Update edit button
+            const editBtn = document.getElementById('editLessonBtn');
+            if (editBtn) {
+                editBtn.textContent = editMode ? '👁️ View Mode' : '✏️ Edit Mode';
+                editBtn.className = editMode ? 'btn btn-secondary' : 'btn btn-secondary';
+            }
+            
+            // Update save button visibility
+            const saveBtn = document.getElementById('saveLessonBtn');
+            if (saveBtn) {
+                saveBtn.style.display = editMode ? 'inline-block' : 'none';
+            }
+        }
+        
+        function toggleEditMode(unitIndex, lessonIndex) {
+            editMode = !editMode;
+            renderLessonContent(unitIndex, lessonIndex);
+        }
+        
+        async function saveLessonEdits(unitIndex, lessonIndex) {
+            if (!currentLessonContent || currentLessonContent.length === 0) {
+                showAlert('No content to save', 'error');
+                return;
+            }
+            
+            // Collect edited values
+            const updates = currentLessonContent.map((item, idx) => {
+                const titleInput = document.getElementById(`contentTitle_${idx}`);
+                const textArea = document.getElementById(`contentText_${idx}`);
+                return {
+                    contentId: item.id,
+                    title: titleInput ? titleInput.value : item.title,
+                    content_text: textArea ? textArea.value : item.content_text
+                };
+            });
+            
+            try {
+                const res = await fetch('api/admin/update_lesson_content.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${sessionStorage.getItem('admin_token')}`
+                    },
+                    body: JSON.stringify({
+                        draftId: draftId,
+                        unitIndex: unitIndex,
+                        lessonIndex: lessonIndex,
+                        updates: updates
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    showAlert('✅ Changes saved successfully!', 'success');
+                    // Update local content and switch to view mode
+                    updates.forEach((update, idx) => {
+                        if (currentLessonContent[idx]) {
+                            currentLessonContent[idx].title = update.title;
+                            currentLessonContent[idx].content_text = update.content_text;
+                        }
+                    });
+                    editMode = false;
+                    renderLessonContent(unitIndex, lessonIndex);
+                } else {
+                    showAlert('❌ Failed to save: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('❌ Error saving changes: ' + error.message, 'error');
             }
         }
 

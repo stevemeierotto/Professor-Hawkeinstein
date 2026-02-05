@@ -36,25 +36,18 @@ try {
         exit;
     }
     
-    // CRITICAL: Google OAuth rejects .local domains
-    // Redirect URI MUST be exactly http://localhost/api/auth/google/callback.php
-    // This must match EXACTLY in Google Cloud Console Authorized redirect URIs
-    $requiredRedirectUri = 'http://localhost/api/auth/google/callback.php';
-    if (GOOGLE_REDIRECT_URI !== $requiredRedirectUri) {
-        error_log("[OAuth Login] CRITICAL: Redirect URI mismatch! Expected: $requiredRedirectUri, Got: " . GOOGLE_REDIRECT_URI);
-        http_response_code(500);
-        echo json_encode([
-            'success' => false,
-            'message' => 'OAuth redirect URI misconfigured. Must use localhost for local development.'
-        ]);
-        exit;
-    }
+    // Detect protocol from current request (supports both HTTP and HTTPS)
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $redirectUri = "$protocol://$host/api/auth/google/callback.php";
+    
+    error_log("[OAuth Login] Using redirect URI: $redirectUri");
     
     // Initialize Google OAuth provider
     $provider = new Google([
         'clientId'     => GOOGLE_CLIENT_ID,
         'clientSecret' => GOOGLE_CLIENT_SECRET,
-        'redirectUri'  => GOOGLE_REDIRECT_URI,
+        'redirectUri'  => $redirectUri,
     ]);
     
     // Generate cryptographically secure state token (CSRF protection)

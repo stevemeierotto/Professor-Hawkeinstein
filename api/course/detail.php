@@ -11,7 +11,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     sendJSON(['success' => false, 'message' => 'Method not allowed'], 405);
 }
 
-requireAuth();
+
+// Require authentication (never trust client userId)
+$userData = requireAuth();
 
 $courseId = $_GET['courseId'] ?? null;
 

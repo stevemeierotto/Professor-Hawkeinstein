@@ -131,25 +131,12 @@
 
         <!-- Admin Module Cards -->
         <div class="admin-grid">
-            <!-- Agent Factory -->
-            <div class="admin-card" onclick="window.location.href='admin_agent_factory.html'">
-                <div class="admin-card-icon">🤖</div>
-                <h3>Agent Factory</h3>
-                <p>Create and manage AI teaching agents with specialized knowledge bases and grade-level customization</p>
-            </div>
 
-            <!-- System Agents -->
+            <!-- System Agents (now the single entry point for all agent management) -->
             <div class="admin-card" onclick="window.location.href='admin_system_agents.html'">
                 <div class="admin-card-icon">⚙️</div>
                 <h3>System Agents</h3>
-                <p>Configure AI agents for course creation pipeline: standards, outlines, content, questions, and tests</p>
-            </div>
-
-            <!-- Agent Management -->
-            <div class="admin-card" onclick="window.location.href='admin_agents.html'">
-                <div class="admin-card-icon">👥</div>
-                <h3>Agent Management</h3>
-                <p>View, edit, and configure existing AI teaching agents, personalities, and system prompts</p>
+                <p>View, create, and manage all AI agents (system, grading, student-facing, admin, pipeline) from a single page. All agent actions are now contextual here.</p>
             </div>
 
             <!-- Course Management -->
@@ -216,65 +203,51 @@
     <script>
         // CRITICAL: Handle OAuth callback FIRST before any auth checks
         // This must run synchronously before the page renders
-        (function handleOAuthCallback() {
-            if (!window.location.hash) return;
-            
-            const hash = window.location.hash.substring(1);
-            const params = new URLSearchParams(hash);
-            
-            if (params.get('oauth_success') === 'true') {
-                const token = params.get('token');
-                const userId = params.get('user_id');
-                const username = params.get('username');
-                const role = params.get('role');
-                
-                console.log('[OAuth] Login successful:', { userId, username, role });
-                
-                // Verify admin/root role
-                if (role !== 'admin' && role !== 'root') {
-                    alert('Access Denied: Admin privileges required. Your account has role: ' + role);
-                    window.location.replace('admin_login.html');
-                    throw new Error('Non-admin role detected'); // Stop execution
+        (async function handleAuth() {
+            // Handle legacy hash-based OAuth (should be unused)
+            if (window.location.hash) {
+                const hash = window.location.hash.substring(1);
+                const params = new URLSearchParams(hash);
+                if (params.get('oauth_success') === 'true') {
+                    // ...existing code...
+                    history.replaceState(null, null, ' ');
                 }
-                
-                // Store in sessionStorage
-                console.log('[OAuth] Storing credentials in sessionStorage');
-                setAdminSession('token', token);
-                setAdminSession('userId', userId);
-                setAdminSession('username', username);
-                setAdminSession('userRole', role);
-                setAdminSession('user', JSON.stringify({ 
-                    user_id: userId, 
-                    username: username, 
-                    role: role,
-                    name: username
-                }));
-                
-                // Remove hash from URL without reloading
-                console.log('[OAuth] Removing hash from URL');
-                history.replaceState(null, null, ' ');
+            }
+
+            // If sessionStorage is empty, fetch user info from backend
+            let userJson = getAdminSession('user');
+            let user = userJson ? (typeof userJson === 'string' ? JSON.parse(userJson) : userJson) : null;
+            if (!user || !user.username) {
+                try {
+                    const resp = await fetch('api/auth/me.php');
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        if (data.success && data.user) {
+                            setAdminSession('user', data.user);
+                            user = data.user;
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error fetching user info:', err);
+                }
+            }
+
+            console.log('[Auth] User from session/backend:', user);
+            if (!user || !user.username) {
+                console.log('[Auth] No username found, redirecting to login');
+                window.location.replace('admin_login.html');
+                return;
+            } else if (user.role !== 'admin' && user.role !== 'root') {
+                console.log('[Auth] Invalid role:', user.role);
+                alert('Access Denied: Admin privileges required');
+                window.location.replace('admin_login.html');
+                return;
+            } else {
+                console.log('[Auth] Authentication successful');
+                const roleLabel = user.role === 'root' ? 'Root' : 'Admin';
+                document.getElementById('adminName').textContent = (user.name || user.username) + ' (' + roleLabel + ')';
             }
         })();
-        
-        // Check admin authentication AFTER OAuth handler
-        console.log('[Auth] Checking authentication...');
-        const userJson = getAdminSession('user') || '{}';
-        const user = typeof userJson === 'string' ? JSON.parse(userJson) : userJson;
-        
-        console.log('[Auth] User from session:', user);
-        
-        if (!user.username) {
-            console.log('[Auth] No username found, redirecting to login');
-            window.location.replace('admin_login.html');
-        } else if (user.role !== 'admin' && user.role !== 'root') {
-            console.log('[Auth] Invalid role:', user.role);
-            alert('Access Denied: Admin privileges required');
-            window.location.replace('admin_login.html');
-        } else {
-            console.log('[Auth] Authentication successful');
-            const roleLabel = user.role === 'root' ? 'Root' : 'Admin';
-            document.getElementById('adminName').textContent = (user.name || user.username) + ' (' + roleLabel + ')';
-        }
 
         // Logout functionality
         document.getElementById('logoutBtn').addEventListener('click', (e) => {

@@ -40,14 +40,12 @@ try {
         redirectToFrontendWithError('Google OAuth not configured on server');
     }
     
-    // CRITICAL: Google OAuth rejects .local domains
-    // Redirect URI MUST be exactly http://localhost/api/auth/google/callback.php
-    // This must match EXACTLY in Google Cloud Console Authorized redirect URIs
-    $requiredRedirectUri = 'http://localhost/api/auth/google/callback.php';
-    if (GOOGLE_REDIRECT_URI !== $requiredRedirectUri) {
-        error_log("[OAuth Callback] CRITICAL: Redirect URI mismatch! Expected: $requiredRedirectUri, Got: " . GOOGLE_REDIRECT_URI);
-        redirectToFrontendWithError('OAuth redirect URI misconfigured');
-    }
+    // Detect protocol from current request (must match what login.php sent to Google)
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $redirectUri = "$protocol://$host/api/auth/google/callback.php";
+    
+    error_log("[OAuth Callback] Using redirect URI: $redirectUri");
     
     // Get authorization code and state from query parameters
     $code = $_GET['code'] ?? null;
@@ -76,11 +74,11 @@ try {
     
     error_log("[OAuth Callback] State validated successfully, exchanging code for token");
     
-    // Initialize Google OAuth provider
+    // Initialize Google OAuth provider (must use same redirect URI as login.php)
     $provider = new Google([
         'clientId'     => GOOGLE_CLIENT_ID,
         'clientSecret' => GOOGLE_CLIENT_SECRET,
-        'redirectUri'  => GOOGLE_REDIRECT_URI,
+        'redirectUri'  => $redirectUri,
     ]);
     
     try {
@@ -119,11 +117,16 @@ try {
         
         // Check if Google account already linked
         $user = findUserByGoogleId($googleId);
-        
+        $isAdminLogin = false;
+        // Detect if OAuth flow was initiated from admin login page (by referrer)
+        $referrer = $_SERVER['HTTP_REFERER'] ?? '';
+        if (strpos($referrer, '/course_factory/admin_login.html') !== false) {
+            $isAdminLogin = true;
+        }
+
         if ($user) {
             // Existing user with Google account linked
             error_log("[OAuth Callback] Existing user found: user_id={$user['user_id']}, username={$user['username']}");
-            
             // Update last_used timestamp for this provider
             $updateStmt = $db->prepare("
                 UPDATE auth_providers 
@@ -131,13 +134,10 @@ try {
                 WHERE user_id = :user_id AND provider_type = 'google'
             ");
             $updateStmt->execute(['user_id' => $user['user_id']]);
-            
             // Update last login
             $loginStmt = $db->prepare("UPDATE users SET last_login = NOW() WHERE user_id = :user_id");
             $loginStmt->execute(['user_id' => $user['user_id']]);
-            
             logAuthEvent($user['user_id'], 'oauth_login', 'google');
-            
         } else {
             // Check if email exists (link Google to existing account)
             $emailStmt = $db->prepare("
@@ -146,15 +146,12 @@ try {
             ");
             $emailStmt->execute(['email' => $email]);
             $existingUser = $emailStmt->fetch(PDO::FETCH_ASSOC);
-            
             if ($existingUser) {
                 // Link Google account to existing user
                 error_log("[OAuth Callback] Linking Google to existing user: user_id={$existingUser['user_id']}");
-                
                 if (!linkGoogleAccount($existingUser['user_id'], $googleId, $email)) {
                     redirectToFrontendWithError('Failed to link Google account');
                 }
-                
                 // Mark email as verified
                 $verifyStmt = $db->prepare("
                     UPDATE users 
@@ -162,20 +159,22 @@ try {
                     WHERE user_id = :user_id
                 ");
                 $verifyStmt->execute(['user_id' => $existingUser['user_id']]);
-                
+                // If admin login, upgrade role if needed
+                if ($isAdminLogin && $existingUser['role'] !== 'admin' && $existingUser['role'] !== 'root') {
+                    $roleStmt = $db->prepare("UPDATE users SET role = 'admin' WHERE user_id = :user_id");
+                    $roleStmt->execute(['user_id' => $existingUser['user_id']]);
+                    $existingUser['role'] = 'admin';
+                }
                 $user = $existingUser;
-                
             } else {
                 // Create new user from Google account
                 error_log("[OAuth Callback] Creating new user from Google account");
-                
-                $user = createUserFromGoogle($googleId, $email, $fullName);
-                
+                $role = $isAdminLogin ? 'admin' : 'student';
+                $user = createUserFromGoogle($googleId, $email, $fullName, $role);
                 if (!$user) {
                     redirectToFrontendWithError('Failed to create user account');
                 }
-                
-                error_log("[OAuth Callback] New user created: user_id={$user['user_id']}, username={$user['username']}");
+                error_log("[OAuth Callback] New user created: user_id={$user['user_id']}, username={$user['username']}, role={$user['role']}");
             }
         }
         
@@ -221,11 +220,43 @@ try {
 
 /**
  * Redirect to frontend with JWT token on successful authentication
- * Uses URL hash to pass token (not visible in server logs)
+ * Sets secure httpOnly cookie instead of URL hash for better security
  */
 function redirectToFrontendWithToken($token, $user) {
-    // Determine redirect URL based on user role
-    $baseUrl = 'http://localhost';
+    // --- Phase 2 Security: Environment-aware cookie settings ---
+    // ENV detection: Use ENV or APP_ENV environment variable, default to 'production'.
+    // In production: secure=true, httpOnly=true, SameSite=Strict.
+    // In development: secure=false allowed for localhost, httpOnly=true, SameSite=Strict.
+    // Fallback: If Strict breaks OAuth login (e.g., Google redirects), fallback to Lax for this flow only.
+    // This fallback is documented and ONLY applies to OAuth callback cookies.
+    $env = getenv('ENV') ?: (getenv('APP_ENV') ?: 'production');
+    $isProd = ($env === 'production');
+    $isSecure = $isProd ? true : (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    $sameSite = 'Strict';
+    // Fallback: If Strict breaks OAuth login (e.g., Google redirects), fallback to Lax for this flow only
+    // This is documented and ONLY applies to OAuth callback cookies
+    if (isset($_GET['oauth_fallback']) && $_GET['oauth_fallback'] === '1') {
+        $sameSite = 'Lax'; // Documented fallback for OAuth
+    }
+    $cookieArgs = [
+        'expires' => time() + SESSION_LIFETIME,
+        'path' => '/',
+        'secure' => $isSecure,
+        'httponly' => true,
+        'samesite' => $sameSite
+    ];
+    $setResult = setcookie('auth_token', $token, $cookieArgs);
+    error_log('[OAUTH CALLBACK] setcookie called with: ' . json_encode($cookieArgs));
+    error_log('[OAUTH CALLBACK] setcookie result: ' . ($setResult ? 'true' : 'false'));
+    error_log('[OAUTH CALLBACK] headers_list: ' . json_encode(headers_list()));
+    error_log('[OAUTH CALLBACK] protocol: ' . (isset($_SERVER['HTTPS']) ? $_SERVER['HTTPS'] : 'unset'));
+    error_log('[OAUTH CALLBACK] host: ' . ($_SERVER['HTTP_HOST'] ?? 'unset'));
+    error_log('[OAUTH CALLBACK] redirecting to: ' . (isset($redirectUrl) ? $redirectUrl : 'unset'));
+    
+    // Determine redirect URL based on user role and protocol
+    $protocol = $isSecure ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $baseUrl = "$protocol://$host";
     
     if ($user['role'] === 'admin' || $user['role'] === 'root') {
         $redirectUrl = $baseUrl . '/course_factory/admin_dashboard.html';
@@ -233,14 +264,12 @@ function redirectToFrontendWithToken($token, $user) {
         $redirectUrl = $baseUrl . '/student_portal/index.html';
     }
     
-    // Pass token in URL hash (not sent to server, only available to JavaScript)
-    // Frontend JavaScript should extract this and store in sessionStorage
-    $redirectUrl .= '#oauth_success=true&token=' . urlencode($token) . 
-                    '&user_id=' . $user['user_id'] . 
+    // Pass success flag and basic user info in URL (cookie has token)
+    $redirectUrl .= '?oauth_success=true&user_id=' . $user['user_id'] . 
                     '&username=' . urlencode($user['username']) .
                     '&role=' . $user['role'];
     
-    error_log("[OAuth Callback] Redirecting to: " . $redirectUrl);
+    error_log("[OAuth Callback] Set secure cookie (secure=$isSecure), redirecting to: $redirectUrl");
     header("Location: $redirectUrl");
     exit;
 }
@@ -249,12 +278,22 @@ function redirectToFrontendWithToken($token, $user) {
  * Redirect to frontend with error message
  */
 function redirectToFrontendWithError($errorMessage) {
-    $baseUrl = 'http://localhost';
-    $redirectUrl = $baseUrl . '/login.html';
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $baseUrl = "$protocol://$host";
+    
+    // Determine which login page to redirect to based on referrer
+    $referrer = $_SERVER['HTTP_REFERER'] ?? '';
+    if (strpos($referrer, '/course_factory/admin_login.html') !== false) {
+        $redirectUrl = $baseUrl . '/course_factory/admin_login.html';
+    } else {
+        $redirectUrl = $baseUrl . '/student_portal/login.html';
+    }
     
     // Pass error in query string (visible but not sensitive)
     $redirectUrl .= '?oauth_error=' . urlencode($errorMessage);
     
+    error_log("[OAuth Error] Redirecting to: $redirectUrl (error: $errorMessage)");
     header("Location: $redirectUrl");
     exit;
 }

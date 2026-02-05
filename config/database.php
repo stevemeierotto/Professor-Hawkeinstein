@@ -55,7 +55,16 @@ define('PASSWORD_PEPPER', getenv('PASSWORD_PEPPER') ?: 'additional_security_pepp
 // Google OAuth 2.0 Configuration
 define('GOOGLE_CLIENT_ID', getenv('GOOGLE_CLIENT_ID') ?: '');
 define('GOOGLE_CLIENT_SECRET', getenv('GOOGLE_CLIENT_SECRET') ?: '');
-define('GOOGLE_REDIRECT_URI', getenv('GOOGLE_REDIRECT_URI') ?: 'http://localhost/api/auth/google/callback.php');
+
+// Auto-detect protocol for OAuth redirect URI (supports HTTP dev and HTTPS mkcert)
+if (!getenv('GOOGLE_REDIRECT_URI')) {
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $defaultRedirectUri = "$protocol://$host/api/auth/google/callback.php";
+    define('GOOGLE_REDIRECT_URI', $defaultRedirectUri);
+} else {
+    define('GOOGLE_REDIRECT_URI', getenv('GOOGLE_REDIRECT_URI'));
+}
 
 // Biometric settings removed for liability reasons
 define('VOICE_RECOGNITION_THRESHOLD', 0.80);
@@ -182,16 +191,29 @@ function generateToken($userId, $username, $role) {
 
 /**
  * Require authentication
+ * Checks cookies first (more secure), then falls back to Authorization header (backward compatibility)
  */
 function requireAuth() {
-    $headers = getallheaders();
-    $authHeader = $headers['Authorization'] ?? '';
+    $token = null;
     
-    if (empty($authHeader) || !preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
+    // Check secure cookie first (preferred for HTTPS)
+    if (isset($_COOKIE['auth_token'])) {
+        $token = $_COOKIE['auth_token'];
+    }
+    // Fallback to Authorization header (backward compatibility)
+    else {
+        $headers = getallheaders();
+        $authHeader = $headers['Authorization'] ?? '';
+        
+        if (!empty($authHeader) && preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
+            $token = $matches[1];
+        }
+    }
+    
+    if (empty($token)) {
         sendJSON(['success' => false, 'message' => 'No authorization token provided'], 401);
     }
     
-    $token = $matches[1];
     $userData = verifyToken($token);
     
     if (!$userData) {
@@ -216,13 +238,25 @@ function verifyPassword($password, $hash) {
 }
 
 /**
- * Get admin ID from JWT token in Authorization header
+ * Get admin ID from JWT token in cookie or Authorization header
  */
 function getAdminId() {
-    $headers = getallheaders();
-    $authHeader = $headers['Authorization'] ?? '';
-    if (!empty($authHeader) && preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-        $token = $matches[1];
+    $token = null;
+    
+    // Check cookie first
+    if (isset($_COOKIE['auth_token'])) {
+        $token = $_COOKIE['auth_token'];
+    }
+    // Fallback to Authorization header
+    else {
+        $headers = getallheaders();
+        $authHeader = $headers['Authorization'] ?? '';
+        if (!empty($authHeader) && preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
+            $token = $matches[1];
+        }
+    }
+    
+    if ($token) {
         $userData = verifyToken($token);
         if ($userData && isset($userData['userId'])) {
             return $userData['userId'];
@@ -566,7 +600,7 @@ function linkGoogleAccount($userId, $googleId, $googleEmail) {
  * @param string $fullName Full name from Google
  * @return array|null User data if created successfully
  */
-function createUserFromGoogle($googleId, $email, $fullName) {
+function createUserFromGoogle($googleId, $email, $fullName, $role = 'student') {
     try {
         $db = getDB();
         $db->beginTransaction();
@@ -591,13 +625,13 @@ function createUserFromGoogle($googleId, $email, $fullName) {
         $stmt = $db->prepare("
             INSERT INTO users 
             (username, email, password_hash, full_name, role, email_verified)
-            VALUES (:username, :email, NULL, :full_name, 'student', TRUE)
+            VALUES (:username, :email, NULL, :full_name, :role, TRUE)
         ");
-        
         $stmt->execute([
             'username' => $username,
             'email' => $email,
-            'full_name' => $fullName
+            'full_name' => $fullName,
+            'role' => $role
         ]);
         
         $userId = $db->lastInsertId();

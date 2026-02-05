@@ -96,23 +96,31 @@ async function loadOverview() {
             throw new Error(response.message || 'Failed to load overview');
         }
         
-        // Update platform health metrics
-        document.getElementById('totalStudents').textContent = response.platformHealth.totalStudents.toLocaleString();
-        document.getElementById('activeCourses').textContent = response.platformHealth.activeCourses;
-        document.getElementById('weeklyActiveUsers').textContent = response.platformHealth.weeklyActiveUsers.toLocaleString();
-        document.getElementById('avgMastery').textContent = response.engagement.avgMastery.toFixed(1) + '%';
+        // Update platform health metrics with safe defaults
+        document.getElementById('totalStudents').textContent = 
+            (response.platformHealth?.totalStudents || 0).toLocaleString();
+        document.getElementById('activeCourses').textContent = 
+            response.platformHealth?.activeCourses || 0;
+        document.getElementById('weeklyActiveUsers').textContent = 
+            (response.platformHealth?.weeklyActiveUsers || 0).toLocaleString();
+        document.getElementById('avgMastery').textContent = 
+            (response.engagement?.avgMastery || 0).toFixed(1) + '%';
         
-        // Update engagement metrics
-        document.getElementById('lessonsCompleted').textContent = response.engagement.lessonsCompleted.toLocaleString();
-        document.getElementById('quizzesPassed').textContent = response.engagement.quizzesPassed.toLocaleString();
-        document.getElementById('studyHours').textContent = response.engagement.totalStudyHours.toLocaleString();
-        document.getElementById('highAchievers').textContent = response.engagement.highAchievers.toLocaleString();
+        // Update engagement metrics with safe defaults
+        document.getElementById('lessonsCompleted').textContent = 
+            (response.engagement?.lessonsCompleted || 0).toLocaleString();
+        document.getElementById('quizzesPassed').textContent = 
+            (response.engagement?.quizzesPassed || 0).toLocaleString();
+        document.getElementById('studyHours').textContent = 
+            (response.engagement?.totalStudyHours || 0).toLocaleString();
+        document.getElementById('highAchievers').textContent = 
+            (response.engagement?.highAchievers || 0).toLocaleString();
         
         // Render mastery distribution chart
-        renderMasteryChart(response.masteryDistribution);
+        renderMasteryChart(response.masteryDistribution || {});
         
         // Populate top courses table
-        populateTopCourses(response.topCourses);
+        populateTopCourses(response.topCourses || []);
         
         // Populate top agents table (if in overview)
         if (response.topAgents) {
@@ -121,7 +129,7 @@ async function loadOverview() {
         
     } catch (error) {
         console.error('Error loading overview:', error);
-        alert('Failed to load analytics overview');
+        alert('Failed to load analytics overview: ' + error.message);
     }
 }
 
@@ -203,15 +211,18 @@ async function loadAgents() {
     try {
         const response = await authenticatedFetch('/api/admin/analytics/overview.php');
         
-        if (!response.success || !response.topAgents) {
-            throw new Error('Failed to load agent data');
+        if (!response.success) {
+            throw new Error(response.message || 'Failed to load agent data');
         }
         
-        populateAgentsTable(response.topAgents);
+        // Populate agents table with safe default
+        populateAgentsTable(response.topAgents || []);
         
     } catch (error) {
         console.error('Error loading agents:', error);
-        alert('Failed to load agent data');
+        // Show error in table instead of alert
+        const tbody = document.querySelector('#agentsTable tbody');
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #e74c3c; padding: 2rem;">Failed to load agent data. Please try again.</td></tr>';
     }
 }
 
@@ -416,6 +427,11 @@ function populateTopCourses(courses) {
     const tbody = document.querySelector('#topCoursesTable tbody');
     tbody.innerHTML = '';
     
+    if (!courses || courses.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999; padding: 2rem;">No course data available</td></tr>';
+        return;
+    }
+    
     courses.forEach(course => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -435,13 +451,21 @@ function populateAgentsTable(agents) {
     const tbody = document.querySelector('#agentsTable tbody');
     tbody.innerHTML = '';
     
+    if (!agents || agents.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999; padding: 2rem;">No agent data available</td></tr>';
+        return;
+    }
+    
     agents.forEach(agent => {
         const row = document.createElement('tr');
+        const mastery = agent.avg_student_mastery != null ? parseFloat(agent.avg_student_mastery) : null;
+        const masteryDisplay = mastery != null && !isNaN(mastery) ? mastery.toFixed(1) + '%' : 'N/A';
+        
         row.innerHTML = `
             <td><strong>${agent.agent_name}</strong></td>
             <td>${agent.total_interactions?.toLocaleString() || 0}</td>
             <td>${agent.unique_users_served?.toLocaleString() || 0}</td>
-            <td>${agent.avg_student_mastery ? agent.avg_student_mastery.toFixed(1) + '%' : 'N/A'}</td>
+            <td>${masteryDisplay}</td>
         `;
         tbody.appendChild(row);
     });

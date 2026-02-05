@@ -12,11 +12,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendJSON(['success' => false, 'message' => 'Method not allowed'], 405);
 }
 
-requireAuth();
+
+// Require authentication and always use authenticated userId (never trust client userId)
+$userData = requireAuth();
 
 $input = getJSONInput();
 $agentId = $input['agentId'] ?? null;
-$userId = $input['userId'] ?? null;
+
+// Always use authenticated userId
+$userId = $userData['userId'];
 
 if (empty($agentId)) {
     sendJSON(['success' => false, 'message' => 'Agent ID required'], 400);

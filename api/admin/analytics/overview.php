@@ -63,6 +63,7 @@ try {
     // ENGAGEMENT METRICS (Date Range)
     // ========================================================================
     
+    // Try analytics_daily_rollup first, fallback to raw data if empty
     $engagementStmt = $db->prepare("
         SELECT 
             SUM(total_active_users) as total_active,
@@ -79,10 +80,48 @@ try {
     $engagementStmt->execute(['start_date' => $startDate, 'end_date' => $endDate]);
     $engagementData = $engagementStmt->fetch();
     
+    // If no rollup data exists, compute directly from progress_tracking
+    if (empty($engagementData['total_active']) || $engagementData['total_active'] === null) {
+        $rawEngagementStmt = $db->prepare("
+            SELECT 
+                COUNT(DISTINCT user_id) as total_active,
+                COUNT(CASE WHEN metric_type = 'completion' THEN 1 END) as lessons_completed,
+                COUNT(CASE WHEN metric_type = 'mastery' AND metric_value >= 70 THEN 1 END) as quizzes_passed,
+                SUM(CASE WHEN metric_type = 'time_spent' THEN metric_value ELSE 0 END) / 60 as total_study_hours,
+                AVG(CASE WHEN metric_type = 'mastery' THEN metric_value END) as avg_mastery,
+                COUNT(CASE WHEN metric_type = 'mastery' AND metric_value >= 90 THEN 1 END) as high_achievers
+            FROM progress_tracking
+            WHERE DATE(recorded_at) BETWEEN :start_date AND :end_date
+        ");
+        $rawEngagementStmt->execute(['start_date' => $startDate, 'end_date' => $endDate]);
+        $rawData = $rawEngagementStmt->fetch();
+        
+        $engagementData = [
+            'total_active' => $rawData['total_active'] ?? 0,
+            'new_registrations' => 0, // Will calculate separately
+            'lessons_completed' => $rawData['lessons_completed'] ?? 0,
+            'quizzes_passed' => $rawData['quizzes_passed'] ?? 0,
+            'total_study_hours' => $rawData['total_study_hours'] ?? 0,
+            'avg_mastery' => $rawData['avg_mastery'] ?? 0,
+            'high_achievers' => $rawData['high_achievers'] ?? 0,
+            'agent_interactions' => 0 // Will calculate from agent_memories
+        ];
+        
+        // Get agent interactions count
+        $agentCountStmt = $db->prepare("
+            SELECT COUNT(*) as count
+            FROM agent_memories
+            WHERE DATE(created_at) BETWEEN :start_date AND :end_date
+        ");
+        $agentCountStmt->execute(['start_date' => $startDate, 'end_date' => $endDate]);
+        $engagementData['agent_interactions'] = $agentCountStmt->fetch()['count'] ?? 0;
+    }
+    
     // ========================================================================
     // MASTERY DISTRIBUTION
     // ========================================================================
     
+    // Try analytics rollup first
     $masteryDistStmt = $db->prepare("
         SELECT 
             SUM(CASE WHEN metric_value < 50 THEN 1 ELSE 0 END) as below_50,
@@ -95,6 +134,17 @@ try {
     ");
     $masteryDistStmt->execute(['start_date' => $startDate, 'end_date' => $endDate]);
     $masteryDist = $masteryDistStmt->fetch();
+    
+    // Default to zeros if no data
+    if (empty($masteryDist['below_50']) && empty($masteryDist['range_50_69']) && 
+        empty($masteryDist['range_70_89']) && empty($masteryDist['range_90_plus'])) {
+        $masteryDist = [
+            'below_50' => 0,
+            'range_50_69' => 0,
+            'range_70_89' => 0,
+            'range_90_plus' => 0
+        ];
+    }
     
     // ========================================================================
     // RECENT ACTIVITY (Last 24 hours)
@@ -113,6 +163,7 @@ try {
     // TOP PERFORMING COURSES
     // ========================================================================
     
+    // Try analytics_course_metrics first, fallback to direct calculation
     $topCoursesStmt = $db->prepare("
         SELECT 
             c.course_id,
@@ -131,10 +182,34 @@ try {
     $topCoursesStmt->execute();
     $topCourses = $topCoursesStmt->fetchAll();
     
+    // If no metrics exist, calculate directly
+    if (empty($topCourses)) {
+        $directCoursesStmt = $db->prepare("
+            SELECT 
+                c.course_id,
+                c.course_name,
+                AVG(CASE WHEN pt.metric_type = 'mastery' THEN pt.metric_value END) as avg_mastery_score,
+                COUNT(DISTINCT ca.user_id) as total_enrolled,
+                (COUNT(DISTINCT CASE WHEN ca.status = 'completed' THEN ca.user_id END) * 100.0 / 
+                 NULLIF(COUNT(DISTINCT ca.user_id), 0)) as completion_rate
+            FROM courses c
+            LEFT JOIN course_assignments ca ON c.course_id = ca.course_id
+            LEFT JOIN progress_tracking pt ON c.course_id = pt.course_id
+            WHERE c.is_active = 1
+            GROUP BY c.course_id, c.course_name
+            HAVING total_enrolled > 0
+            ORDER BY avg_mastery_score DESC
+            LIMIT 5
+        ");
+        $directCoursesStmt->execute();
+        $topCourses = $directCoursesStmt->fetchAll();
+    }
+    
     // ========================================================================
     // AGENT PERFORMANCE
     // ========================================================================
     
+    // Try analytics_agent_metrics first, fallback to direct calculation
     $agentPerfStmt = $db->prepare("
         SELECT 
             a.agent_id,
@@ -152,6 +227,28 @@ try {
     ");
     $agentPerfStmt->execute();
     $topAgents = $agentPerfStmt->fetchAll();
+    
+    // If no metrics exist, calculate directly from agent_memories
+    if (empty($topAgents)) {
+        $directAgentsStmt = $db->prepare("
+            SELECT 
+                a.agent_id,
+                a.agent_name,
+                COUNT(am.memory_id) as total_interactions,
+                COUNT(DISTINCT am.user_id) as unique_users_served,
+                AVG(pt.metric_value) as avg_student_mastery
+            FROM agents a
+            LEFT JOIN agent_memories am ON a.agent_id = am.agent_id
+            LEFT JOIN progress_tracking pt ON am.user_id = pt.user_id AND pt.metric_type = 'mastery'
+            WHERE a.is_active = 1
+            GROUP BY a.agent_id, a.agent_name
+            HAVING total_interactions > 0
+            ORDER BY total_interactions DESC
+            LIMIT 5
+        ");
+        $directAgentsStmt->execute();
+        $topAgents = $directAgentsStmt->fetchAll();
+    }
     
     // ========================================================================
     // BUILD RESPONSE
