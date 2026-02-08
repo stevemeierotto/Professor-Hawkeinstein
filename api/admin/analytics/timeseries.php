@@ -10,6 +10,7 @@ define('APP_ROOT', '/var/www/html/basic_educational');
 require_once APP_ROOT . '/config/database.php';
 require_once APP_ROOT . '/api/admin/auth_check.php';
 require_once APP_ROOT . '/api/helpers/analytics_response_guard.php';
+require_once APP_ROOT . '/api/helpers/analytics_cohort_guard.php';
 
 setCORSHeaders();
 
@@ -70,7 +71,7 @@ try {
             ]];
         }
         
-        sendAnalyticsJSON([
+        sendProtectedAnalyticsJSON([
             'success' => true,
             'period' => 'daily',
             'dateRange' => ['start' => $startDate, 'end' => $endDate],
@@ -106,7 +107,7 @@ try {
         $stmt->execute(['start_date' => $startDate, 'end_date' => $endDate]);
         $data = $stmt->fetchAll();
         
-        sendAnalyticsJSON([
+        sendProtectedAnalyticsJSON([
             'success' => true,
             'period' => 'weekly',
             'dateRange' => ['start' => $startDate, 'end' => $endDate],
@@ -142,7 +143,7 @@ try {
         $stmt->execute(['start_date' => $startDate, 'end_date' => $endDate]);
         $data = $stmt->fetchAll();
         
-        sendAnalyticsJSON([
+        sendProtectedAnalyticsJSON([
             'success' => true,
             'period' => 'monthly',
             'dateRange' => ['start' => $startDate, 'end' => $endDate],

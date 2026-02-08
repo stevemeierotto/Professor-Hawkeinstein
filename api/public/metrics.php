@@ -10,6 +10,7 @@
 define('APP_ROOT', '/var/www/html/basic_educational');
 require_once APP_ROOT . '/config/database.php';
 require_once APP_ROOT . '/api/helpers/analytics_response_guard.php';
+require_once APP_ROOT . '/api/helpers/analytics_cohort_guard.php';
 
 setCORSHeaders();
 
@@ -96,7 +97,7 @@ try {
     ");
     $subjects = $subjectsStmt->fetchAll();
     
-    sendAnalyticsJSON([
+    sendProtectedAnalyticsJSON([
         'success' => true,
         'metrics' => $formattedMetrics,
         'recentActivity' => [

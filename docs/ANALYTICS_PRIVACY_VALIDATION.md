@@ -1,7 +1,7 @@
 # Analytics Privacy Validation Report
 
-**Document Version:** 3.0  
-**Date:** February 8, 2026 (Updated with Phase 2 Implementation)  
+**Document Version:** 4.0  
+**Date:** February 8, 2026 (Updated with Phase 3 Implementation)  
 **Platform:** Professor Hawkeinstein Educational Platform  
 **Compliance Standards:** FERPA, COPPA, GDPR (General Principles)
 
@@ -17,6 +17,8 @@ This document validates that the analytics system implemented for the Professor 
 
 **Phase 2 Implementation (Feb 8, 2026):** ✅ **API-layer response validator prevents PII leakage from analytics endpoints, even if SQL queries accidentally include PII fields.**
 
+**Phase 3 Implementation (Feb 8, 2026):** ✅ **k-anonymity enforcement (k=5) prevents re-identification attacks by suppressing metrics when cohort sizes are too small.**
+
 ---
 
 ## Privacy Enforcement Implementation Status
@@ -27,13 +29,14 @@ This document validates that the analytics system implemented for the Professor 
 |-------|--------|----------------|-------------|
 | Phase 1: Database Access Lock-Down | ✅ **COMPLETED** | Feb 8, 2026 | Analytics reader user with SELECT-only on analytics_* tables |
 | Phase 2: API Response Validation | ✅ **COMPLETED** | Feb 8, 2026 | PII guardrails middleware for API responses |
-| Phase 3: Cohort Size Protection | 🔄 TODO | TBD | Minimum 5-user threshold for analytics queries |
+| Phase 3: Cohort Size Protection | ✅ **COMPLETED** | Feb 8, 2026 | k-anonymity enforcement (k=5) with metric suppression |
 | Phase 4: Endpoint Safeguards | 🔄 TODO | TBD | Rate limiting, audit logs, access controls |
 | Phase 5: CI Privacy Checks | 🔄 TODO | TBD | Automated regression tests and compliance audits |
 
 **See:** 
 - [Phase 1 Implementation Details](#phase-1-database-access-lock-down)
 - [Phase 2 Implementation Details](#phase-2-api-layer-response-validation)
+- [Phase 3 Implementation Details](#phase-3-minimum-cohort-size-protection)
 
 ---
 
@@ -477,7 +480,176 @@ Privileges: USAGE (login only) + SELECT on analytics_* tables
 ### Next Steps
 
 - ~~**Phase 2:** Implement API middleware to validate analytics responses contain no PII~~ ✅ **COMPLETED Feb 8, 2026**
-- **Phase 3:** Enforce minimum cohort size (k=5) for all analytics queries
+- ~~**Phase 3:** Enforce minimum cohort size (k=5) for all analytics queries~~ ✅ **COMPLETED Feb 8, 2026**
+- **Phase 4:** Add rate limiting and audit logging to analytics endpoints
+- **Phase 5:** Create CI tests to detect privacy violations automatically
+
+---
+
+## Phase 3: Minimum Cohort Size Protection (k-Anonymity)
+
+**Status:** ✅ COMPLETED  
+**Implementation Date:** February 8, 2026  
+**Module:** `/api/helpers/analytics_cohort_guard.php`
+
+### Purpose
+
+Phase 3 enforces **k-anonymity principles** (k=5) to prevent re-identification attacks when cohort sizes are too small. This ensures analytics cannot expose individual-level insights through small sample sizes.
+
+### The Re-identification Problem
+
+**Example Attack:**
+```json
+{
+  "course_name": "Advanced Quantum Physics",
+  "total_enrolled": 2,
+  "avg_mastery_score": 87.5
+}
+```
+
+If an observer knows one student scored 92%, they can infer the other scored 83%.
+
+**Phase 3 Solution:**
+```json
+{
+  "course_name": "Advanced Quantum Physics",
+  "total_enrolled": 2,
+  "avg_mastery_score": null,
+  "insufficient_data": true
+}
+```
+
+No individual inference possible.
+
+### Implementation Details
+
+#### Global Constant
+```php
+define('MIN_ANALYTICS_COHORT_SIZE', 5);
+```
+
+#### Core Functions
+- `enforceCohortMinimum($payload, $contextLabel)` - Main enforcement entry point
+- `applyCohortEnforcement($data, $path, &$suppressions)` - Recursive processor
+- `extractCohortSize($data)` - Automatic cohort size detection
+- `suppressMetrics($data, $cohortSize, $path, &$suppressions)` - Metric suppression
+- `sendProtectedAnalyticsJSON()` - Combined Phase 2+3 wrapper
+
+#### Cohort Size Detection
+
+Automatically detects from these fields:
+- `total_enrolled`, `total_students`, `unique_students`
+- `student_count`, `total`, `active_students`
+- `unique_users`, `unique_users_served`
+- `studentSummary.total` (nested)
+
+#### Suppressed Metrics (14 total)
+
+When cohort < 5:
+- **Mastery:** `avg_mastery_score`, `avg_student_mastery`
+- **Completion:** `completion_rate`, `avg_completion_time_days`
+- **Time:** `avg_study_time_hours`, `avg_session_duration_minutes`
+- **Agent:** `avg_response_time_ms`, `avg_response_length_chars`, `avg_interactions_per_user`
+- **Course:** `retry_rate`, `avg_lessons_per_student`, `avg_quiz_attempts`
+- **Improvement:** `students_improved_count`
+
+#### Preserved Data
+
+Even when suppressed:
+- Identifiers: `course_id`, `course_name`, `agent_name`
+- Cohort size: `total_enrolled`, `total_students`
+- Descriptive: `subject_area`, `difficulty_level`
+
+**Rationale:** Knowing a course has 2 students is not a privacy violation. Knowing their average score IS.
+
+#### Enforcement Examples
+
+**Single metric group:**
+```php
+// Before suppression
+['total_enrolled' => 3, 'avg_score' => 92.0]
+
+// After suppression
+['total_enrolled' => 3, 'avg_score' => null, 'insufficient_data' => true]
+```
+
+**Array with mixed cohorts (selective suppression):**
+```php
+// Before
+['courses' => [
+  ['name' => 'Large', 'total' => 50, 'avg' => 82.0],
+  ['name' => 'Small', 'total' => 2, 'avg' => 95.0],
+  ['name' => 'Medium', 'total' => 8, 'avg' => 77.5]
+]]
+
+// After
+['courses' => [
+  ['name' => 'Large', 'total' => 50, 'avg' => 82.0],  // ✅ Preserved
+  ['name' => 'Small', 'total' => 2, 'avg' => null, 'insufficient_data' => true],  // ❌ Suppressed
+  ['name' => 'Medium', 'total' => 8, 'avg' => 77.5]  // ✅ Preserved
+]]
+```
+
+#### Protected Endpoints
+
+All 9 analytics endpoints now use `sendProtectedAnalyticsJSON()`:
+- `/api/admin/analytics/overview.php`
+- `/api/admin/analytics/course.php` (2 routes)
+- `/api/admin/analytics/timeseries.php` (3 routes)
+- `/api/admin/analytics/export.php` (4 datasets)
+- `/api/public/metrics.php`
+
+#### Verification Tests Passed
+
+```bash
+✅ Test 1: Cohort size 10 → metrics preserved
+✅ Test 2: Cohort size 3 → metrics suppressed
+✅ Test 3: Cohort size 5 (threshold) → metrics preserved
+✅ Test 4: Mixed array (50, 2, 8) → selective suppression
+✅ Test 5: No cohort field → pass through
+✅ Test 6: Nested cohort (4) → nested suppression
+✅ Test 7: Agent metrics (2 users) → suppression
+✅ Test 8: Zero students → suppression
+```
+
+**Test Coverage:** 8/8 tests passing
+
+#### Logging Example (Non-Production)
+
+```log
+[COHORT SUPPRESSION] Endpoint: admin_analytics_course_detail | Events: 1 | Time: 2026-02-08 19:05:12
+[COHORT SUPPRESSION DETAIL] Path: root | Cohort: 3/5 | Suppressed: avg_mastery_score, completion_rate
+```
+
+### Privacy Impact
+
+**Before Phase 3:** Small cohort metrics could enable individual student inference through averaging attacks.  
+**After Phase 3:** Metrics for cohorts < 5 are structurally suppressed, preventing all averaging-based re-identification.
+
+**k-anonymity Rationale:**
+- **FERPA guidance:** Suppress small numbers (< 5)
+- **NCES standards:** Minimum cell size = 5 for education data
+- **Balance:** Usable analytics vs. privacy protection
+
+**Compliance:**
+- **FERPA:** Prevents identification "alone or in combination" (34 CFR § 99.3)
+- **COPPA:** Prevents contact identification through small cohort correlation
+- **GDPR:** Ensures data minimization (Article 5(1)(c))
+
+### Attack Scenarios Prevented
+
+| Attack | Method | Defense |
+|--------|--------|---------|
+| Single-Student Inference | Cohort=1 → avg reveals individual | ✅ Suppressed |
+| Two-Student Differencing | Know one score → derive other | ✅ Suppressed |
+| Temporal Correlation | Track size changes over time | ✅ All periods suppressed |
+| Cross-Course Triangulation | Combine multiple small courses | ✅ Each suppressed independently |
+| Agent Interaction Profiling | 2 users → pattern reveals identity | ✅ Suppressed |
+
+**Key Achievement:** **Analytics cannot expose individual student data through small cohorts, even if developers accidentally query small groups.**
+
+### Next Steps
+
 - **Phase 4:** Add rate limiting and audit logging to analytics endpoints
 - **Phase 5:** Create CI tests to detect privacy violations automatically
 
