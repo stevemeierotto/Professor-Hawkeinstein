@@ -10,6 +10,7 @@
 define('APP_ROOT', '/var/www/html/basic_educational');
 require_once APP_ROOT . '/config/database.php';
 require_once APP_ROOT . '/api/admin/auth_check.php';
+require_once APP_ROOT . '/api/helpers/analytics_response_guard.php';
 
 setCORSHeaders();
 
@@ -57,7 +58,7 @@ try {
         if ($format === 'csv') {
             exportCSV($data, 'user_progress_export_' . date('Ymd'));
         } else {
-            sendJSON([
+            sendAnalyticsJSON([
                 'success' => true,
                 'dataset' => 'user_progress',
                 'dateRange' => ['start' => $startDate, 'end' => $endDate],
@@ -68,7 +69,7 @@ try {
                     'age_groups' => ['under_13', '13_17', '18_plus', 'not_provided'],
                     'geographic_precision' => 'State/province level only'
                 ]
-            ]);
+            ], 200, 'admin_analytics_export_user_progress');
         }
         return;
     }
@@ -105,13 +106,13 @@ try {
         if ($format === 'csv') {
             exportCSV($data, 'course_metrics_export_' . date('Ymd'));
         } else {
-            sendJSON([
+            sendAnalyticsJSON([
                 'success' => true,
                 'dataset' => 'course_metrics',
                 'dateRange' => ['start' => $startDate, 'end' => $endDate],
                 'recordCount' => count($data),
                 'data' => $data
-            ]);
+            ], 200, 'admin_analytics_export_course_metrics');
         }
         return;
     }
@@ -146,13 +147,13 @@ try {
         if ($format === 'csv') {
             exportCSV($data, 'platform_aggregate_export_' . date('Ymd'));
         } else {
-            sendJSON([
+            sendAnalyticsJSON([
                 'success' => true,
                 'dataset' => 'platform_aggregate',
                 'dateRange' => ['start' => $startDate, 'end' => $endDate],
                 'recordCount' => count($data),
                 'data' => $data
-            ]);
+            ], 200, 'admin_analytics_export_platform_aggregate');
         }
         return;
     }
@@ -186,13 +187,13 @@ try {
         if ($format === 'csv') {
             exportCSV($data, 'agent_metrics_export_' . date('Ymd'));
         } else {
-            sendJSON([
+            sendAnalyticsJSON([
                 'success' => true,
                 'dataset' => 'agent_metrics',
                 'dateRange' => ['start' => $startDate, 'end' => $endDate],
                 'recordCount' => count($data),
                 'data' => $data
-            ]);
+            ], 200, 'admin_analytics_export_agent_metrics');
         }
         return;
     }

@@ -9,6 +9,7 @@
 
 define('APP_ROOT', '/var/www/html/basic_educational');
 require_once APP_ROOT . '/config/database.php';
+require_once APP_ROOT . '/api/helpers/analytics_response_guard.php';
 
 setCORSHeaders();
 
@@ -95,7 +96,7 @@ try {
     ");
     $subjects = $subjectsStmt->fetchAll();
     
-    sendJSON([
+    sendAnalyticsJSON([
         'success' => true,
         'metrics' => $formattedMetrics,
         'recentActivity' => [
@@ -106,7 +107,7 @@ try {
         'popularSubjects' => $subjects,
         'lastUpdated' => date('Y-m-d H:i:s'),
         'privacyNotice' => 'All data is aggregated. No individual student information is displayed.'
-    ]);
+    ], 200, 'public_metrics');
     
 } catch (Exception $e) {
     error_log("Public metrics error: " . $e->getMessage());

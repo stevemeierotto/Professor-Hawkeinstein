@@ -9,6 +9,7 @@
 define('APP_ROOT', '/var/www/html/basic_educational');
 require_once APP_ROOT . '/config/database.php';
 require_once APP_ROOT . '/api/admin/auth_check.php';
+require_once APP_ROOT . '/api/helpers/analytics_response_guard.php';
 
 setCORSHeaders();
 
@@ -84,10 +85,10 @@ try {
             $courses = $directCoursesStmt->fetchAll();
         }
         
-        sendJSON([
+        sendAnalyticsJSON([
             'success' => true,
             'courses' => $courses
-        ]);
+        ], 200, 'admin_analytics_courses_list');
         return;
     }
     
@@ -191,7 +192,7 @@ try {
     $agentUsageStmt->execute(['course_id' => $courseId]);
     $agentUsage = $agentUsageStmt->fetchAll();
     
-    sendJSON([
+    sendAnalyticsJSON([
         'success' => true,
         'course' => $course,
         'currentMetrics' => $metrics,
@@ -208,7 +209,7 @@ try {
         ],
         'lessonBreakdown' => $lessons,
         'agentUsage' => $agentUsage
-    ]);
+    ], 200, 'admin_analytics_course_detail');
     
 } catch (Exception $e) {
     error_log("Course analytics error: " . $e->getMessage());

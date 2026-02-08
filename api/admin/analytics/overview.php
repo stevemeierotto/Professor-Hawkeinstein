@@ -9,6 +9,7 @@
 define('APP_ROOT', '/var/www/html/basic_educational');
 require_once APP_ROOT . '/config/database.php';
 require_once APP_ROOT . '/api/admin/auth_check.php';
+require_once APP_ROOT . '/api/helpers/analytics_response_guard.php';
 
 setCORSHeaders();
 
@@ -292,7 +293,7 @@ try {
         ],
         'topCourses' => $topCourses,
         'topAgents' => $topAgents
-    ]);
+    ], 200, 'admin_analytics_overview');
     
 } catch (Exception $e) {
     error_log("Analytics overview error: " . $e->getMessage());

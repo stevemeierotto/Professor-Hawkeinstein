@@ -9,6 +9,7 @@
 define('APP_ROOT', '/var/www/html/basic_educational');
 require_once APP_ROOT . '/config/database.php';
 require_once APP_ROOT . '/api/admin/auth_check.php';
+require_once APP_ROOT . '/api/helpers/analytics_response_guard.php';
 
 setCORSHeaders();
 
@@ -69,12 +70,12 @@ try {
             ]];
         }
         
-        sendJSON([
+        sendAnalyticsJSON([
             'success' => true,
             'period' => 'daily',
             'dateRange' => ['start' => $startDate, 'end' => $endDate],
             'data' => $data
-        ]);
+        ], 200, 'admin_analytics_timeseries_daily');
         return;
     }
     
@@ -105,12 +106,12 @@ try {
         $stmt->execute(['start_date' => $startDate, 'end_date' => $endDate]);
         $data = $stmt->fetchAll();
         
-        sendJSON([
+        sendAnalyticsJSON([
             'success' => true,
             'period' => 'weekly',
             'dateRange' => ['start' => $startDate, 'end' => $endDate],
             'data' => $data
-        ]);
+        ], 200, 'admin_analytics_timeseries_weekly');
         return;
     }
     
@@ -141,12 +142,12 @@ try {
         $stmt->execute(['start_date' => $startDate, 'end_date' => $endDate]);
         $data = $stmt->fetchAll();
         
-        sendJSON([
+        sendAnalyticsJSON([
             'success' => true,
             'period' => 'monthly',
             'dateRange' => ['start' => $startDate, 'end' => $endDate],
             'data' => $data
-        ]);
+        ], 200, 'admin_analytics_timeseries_monthly');
         return;
     }
     
