@@ -36,12 +36,24 @@ try {
         exit;
     }
     
+    // ============================================================================
+    // STEP 3: Accept invitation token from frontend
+    // ============================================================================
+    // If OAuth is being initiated from an invitation link, the frontend passes
+    // the invite_token. We'll store it with the OAuth state for retrieval in callback.
+    // ============================================================================
+    $input = json_decode(file_get_contents('php://input'), true);
+    $inviteToken = $input['invite_token'] ?? null;
+    
     // Detect protocol from current request (supports both HTTP and HTTPS)
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
     $redirectUri = "$protocol://$host/api/auth/google/callback.php";
     
     error_log("[OAuth Login] Using redirect URI: $redirectUri");
+    if ($inviteToken) {
+        error_log("[OAuth Login] Invitation token provided: " . substr($inviteToken, 0, 16) . "...");
+    }
     
     // Initialize Google OAuth provider
     $provider = new Google([
@@ -54,7 +66,8 @@ try {
     $state = generateOAuthState();
     
     // Store state in database with 10-minute expiration
-    if (!storeOAuthState($state)) {
+    // If invite token present, store it alongside the state
+    if (!storeOAuthState($state, 10, $inviteToken)) {
         throw new Exception('Failed to store OAuth state token');
     }
     

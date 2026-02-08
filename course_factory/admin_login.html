@@ -219,7 +219,22 @@
                         submitBtn.disabled = false;
                     }
                 } else {
-                    alert(data.message || 'Login failed. Please check your credentials.');
+                    // STEP 4: Handle auth provider enforcement error
+                    if (data.error_code === 'AUTH_PROVIDER_REQUIRED') {
+                        // User must use Google SSO instead of password
+                        alert(
+                            '⚠️ ' + data.message + '\n\n' +
+                            data.instructions + '\n\n' +
+                            'Admin accounts require Google Sign-In for enhanced security.'
+                        );
+                        console.log('Auth provider required:', data.required_provider);
+                        
+                        // Optionally auto-scroll to Google button
+                        document.getElementById('google-signin-btn').scrollIntoView({ behavior: 'smooth' });
+                    } else {
+                        // Generic login error
+                        alert(data.message || 'Login failed. Please check your credentials.');
+                    }
                     submitBtn.innerHTML = originalText;
                     submitBtn.disabled = false;
                 }

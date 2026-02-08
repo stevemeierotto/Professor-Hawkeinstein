@@ -419,21 +419,23 @@ function generateOAuthState() {
  * Store OAuth state token in database with expiration
  * @param string $state State token
  * @param int $expiryMinutes Minutes until expiration (default 10)
+ * @param string|null $inviteToken Optional invitation token to link with this OAuth flow
  * @return bool Success
  */
-function storeOAuthState($state, $expiryMinutes = 10) {
+function storeOAuthState($state, $expiryMinutes = 10, $inviteToken = null) {
     try {
         $db = getDB();
         $expiresAt = date('Y-m-d H:i:s', time() + ($expiryMinutes * 60));
         
         $stmt = $db->prepare("
-            INSERT INTO oauth_states (state_token, expires_at) 
-            VALUES (:state, :expires)
+            INSERT INTO oauth_states (state_token, expires_at, invite_token) 
+            VALUES (:state, :expires, :invite_token)
         ");
         
         return $stmt->execute([
             'state' => $state,
-            'expires' => $expiresAt
+            'expires' => $expiresAt,
+            'invite_token' => $inviteToken
         ]);
     } catch (Exception $e) {
         error_log("Error storing OAuth state: " . $e->getMessage());
@@ -443,16 +445,17 @@ function storeOAuthState($state, $expiryMinutes = 10) {
 
 /**
  * Validate and consume OAuth state token (one-time use)
+ * Returns the invitation token if one was stored with this state
  * @param string $state State token to validate
- * @return bool Valid and not expired
+ * @return string|null Invitation token if present, empty string if not, null if invalid state
  */
 function validateOAuthState($state) {
     try {
         $db = getDB();
         
-        // Check if state exists and not expired
+        // Check if state exists and not expired, retrieve invite_token if present
         $stmt = $db->prepare("
-            SELECT state_token FROM oauth_states 
+            SELECT state_token, invite_token FROM oauth_states 
             WHERE state_token = :state 
             AND expires_at > NOW()
         ");
@@ -461,8 +464,10 @@ function validateOAuthState($state) {
         
         if (!$result) {
             error_log("OAuth state validation failed: state not found or expired");
-            return false;
+            return null;
         }
+        
+        $inviteToken = $result['invite_token'] ?? null;
         
         // Delete state token (one-time use)
         $deleteStmt = $db->prepare("DELETE FROM oauth_states WHERE state_token = :state");
@@ -472,10 +477,11 @@ function validateOAuthState($state) {
         $cleanupStmt = $db->prepare("DELETE FROM oauth_states WHERE expires_at <= NOW()");
         $cleanupStmt->execute();
         
-        return true;
+        // Return the invite token (may be null)
+        return $inviteToken;
     } catch (Exception $e) {
         error_log("Error validating OAuth state: " . $e->getMessage());
-        return false;
+        return null;
     }
 }
 
@@ -665,5 +671,88 @@ function createUserFromGoogle($googleId, $email, $fullName, $role = 'student') {
         }
         error_log("Error creating user from Google: " . $e->getMessage());
         return null;
+    }
+}
+
+/**
+ * Find pending admin invitation by token
+ * @param string $token Invitation token
+ * @return array|null Invitation data if valid and not expired
+ */
+function findPendingInvitation($token) {
+    try {
+        $db = getDB();
+        
+        $stmt = $db->prepare("
+            SELECT * FROM admin_invitations 
+            WHERE invite_token = :token 
+            AND used_at IS NULL 
+            AND expires_at > NOW()
+        ");
+        
+        $stmt->execute(['token' => $token]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        error_log("Error finding invitation: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Mark invitation as used
+ * @param string $token Invitation token
+ * @param int $userId User ID who accepted the invite
+ * @return bool Success
+ */
+function markInvitationUsed($token, $userId) {
+    try {
+        $db = getDB();
+        
+        $stmt = $db->prepare("
+            UPDATE admin_invitations 
+            SET used_at = NOW(), used_by_user_id = :user_id
+            WHERE invite_token = :token
+        ");
+        
+        return $stmt->execute([
+            'token' => $token,
+            'user_id' => $userId
+        ]);
+    } catch (Exception $e) {
+        error_log("Error marking invitation as used: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * List all admin invitations (for management UI)
+ * @param bool $pendingOnly Show only unused invitations
+ * @return array Array of invitation records
+ */
+function listAdminInvitations($pendingOnly = false) {
+    try {
+        $db = getDB();
+        
+        $sql = "
+            SELECT 
+                ai.*,
+                invited_by_user.username as invited_by_username,
+                used_by_user.username as used_by_username
+            FROM admin_invitations ai
+            LEFT JOIN users invited_by_user ON ai.invited_by = invited_by_user.user_id
+            LEFT JOIN users used_by_user ON ai.used_by_user_id = used_by_user.user_id
+        ";
+        
+        if ($pendingOnly) {
+            $sql .= " WHERE ai.used_at IS NULL AND ai.expires_at > NOW()";
+        }
+        
+        $sql .= " ORDER BY ai.created_at DESC";
+        
+        $stmt = $db->query($sql);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        error_log("Error listing invitations: " . $e->getMessage());
+        return [];
     }
 }

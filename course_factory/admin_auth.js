@@ -39,3 +39,36 @@ function adminLogout() {
     clearAdminSession();
     window.location.href = 'admin_login.html';
 }
+
+/**
+ * Get authentication headers for API requests
+ * 
+ * Returns headers object with JWT Authorization token
+ * Use this for ALL admin API fetch requests
+ * 
+ * Example:
+ *   fetch('api/admin/statistics.php', {
+ *       headers: getAuthHeaders()
+ *   })
+ * 
+ * @returns {Object} Headers object with Authorization token
+ */
+function getAuthHeaders() {
+    const token = getAdminSession('token');
+    
+    if (!token) {
+        console.error('[admin_auth] No token found for API request');
+        return {
+            'Content-Type': 'application/json'
+        };
+    }
+    
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+    };
+}
+
+// Make functions globally available
+window.adminLogout = adminLogout;
+window.getAuthHeaders = getAuthHeaders;

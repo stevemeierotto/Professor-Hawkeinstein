@@ -66,13 +66,43 @@ try {
     }
     
     // Validate state token (CSRF protection)
-    if (!validateOAuthState($state)) {
+    // Returns the invitation token if one was stored with this OAuth flow
+    $inviteToken = validateOAuthState($state);
+    if ($inviteToken === null) {
+        // State validation failed (invalid or expired)
         error_log("[OAuth Callback] State validation failed: $state");
         logAuthEvent(null, 'login_failed', 'google', ['error' => 'invalid_state']);
         redirectToFrontendWithError('Invalid or expired OAuth state. Please try again.');
     }
     
-    error_log("[OAuth Callback] State validated successfully, exchanging code for token");
+    error_log("[OAuth Callback] State validated successfully" . ($inviteToken ? ", invitation token present" : ""));
+    
+    // ============================================================================
+    // STEP 3: Check for admin invitation token
+    // ============================================================================
+    // If OAuth flow was initiated from an invitation link, the token is retrieved
+    // from the OAuth state. The invitation token determines:
+    // - User role (admin/staff/root)
+    // - Enforcement of Google SSO (auth_provider_required = 'google')
+    // - Email validation (must match invitation)
+    //
+    // SAFETY: Invitation is OPTIONAL
+    // - If no invitation: Normal OAuth flow continues (backward compatible)
+    // - If invitation exists: Enhanced with role assignment and enforcement
+    // ============================================================================
+    $invitation = null;
+    
+    if ($inviteToken) {
+        error_log("[OAuth Callback] Checking for invitation token: " . substr($inviteToken, 0, 16) . "...");
+        $invitation = findPendingInvitation($inviteToken);
+        
+        if (!$invitation) {
+            error_log("[OAuth Callback] Invalid or expired invitation token");
+            redirectToFrontendWithError('Invalid or expired invitation. Please request a new invitation.');
+        }
+        
+        error_log("[OAuth Callback] Valid invitation found: email={$invitation['email']}, role={$invitation['role']}");
+    }
     
     // Initialize Google OAuth provider (must use same redirect URI as login.php)
     $provider = new Google([
@@ -113,68 +143,213 @@ try {
         
         error_log("[OAuth Callback] User details: googleId=" . substr($googleId, 0, 16) . "..., email=$email");
         
+        // ============================================================================
+        // STEP 3: Validate email against invitation (if invitation present)
+        // ============================================================================
+        if ($invitation) {
+            // Email from Google MUST match invitation email
+            if (strtolower($email) !== strtolower($invitation['email'])) {
+                error_log("[OAuth Callback] Email mismatch: invited={$invitation['email']}, google=$email");
+                redirectToFrontendWithError('Your Google account email does not match the invitation. Please use the invited email address.');
+            }
+            error_log("[OAuth Callback] Email matches invitation: $email");
+        }
+        
         $db = getDB();
         
         // Check if Google account already linked
         $user = findUserByGoogleId($googleId);
-        $isAdminLogin = false;
-        // Detect if OAuth flow was initiated from admin login page (by referrer)
-        $referrer = $_SERVER['HTTP_REFERER'] ?? '';
-        if (strpos($referrer, '/course_factory/admin_login.html') !== false) {
-            $isAdminLogin = true;
-        }
+        
+        // ============================================================================
+        // STEP 3: Detect invitation vs. normal OAuth flow
+        // ============================================================================
+        // Invitation token is the ONLY source of truth for admin role assignment.
+        // Referrer-based detection removed (security policy: invitation-only admins).
+        // 
+        // SECURITY POLICY CHANGE (February 2026):
+        // - Admin accounts can ONLY be created via invitation flow
+        // - No alternate paths for admin role assignment
+        // - HTTP_REFERER is unreliable and bypassable
+        // - Existing admins can link Google accounts normally (role unchanged)
+        // ============================================================================
+        $isInvitedAdmin = ($invitation !== null);
 
         if ($user) {
+            // ========================================================================
             // Existing user with Google account linked
+            // ========================================================================
             error_log("[OAuth Callback] Existing user found: user_id={$user['user_id']}, username={$user['username']}");
-            // Update last_used timestamp for this provider
-            $updateStmt = $db->prepare("
-                UPDATE auth_providers 
-                SET last_used = NOW() 
-                WHERE user_id = :user_id AND provider_type = 'google'
-            ");
-            $updateStmt->execute(['user_id' => $user['user_id']]);
-            // Update last login
-            $loginStmt = $db->prepare("UPDATE users SET last_login = NOW() WHERE user_id = :user_id");
-            $loginStmt->execute(['user_id' => $user['user_id']]);
-            logAuthEvent($user['user_id'], 'oauth_login', 'google');
+            
+            // If invited, upgrade role and enforce Google SSO
+            if ($isInvitedAdmin) {
+                $db->beginTransaction();
+                try {
+                    // Update role from invitation
+                    $roleStmt = $db->prepare("
+                        UPDATE users 
+                        SET role = :role, 
+                            auth_provider_required = 'google',
+                            last_login = NOW()
+                        WHERE user_id = :user_id
+                    ");
+                    $roleStmt->execute([
+                        'role' => $invitation['role'],
+                        'user_id' => $user['user_id']
+                    ]);
+                    
+                    // Mark invitation as used
+                    markInvitationUsed($inviteToken, $user['user_id']);
+                    
+                    $db->commit();
+                    
+                    // Update user data with new role
+                    $user['role'] = $invitation['role'];
+                    $user['auth_provider_required'] = 'google';
+                    
+                    error_log("[OAuth Callback] Existing user upgraded via invitation: role={$invitation['role']}, google_required=true");
+                    logAuthEvent($user['user_id'], 'oauth_login', 'google', ['invitation_used' => true, 'role' => $invitation['role']]);
+                } catch (Exception $e) {
+                    $db->rollBack();
+                    error_log("[OAuth Callback] Failed to process invitation: " . $e->getMessage());
+                    redirectToFrontendWithError('Failed to process invitation');
+                }
+            } else {
+                // Normal login (no invitation)
+                // Update last_used timestamp for this provider
+                $updateStmt = $db->prepare("
+                    UPDATE auth_providers 
+                    SET last_used = NOW() 
+                    WHERE user_id = :user_id AND provider_type = 'google'
+                ");
+                $updateStmt->execute(['user_id' => $user['user_id']]);
+                
+                // Update last login
+                $loginStmt = $db->prepare("UPDATE users SET last_login = NOW() WHERE user_id = :user_id");
+                $loginStmt->execute(['user_id' => $user['user_id']]);
+                
+                logAuthEvent($user['user_id'], 'oauth_login', 'google');
+            }
         } else {
-            // Check if email exists (link Google to existing account)
+            // ========================================================================
+            // No existing Google link - check if email exists (link to existing account)
+            // ========================================================================
             $emailStmt = $db->prepare("
                 SELECT * FROM users 
                 WHERE email = :email AND is_active = 1
             ");
             $emailStmt->execute(['email' => $email]);
             $existingUser = $emailStmt->fetch(PDO::FETCH_ASSOC);
+            
             if ($existingUser) {
+                // ====================================================================
                 // Link Google account to existing user
+                // ====================================================================
                 error_log("[OAuth Callback] Linking Google to existing user: user_id={$existingUser['user_id']}");
-                if (!linkGoogleAccount($existingUser['user_id'], $googleId, $email)) {
+                
+                $db->beginTransaction();
+                try {
+                    // Link Google account
+                    if (!linkGoogleAccount($existingUser['user_id'], $googleId, $email)) {
+                        throw new Exception('Failed to link Google account');
+                    }
+                    
+                    // If invited, update role and enforce Google SSO
+                    if ($isInvitedAdmin) {
+                        $roleStmt = $db->prepare("
+                            UPDATE users 
+                            SET role = :role, 
+                                auth_provider_required = 'google',
+                                email_verified = TRUE,
+                                last_login = NOW()
+                            WHERE user_id = :user_id
+                        ");
+                        $roleStmt->execute([
+                            'role' => $invitation['role'],
+                            'user_id' => $existingUser['user_id']
+                        ]);
+                        
+                        // Mark invitation as used
+                        markInvitationUsed($inviteToken, $existingUser['user_id']);
+                        
+                        $existingUser['role'] = $invitation['role'];
+                        $existingUser['auth_provider_required'] = 'google';
+                        
+                        error_log("[OAuth Callback] Existing user linked and upgraded via invitation: role={$invitation['role']}");
+                    } else {
+                        // Normal linking (no invitation) - just mark email verified
+                        // Role remains unchanged (existing users keep their current role)
+                        $verifyStmt = $db->prepare("
+                            UPDATE users 
+                            SET email_verified = TRUE, last_login = NOW() 
+                            WHERE user_id = :user_id
+                        ");
+                        $verifyStmt->execute(['user_id' => $existingUser['user_id']]);
+                        
+                        error_log("[OAuth Callback] Existing user linked Google account (role unchanged: {$existingUser['role']})");
+                    }
+                    
+                    $db->commit();
+                    $user = $existingUser;
+                    
+                    logAuthEvent($user['user_id'], 'oauth_login', 'google', [
+                        'linked' => true, 
+                        'invitation_used' => $isInvitedAdmin
+                    ]);
+                } catch (Exception $e) {
+                    $db->rollBack();
+                    error_log("[OAuth Callback] Failed to link account: " . $e->getMessage());
                     redirectToFrontendWithError('Failed to link Google account');
                 }
-                // Mark email as verified
-                $verifyStmt = $db->prepare("
-                    UPDATE users 
-                    SET email_verified = TRUE, last_login = NOW() 
-                    WHERE user_id = :user_id
-                ");
-                $verifyStmt->execute(['user_id' => $existingUser['user_id']]);
-                // If admin login, upgrade role if needed
-                if ($isAdminLogin && $existingUser['role'] !== 'admin' && $existingUser['role'] !== 'root') {
-                    $roleStmt = $db->prepare("UPDATE users SET role = 'admin' WHERE user_id = :user_id");
-                    $roleStmt->execute(['user_id' => $existingUser['user_id']]);
-                    $existingUser['role'] = 'admin';
-                }
-                $user = $existingUser;
             } else {
+                // ====================================================================
                 // Create new user from Google account
+                // ====================================================================
                 error_log("[OAuth Callback] Creating new user from Google account");
-                $role = $isAdminLogin ? 'admin' : 'student';
-                $user = createUserFromGoogle($googleId, $email, $fullName, $role);
-                if (!$user) {
+                
+                $db->beginTransaction();
+                try {
+                    // Determine role from invitation ONLY
+                    // SECURITY: Without invitation, all new users are students
+                    // Admin accounts MUST be created via invitation flow
+                    $role = $isInvitedAdmin ? $invitation['role'] : 'student';
+                    
+                    // Create user with Google auth
+                    $user = createUserFromGoogle($googleId, $email, $fullName, $role);
+                    if (!$user) {
+                        throw new Exception('Failed to create user account');
+                    }
+                    
+                    // If invited, enforce Google SSO and mark invitation used
+                    if ($isInvitedAdmin) {
+                        $enforceStmt = $db->prepare("
+                            UPDATE users 
+                            SET auth_provider_required = 'google'
+                            WHERE user_id = :user_id
+                        ");
+                        $enforceStmt->execute(['user_id' => $user['user_id']]);
+                        
+                        // Mark invitation as used
+                        markInvitationUsed($inviteToken, $user['user_id']);
+                        
+                        $user['auth_provider_required'] = 'google';
+                        
+                        error_log("[OAuth Callback] New user created via invitation: role=$role, google_required=true");
+                        logAuthEvent($user['user_id'], 'oauth_login', 'google', [
+                            'new_account' => true, 
+                            'invitation_used' => true,
+                            'role' => $role
+                        ]);
+                    } else {
+                        error_log("[OAuth Callback] New user created: user_id={$user['user_id']}, role={$user['role']}");
+                        logAuthEvent($user['user_id'], 'oauth_login', 'google', ['new_account' => true]);
+                    }
+                    
+                    $db->commit();
+                } catch (Exception $e) {
+                    $db->rollBack();
+                    error_log("[OAuth Callback] Failed to create user: " . $e->getMessage());
                     redirectToFrontendWithError('Failed to create user account');
                 }
-                error_log("[OAuth Callback] New user created: user_id={$user['user_id']}, username={$user['username']}, role={$user['role']}");
             }
         }
         

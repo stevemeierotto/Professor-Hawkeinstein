@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accept Admin Invitation - Professor Hawkeinstein's Educational Foundation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="nav-container">
+            <span class="logo">🎓 Professor Hawkeinstein's Educational Foundation</span>
+        </div>
+    </nav>
+
+    <!-- Invitation Acceptance Container -->
+    <div class="form-container">
+        <div class="text-center" style="margin-bottom: 2rem;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">📧</div>
+            <h2>Admin Invitation</h2>
+            <p style="color: var(--text-light);">You've been invited to join as an administrator</p>
+        </div>
+
+        <!-- Loading state -->
+        <div id="loading" class="text-center">
+            <p>Validating your invitation...</p>
+            <div style="margin: 2rem 0;">
+                <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            </div>
+        </div>
+
+        <!-- Error state -->
+        <div id="error" style="display: none;">
+            <div class="alert alert-error">
+                <strong>⚠️ Invalid Invitation</strong>
+                <p id="error-message"></p>
+            </div>
+            <div class="text-center mt-3">
+                <p>Contact your administrator for a new invitation.</p>
+                <a href="admin_login.html" class="btn btn-primary">Go to Login</a>
+            </div>
+        </div>
+
+        <!-- Valid invitation state -->
+        <div id="valid-invite" style="display: none;">
+            <div class="alert alert-success">
+                <strong>✓ Valid Invitation</strong>
+                <p>Email: <span id="invite-email"></span></p>
+                <p>Role: <span id="invite-role"></span></p>
+                <p>Expires: <span id="invite-expires"></span></p>
+            </div>
+
+            <div class="text-center" style="margin: 2rem 0;">
+                <p style="margin-bottom: 1rem; color: var(--text-light);">
+                    Click below to sign in with Google and complete your admin account setup.
+                </p>
+                
+                <button id="accept-invite-btn" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.75rem; font-size: 1.1rem; padding: 1rem;">
+                    <svg width="24" height="24" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+                        <g fill="none" fill-rule="evenodd">
+                            <path d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+                            <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+                            <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                            <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+                        </g>
+                    </svg>
+                    Accept Invitation with Google
+                </button>
+            </div>
+
+            <div class="alert alert-info mt-3">
+                <strong>📋 What happens next:</strong>
+                <ol style="margin: 0.5rem 0 0 1.5rem; padding: 0;">
+                    <li>You'll be redirected to Google to sign in</li>
+                    <li>Your account will be created or linked</li>
+                    <li>You'll gain admin access to the platform</li>
+                    <li>Future logins will require Google SSO</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+
+    <script>
+        // Extract token from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const inviteToken = urlParams.get('token');
+
+        if (!inviteToken) {
+            showError('No invitation token provided in URL');
+        } else {
+            validateInvitation(inviteToken);
+        }
+
+        /**
+         * Validate invitation token with backend
+         */
+        async function validateInvitation(token) {
+            try {
+                const response = await fetch(`/api/admin/validate_invitation.php?token=${encodeURIComponent(token)}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    showValidInvite(data.invitation);
+                    
+                    // Set up accept button to trigger OAuth with invite token
+                    document.getElementById('accept-invite-btn').addEventListener('click', () => {
+                        acceptInvitation(token);
+                    });
+                } else {
+                    showError(data.error || 'Invalid invitation');
+                }
+            } catch (error) {
+                console.error('Validation error:', error);
+                showError('Failed to validate invitation. Please try again.');
+            }
+        }
+
+        /**
+         * Show valid invitation details
+         */
+        function showValidInvite(invitation) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('valid-invite').style.display = 'block';
+            
+            document.getElementById('invite-email').textContent = invitation.email;
+            document.getElementById('invite-role').textContent = invitation.role.toUpperCase();
+            
+            const expiresDate = new Date(invitation.expires_at);
+            document.getElementById('invite-expires').textContent = expiresDate.toLocaleDateString();
+        }
+
+        /**
+         * Show error message
+         */
+        function showError(message) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('error-message').textContent = message;
+        }
+
+        /**
+         * Accept invitation by triggering Google OAuth
+         * The invite token is passed to OAuth so callback can link it
+         */
+        async function acceptInvitation(token) {
+            try {
+                // Call Google OAuth login endpoint with invite token in state
+                const response = await fetch('/api/auth/google/login.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        invite_token: token
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.authorization_url) {
+                    // Store invite token in sessionStorage for OAuth callback
+                    sessionStorage.setItem('invite_token', token);
+                    
+                    // Redirect to Google OAuth
+                    window.location.href = data.authorization_url;
+                } else {
+                    showError('Failed to initiate Google sign-in');
+                }
+            } catch (error) {
+                console.error('Accept error:', error);
+                showError('Failed to process invitation. Please try again.');
+            }
+        }
+    </script>
+</body>
+</html>

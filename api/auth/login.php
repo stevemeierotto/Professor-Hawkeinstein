@@ -40,8 +40,9 @@ try {
     }
 
     // Find user by username or email
+    // STEP 4: Include auth_provider_required to check login method enforcement
     $stmt = $db->prepare("
-        SELECT user_id, username, email, password_hash, full_name, role, is_active
+        SELECT user_id, username, email, password_hash, full_name, role, is_active, auth_provider_required
         FROM users
         WHERE (username = ? OR email = ?) AND is_active = 1
         LIMIT 1
@@ -56,7 +57,56 @@ try {
         exit;
     }
 
+    // ============================================================================
+    // STEP 4: Enforce authentication provider requirement
+    // ============================================================================
+    // If user has auth_provider_required set, they MUST use that provider.
+    // This check happens BEFORE password verification for security reasons:
+    // - Don't reveal password validity if login method is wrong
+    // - Fail fast with clear guidance
+    //
+    // SAFETY: Only affects users with auth_provider_required set (invited admins)
+    // - Students: auth_provider_required = NULL → check skipped
+    // - Legacy admins: auth_provider_required = NULL → check skipped
+    // - Invited admins: auth_provider_required = 'google' → password login blocked
+    //
+    // MIGRATION SAFETY: If column doesn't exist yet, skip enforcement entirely.
+    // This allows system to work before migrations run.
+    // ============================================================================
+    if (isset($user['auth_provider_required']) && !empty($user['auth_provider_required'])) {
+        $requiredProvider = $user['auth_provider_required'];
+        
+        // User is trying password login but must use OAuth
+        if ($requiredProvider === 'google') {
+            http_response_code(403);
+            error_log("Login attempt blocked: user {$user['username']} must use Google SSO (tried password)");
+            
+            // Log the attempt for security monitoring
+            logAuthEvent($user['user_id'], 'login_failed', 'local', [
+                'error' => 'wrong_auth_provider',
+                'required' => 'google',
+                'attempted' => 'local'
+            ]);
+            
+            echo json_encode([
+                'success' => false,
+                'message' => 'This account requires Google Sign-In',
+                'error_code' => 'AUTH_PROVIDER_REQUIRED',
+                'required_provider' => 'google',
+                'instructions' => 'Please use the "Sign in with Google" button instead of password login.'
+            ]);
+            exit;
+        }
+        
+        // Future providers (Microsoft, Clever, etc.) would be checked here
+        // Example:
+        // if ($requiredProvider === 'microsoft') { ... }
+    }
+
     // Verify password
+    // This only runs if:
+    // - auth_provider_required is NULL (no restriction), OR
+    // - auth_provider_required is 'local' (password explicitly allowed)
     if (!password_verify($password, $user['password_hash'])) {
         http_response_code(401);
         error_log("Login attempt failed: invalid password for username: $username");

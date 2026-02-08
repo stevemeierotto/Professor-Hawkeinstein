@@ -261,6 +261,7 @@
         async function loadStatistics() {
             try {
                 const response = await fetch('api/admin/statistics.php', {
+                    headers: getAuthHeaders()
                 });
 
                 if (response.ok) {
@@ -270,7 +271,7 @@
                     document.getElementById('totalStudents').textContent = data.total_students || 0;
                     document.getElementById('pendingReviews').textContent = data.pending_reviews || 0;
                 } else {
-                    console.error('Failed to load statistics');
+                    console.error('Failed to load statistics:', response.status);
                 }
             } catch (error) {
                 console.error('Error loading statistics:', error);
@@ -281,6 +282,7 @@
         async function loadActivity() {
             try {
                 const response = await fetch('api/admin/activity.php?limit=10', {
+                    headers: getAuthHeaders()
                 });
 
                 if (response.ok) {
