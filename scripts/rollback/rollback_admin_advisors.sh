@@ -46,12 +46,12 @@ echo "Step 3: Reverting API files (optional)..."
 read -p "Remove admin advisor API files? (yes/no): " remove_apis
 
 if [ "$remove_apis" = "yes" ]; then
-    rm -f /var/www/html/Professor_Hawkeinstein/api/admin/create_agent_instance.php
-    rm -f /var/www/html/Professor_Hawkeinstein/api/admin/chat_instance.php
-    rm -f /var/www/html/Professor_Hawkeinstein/api/admin/get_agent_instance.php
-    rm -f api/admin/create_agent_instance.php
-    rm -f api/admin/chat_instance.php
-    rm -f api/admin/get_agent_instance.php
+    rm -f /var/www/html/Professor_Hawkeinstein/app/api/admin/create_agent_instance.php
+    rm -f /var/www/html/Professor_Hawkeinstein/app/api/admin/chat_instance.php
+    rm -f /var/www/html/Professor_Hawkeinstein/app/api/admin/get_agent_instance.php
+    rm -f app/api/admin/create_agent_instance.php
+    rm -f app/api/admin/chat_instance.php
+    rm -f app/api/admin/get_agent_instance.php
     echo -e "${GREEN}✓ API files removed${NC}"
 else
     echo "Keeping API files"

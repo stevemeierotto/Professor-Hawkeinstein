@@ -66,7 +66,7 @@ test-sync:
 # Start all services (llama-server + agent_service)
 start-services:
 	@echo "🚀 Starting services..."
-	@./start_services.sh
+	@./scripts/setup/start_services.sh
 
 # Stop all services
 stop-services:
@@ -90,13 +90,13 @@ check-services:
 # Build C++ agent service
 agent-build:
 	@echo "🔨 Building agent service..."
-	@cd cpp_agent && make clean && make
-	@echo "✅ Build complete: cpp_agent/bin/agent_service"
+	@cd app/cpp_agent && make clean && make
+	@echo "✅ Build complete: app/cpp_agent/bin/agent_service"
 
 # Clean C++ build artifacts
 agent-clean:
 	@echo "🧹 Cleaning C++ build..."
-	@cd cpp_agent && make clean
+	@cd app/cpp_agent && make clean
 
 # ==============================================================================
 # MAINTENANCE

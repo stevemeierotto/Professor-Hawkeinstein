@@ -76,6 +76,7 @@ The project is organized as a **two-subsystem architecture**:
 - Admin dashboard for course management
 - Agent factory for creating/editing agents
 - Course wizard and editor
+- Analytics dashboard (`admin_analytics.html`, `admin_analytics.js`)
 - Question generator interface
 - System agent management
 
@@ -86,6 +87,10 @@ The project is organized as a **two-subsystem architecture**:
 - RAG documents and embeddings tables
 - Courses, course_assignments, progress_tracking tables
 - Student advisors system (per-student advisor instances)
+- Analytics tables (daily rollups, course metrics, agent performance, time-series)
+- Invitation system (`admin_invitations` table)
+- OAuth tables (`oauth_states`, `auth_providers`, `auth_events`)
+- Audit logging infrastructure
 
 **Authentication System**
 - JWT-based authentication for all API endpoints
@@ -93,6 +98,42 @@ The project is organized as a **two-subsystem architecture**:
 - Root user provisions additional admins through the invitation workflow (`admin_invitations` table + Google SSO requirement)
 - Google OAuth Authorization Code flow implemented server-side with state storage, audit logging, and role upgrades
 - Session management via PHP plus secure cookies (`SameSite=Strict`, `ENV`-aware `secure` flag)
+- Authentication event logging to `auth_events` table via `logAuthEvent()`
+
+**Course Generation System (5-Agent Pipeline)**
+- ✅ **Agent 1 (Standards Analyzer):** Generates educational standards from grade/subject input
+- ✅ **Agent 2 (Outline Generator):** Converts standards into structured course outline (units + lessons)
+- ✅ **Agent 3 (Content Creator):** Generates full lesson content (800-1000 words) from outlines
+- ✅ **Agent 4 (Question Generator):** Creates question banks (fill-in-blank, multiple choice, essay)
+- ✅ **Agent 5 (Assessment Generator):** Produces unit tests, midterms, and final exams
+- Complete APIs: `generate_standards.php`, `generate_draft_outline.php`, `generate_lesson_content.php`, `generate_lesson_questions.php`, `generate_assessment.php`
+- Documentation: `docs/COURSE_GENERATION_ARCHITECTURE.md`, `docs/COURSE_GENERATION_API.md`, `docs/ASSESSMENT_GENERATION_API.md`
+
+**Analytics System (January 2026)**
+- Aggregate metrics tables (`analytics_daily_rollup`, `analytics_course_metrics`, `analytics_agent_metrics`, `analytics_user_snapshots`, `analytics_timeseries`, `analytics_public_metrics`)
+- Daily aggregation ETL script (`scripts/aggregate_analytics.php`) with cron scheduling
+- Admin analytics dashboard (`course_factory/admin_analytics.html`) with Chart.js visualizations
+- Public metrics page (`student_portal/metrics.html`) - no authentication required
+- Time-series API (`api/admin/analytics/timeseries.php`) for daily/weekly/monthly trends
+- Export API (`api/admin/analytics/export.php`) with CSV/JSON formats - anonymized (hashed user IDs)
+- Rate limiting on public endpoints (`api/helpers/analytics_rate_limiter.php`) - 60 req/min public, 300 req/min admin
+- FERPA/COPPA-compliant design (no PII in analytics tables, documented in `docs/ANALYTICS_PRIVACY_VALIDATION.md`)
+
+**Audit System (February 2026)**
+- Role-based audit access: admin (summary stats only), root (full log access)
+- Audit endpoints: `api/admin/audit/summary.php`, `api/root/audit/logs.php`
+- Privacy enforcement auditing (PII blocks, cohort suppressions, rate limit violations tracked)
+- Audit access logging to `/tmp/audit_access.log`
+- Documentation: `docs/PHASE6_AUDIT_ACCESS.md`
+
+**Security Infrastructure (January 2026)**
+- Centralized security headers (`api/helpers/security_headers.php`): CSP, HSTS, X-Frame-Options, Permissions-Policy
+- Secure httpOnly cookies with `SameSite=Lax` and environment-aware `secure` flag
+- HTTPS support via mkcert for localhost development (`docs/HTTPS_AUDIT_REPORT.md`)
+- CORS configuration (currently `*` for dev; production requires allowlist)
+- OAuth state management (10-minute TTL in `oauth_states` table)
+- Invitation-only admin onboarding with email verification and forced Google SSO
+- All authentication events logged to `auth_events` for audit trail
 
 ### ⏳ Partially Implemented
 
@@ -102,25 +143,22 @@ The project is organized as a **two-subsystem architecture**:
 - Document chunking not fully implemented
 - Embedding generation requires external setup
 
-**Course Content Pipeline**
-- Standards retrieval from CSP API works
-- Course outline generation via LLM works
-- Lesson content generation partially implemented
-- Assessment generation API exists but needs testing
-
-**Progress Tracking**
+**Progress Tracking Visualization**
 - Database schema complete
 - API endpoints exist
-- Frontend visualization present but not connected to real data
+- Frontend visualization present but not fully connected to real-time data
 
 ### ❌ Not Yet Implemented
 
 - Vector similarity search (MariaDB vector plugin not configured)
 - Actual embedding generation and storage
-- Real-time progress updates from learning activities
+- Real-time progress updates via WebSocket (current implementation uses polling)
 - Multimedia content delivery (video/audio placeholders only)
 - Student placement testing
 - Automated agent assignment based on assessment
+- Two-factor authentication (MFA/TOTP) for admin accounts
+- WCAG 2.1 accessibility compliance audit
+- GDPR/CCPA data access portal for students/parents
 
 ## File Structure
 
@@ -271,6 +309,10 @@ curl http://localhost:8080/health  # agent_service
 3. **Model size constraints** - Runs on consumer hardware with quantized models
 4. **No real-time sync** - Frontend polling, not WebSocket
 5. **Limited multimedia** - Video/audio placeholders only
+6. **No 2FA** - Password and OAuth authentication implemented, but TOTP/SMS multi-factor authentication not present
+7. **Rate limiting gaps** - Public analytics endpoints have rate limiting; admin invitation and course generation endpoints do not
+8. **No accessibility audit** - WCAG 2.1 compliance not formally tested
+9. **No GDPR/CCPA data portal** - No mechanism for students/parents to download personal data on request
 
 ## Development Notes
 

@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
     // Load configuration - try Docker path first, then local path
     Config config;
     if (!config.load("/app/config.json")) {
-        if (!config.load("/home/steve/Professor_Hawkeinstein/cpp_agent/config.json")) {
+        if (!config.load("/home/steve/Professor_Hawkeinstein/app/cpp_agent/config.json")) {
             std::cerr << "Warning: Could not load config, using defaults" << std::endl;
         }
     }

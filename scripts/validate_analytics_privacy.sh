@@ -35,11 +35,11 @@ echo -e "${BOLD}═════════════════════�
 
 # Define analytics endpoints to check
 ANALYTICS_ENDPOINTS=(
-    "api/public/metrics.php"
-    "api/admin/analytics/overview.php"
-    "api/admin/analytics/course.php"
-    "api/admin/analytics/timeseries.php"
-    "api/admin/analytics/export.php"
+    "app/api/public/metrics.php"
+    "app/api/admin/analytics/overview.php"
+    "app/api/admin/analytics/course.php"
+    "app/api/admin/analytics/timeseries.php"
+    "app/api/admin/analytics/export.php"
 )
 
 # ============================================================================
@@ -195,11 +195,11 @@ fi
 echo -e "${BLUE}[CHECK 6]${NC} Verifying privacy helper modules...\n"
 
 REQUIRED_HELPERS=(
-    "api/helpers/analytics_response_guard.php"
-    "api/helpers/analytics_cohort_guard.php"
-    "api/helpers/analytics_rate_limiter.php"
-    "api/helpers/analytics_audit_log.php"
-    "api/helpers/analytics_export_guard.php"
+    "app/api/helpers/analytics_response_guard.php"
+    "app/api/helpers/analytics_cohort_guard.php"
+    "app/api/helpers/analytics_rate_limiter.php"
+    "app/api/helpers/analytics_audit_log.php"
+    "app/api/helpers/analytics_export_guard.php"
 )
 
 for helper in "${REQUIRED_HELPERS[@]}"; do

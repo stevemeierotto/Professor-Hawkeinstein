@@ -37,20 +37,20 @@ echo "✓ Database created"
 
 # Import schema
 echo "Step 2: Importing database schema..."
-mysql -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$INSTALL_DIR/schema.sql"
+mysql -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$INSTALL_DIR/data/sql/schema.sql"
 echo "✓ Schema imported"
 
 # Update config file
 echo "Step 3: Configuring application..."
-sed -i "s/define('DB_PASS', 'your_secure_password_here');/define('DB_PASS', '$DB_PASS');/" "$INSTALL_DIR/config/database.php"
+sed -i "s/define('DB_PASS', 'your_secure_password_here');/define('DB_PASS', '$DB_PASS');/" "$INSTALL_DIR/app/config/database.php"
 
 # Generate JWT secret
 JWT_SECRET=$(openssl rand -hex 32)
-sed -i "s/define('JWT_SECRET', 'your_jwt_secret_key_here_change_in_production');/define('JWT_SECRET', '$JWT_SECRET');/" "$INSTALL_DIR/config/database.php"
+sed -i "s/define('JWT_SECRET', 'your_jwt_secret_key_here_change_in_production');/define('JWT_SECRET', '$JWT_SECRET');/" "$INSTALL_DIR/app/config/database.php"
 
 # Generate password pepper
 PASSWORD_PEPPER=$(openssl rand -hex 32)
-sed -i "s/define('PASSWORD_PEPPER', 'additional_security_pepper_change_in_production');/define('PASSWORD_PEPPER', '$PASSWORD_PEPPER');/" "$INSTALL_DIR/config/database.php"
+sed -i "s/define('PASSWORD_PEPPER', 'additional_security_pepper_change_in_production');/define('PASSWORD_PEPPER', '$PASSWORD_PEPPER');/" "$INSTALL_DIR/app/config/database.php"
 
 echo "✓ Configuration updated"
 

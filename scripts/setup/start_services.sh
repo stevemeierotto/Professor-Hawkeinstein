@@ -11,7 +11,8 @@
 set -e  # Exit on any error
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WAIT_SCRIPT="$SCRIPT_DIR/scripts/wait_for_services.sh"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+WAIT_SCRIPT="$PROJECT_ROOT/scripts/wait_for_services.sh"
 
 # Configuration - change these to switch models
 MULTI_MODEL=${MULTI_MODEL:-0}  # Set to 1 to enable multi-model mode
@@ -121,7 +122,7 @@ fi
 # Start C++ agent service (depends on llama-server(s) being healthy)
 echo ""
 echo "Starting C++ agent service on port 8080..."
-nohup /home/steve/Professor_Hawkeinstein/cpp_agent/bin/agent_service \
+nohup /home/steve/Professor_Hawkeinstein/app/cpp_agent/bin/agent_service \
     > /tmp/agent_service_full.log 2>&1 &
 
 AGENT_PID=$!

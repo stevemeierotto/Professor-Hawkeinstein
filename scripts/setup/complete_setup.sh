@@ -38,7 +38,7 @@ EOSQL
 
 echo ""
 echo "=== Starting C++ Agent Service ==="
-cd ~/Professor_Hawkeinstein/cpp_agent
+cd ~/Professor_Hawkeinstein/app/cpp_agent
 pkill -9 -f agent_service 2>/dev/null
 sleep 1
 ./bin/agent_service > /tmp/agent.log 2>&1 &

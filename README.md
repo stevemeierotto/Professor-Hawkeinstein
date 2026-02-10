@@ -4,10 +4,11 @@ An AI-powered educational platform with automated course generation, personalize
 
 ## Primary References
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) — Source of truth for subsystem boundaries and allowed responsibilities.
+- [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) — Source of truth for subsystem boundaries and allowed responsibilities.
 - [docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md](docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md) — Required dev/prod workflow and sync rules (read before editing files).
-- [SECURITY.md](SECURITY.md) — Phase-by-phase record of the 2026 hardening work.
-- [OAUTH_IMPLEMENTATION_COMPLETE.md](OAUTH_IMPLEMENTATION_COMPLETE.md) — Google OAuth configuration checklist and supporting docs.
+- [docs/security/SECURITY.md](docs/security/SECURITY.md) — Phase-by-phase record of the 2026 hardening work.
+- [docs/oauth/OAUTH_IMPLEMENTATION_COMPLETE.md](docs/oauth/OAUTH_IMPLEMENTATION_COMPLETE.md) — Google OAuth configuration checklist and supporting docs.
+- [docs/REPO_STRUCTURE.md](docs/REPO_STRUCTURE.md) — Directory structure and navigation guide (refactored February 2026).
 
 ## Development vs Production Environment
 
@@ -78,7 +79,7 @@ Changes in DEV do not automatically sync to PROD. Deploy explicitly using `make 
 
 - The implementation is server-side only using the League OAuth2 client. Minimal scopes (`openid email profile`) are requested.
 - Helper functions in [config/database.php](config/database.php) handle state generation/storage, linking Google IDs, and writing audit rows to `auth_events` via `logAuthEvent()`.
-- OAuth requests must use a `localhost` redirect URI during development (see `OAUTH_*` docs). Production domains belong on the allowlist before going live.
+- OAuth requests must use a `localhost` redirect URI during development (see docs/oauth/). Production domains belong on the allowlist before going live.
 
 ### Session Handling & Frontend API Calls
 
@@ -87,9 +88,9 @@ Changes in DEV do not automatically sync to PROD. Deploy explicitly using `make 
 
 ## Security Posture
 
-- The hardening work documented in [SECURITY.md](SECURITY.md) is applied project-wide. All API entrypoints start with `set_api_security_headers()` from [api/helpers/security_headers.php](api/helpers/security_headers.php), which adds CSP, X-Frame-Options, Permissions-Policy, HSTS (when `ENV=production` over HTTPS), and an environment-aware CORS allowlist.
+- The hardening work documented in [docs/security/SECURITY.md](docs/security/SECURITY.md) is applied project-wide. All API entrypoints start with `set_api_security_headers()` from `app/api/helpers/security_headers.php`, which adds CSP, X-Frame-Options, Permissions-Policy, HSTS (when `ENV=production` over HTTPS), and an environment-aware CORS allowlist.
 - SQL access is through prepared statements only; legacy debug endpoints and raw queries were removed during Phase 1.
-- Authentication events funnel through `logAuthEvent()` in [config/database.php](config/database.php) and persist to the `auth_events` table for auditability. Invitation creation and usage are logged as well.
+- Authentication events funnel through `logAuthEvent()` in `app/config/database.php` and persist to the `auth_events` table for auditability. Invitation creation and usage are logged as well.
 - Error responses are standardized (no stack traces), while detailed context lands in `/tmp` logs or Apache error logs for administrators.
 - Admin and root actions are separated from student APIs both in PHP (`requireAdmin()` / `requireRoot()`) and in frontend code (`admin_auth.js`), ensuring Course Factory tooling cannot call student data endpoints directly.
 - Security headers, OAuth enforcement, and JWT cookies are all environment-aware so development remains practical without diluting production requirements.
@@ -126,52 +127,46 @@ Browser
 
 ### Subsystems
 
+See [docs/architecture/ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) for complete subsystem definitions and boundaries.
+
 | Subsystem | Path | Purpose |
 |-----------|------|---------|
-| Student Portal | `/student_portal/` | Learning interface, advisor chat, workbooks |
-| Course Factory | `/course_factory/` | Admin tools, course creation, content review |
-| Shared | `/shared/`, `/api/`, `/config/` | Authentication, database, common utilities |
+| Student Portal | `app/student_portal/` | Learning interface, advisor chat, workbooks |
+| Course Factory | `app/course_factory/` | Admin tools, course creation, content review |
+| Shared | `app/shared/`, `app/api/`, `app/config/` | Authentication, database, common utilities |
 
 ## Project Structure
 
+See [docs/REPO_STRUCTURE.md](docs/REPO_STRUCTURE.md) for detailed directory layout and navigation guide.
+
 ```
 Professor_Hawkeinstein/
-├── start_services.sh           # Service startup script
-├── schema.sql                  # Database schema
+├── app/                        # Application code (deployed to production)
+│   ├── api/                    # Backend API endpoints
+│   ├── config/                 # Configuration files
+│   ├── cpp_agent/              # C++ agent service
+│   ├── course_factory/         # Admin dashboard and course authoring
+│   ├── student_portal/         # Student-facing UI
+│   └── shared/                 # Shared utilities
+├── docs/                       # Documentation (organized by category)
+│   ├── architecture/           # System architecture
+│   ├── security/               # Security documentation
+│   ├── compliance/             # Privacy and compliance
+│   ├── oauth/                  # OAuth implementation
+│   ├── roadmap/                # Project planning
+│   └── reports/                # Implementation reports
+├── tests/                      # Test files (php, shell, html)
+├── scripts/                    # Automation scripts (setup, rollback, maintenance)
+├── infra/                      # Infrastructure configuration (docker, apache)
+├── data/                       # SQL schemas and backups
+├── logs/                       # Application logs
+├── media/                      # User uploads
+├── models/                     # LLM model files (.gguf)
+├── scripts/setup/start_services.sh  # Service startup script
 ├── Makefile                    # Build and deployment
-├── docker-compose.yml          # Container orchestration
-│
-├── student_portal/             # Student-facing subsystem
-│   ├── student_dashboard.html
-│   ├── workbook.html
-│   ├── quiz.html
-│   ├── login.html
-│   ├── register.html
-│   └── app.js
-│
-├── course_factory/             # Admin subsystem
-│   ├── admin_dashboard.html
-│   ├── admin_course_wizard.html
-│   ├── admin_question_generator.html
-│   ├── admin_agent_factory.html
-│   └── admin_login.html
-│
-├── api/                        # PHP API endpoints
-│   ├── admin/                  # Admin endpoints (50+, JWT required)
-│   ├── agent/                  # Agent chat proxy
-│   ├── auth/                   # Authentication
-│   ├── course/                 # Course content
-│   ├── student/                # Student endpoints
-│   └── progress/               # Progress tracking
-│
-├── cpp_agent/                  # C++ agent microservice
-│   ├── src/
-│   │   ├── main.cpp
-│   │   ├── http_server.cpp
-│   │   ├── agent_manager.cpp
-│   │   ├── llamacpp_client.cpp
-│   │   ├── database.cpp
-│   │   └── rag_engine.cpp
+├── composer.json               # PHP dependencies
+└── README.md                   # This file
+```
 │   ├── include/
 │   └── bin/agent_service
 │
@@ -222,7 +217,7 @@ The current development environment uses a **HYBRID setup**:
 **Important sync workflow:**
 ```bash
 # 1. Edit files in DEV
-nano /home/steve/Professor_Hawkeinstein/student_portal/unit_test.html
+nano /home/steve/Professor_Hawkeinstein/app/student_portal/unit_test.html
 
 # 2. Sync to PROD
 make sync-web
@@ -249,7 +244,7 @@ environment:
   - MODEL_FILE=qwen2.5-1.5b-instruct-q4_k_m.gguf  # Change model here
 ```
 
-**Native method:** Edit `start_services.sh` line 18
+**Native method:** Edit `scripts/setup/start_services.sh` line 18
 ```bash
 ACTIVE_MODEL="qwen2.5-1.5b-instruct-q4_k_m.gguf"  # Change model here
 ```
@@ -258,10 +253,10 @@ ACTIVE_MODEL="qwen2.5-1.5b-instruct-q4_k_m.gguf"  # Change model here
 
 ## Google OAuth Configuration
 
-1. Register a Web OAuth client in Google Cloud Console and add `http://localhost/api/auth/google/callback.php` as an authorized redirect URI for local testing (production domains must be HTTPS).
-2. Populate `.env` with `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and (optionally) `GOOGLE_REDIRECT_URI`. These values are consumed by [api/auth/google/login.php](api/auth/google/login.php) and [api/auth/google/callback.php](api/auth/google/callback.php).
+1. Register a Web OAuth client in Google Cloud Console and add `http://localhost/app/api/auth/google/callback.php` as an authorized redirect URI for local testing (production domains must be HTTPS).
+2. Populate `.env` with `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and (optionally) `GOOGLE_REDIRECT_URI`. These values are consumed by `app/api/auth/google/login.php` and `app/api/auth/google/callback.php`.
 3. Ensure the database has run `migrations/add_oauth_support.sql` so the `oauth_states`, `auth_providers`, and `auth_events` tables exist.
-4. Follow [OAUTH_IMPLEMENTATION_COMPLETE.md](OAUTH_IMPLEMENTATION_COMPLETE.md), [OAUTH_TESTING_GUIDE.md](OAUTH_TESTING_GUIDE.md), and [docs/OAUTH_LOCALHOST_SETUP.md](docs/OAUTH_LOCALHOST_SETUP.md) for validation steps.
+4. Follow [docs/oauth/OAUTH_IMPLEMENTATION_COMPLETE.md](docs/oauth/OAUTH_IMPLEMENTATION_COMPLETE.md), [docs/oauth/OAUTH_TESTING_GUIDE.md](docs/oauth/OAUTH_TESTING_GUIDE.md), and [docs/oauth/OAUTH_LOCALHOST_SETUP.md](docs/oauth/OAUTH_LOCALHOST_SETUP.md) for validation steps.
 
 Without a valid OAuth configuration, invitation-based admin onboarding will fail because invited accounts are forced to complete Google SSO.
 
@@ -303,7 +298,7 @@ EOF
 # 4. Initialize database
 docker-compose up -d database
 sleep 10
-docker exec -i phef-database mysql -u root -pRoot1234 < schema.sql
+docker exec -i phef-database mysql -u root -pRoot1234 < data/sql/schema.sql
 
 # 5. Start all services
 docker-compose up -d
@@ -339,7 +334,7 @@ curl http://localhost:8080/health  # agent-service
 - Apache with PHP 8.0+ configured and running
 - MariaDB installed and running (port 3306)
 - llama.cpp compiled in `llama.cpp/build/bin/`
-- C++ agent service compiled at `cpp_agent/build/bin/agent_service`
+- C++ agent service compiled at `app/cpp_agent/build/bin/agent_service`
 - Web root at `/var/www/html/basic_educational`
 
 1. **Install dependencies:**
@@ -377,7 +372,7 @@ curl http://localhost:8080/health  # agent-service
    EXIT;
    ```
    ```bash
-   mysql -u professorhawkeinstein_user -pBT1716lit professorhawkeinstein_platform < schema.sql
+   mysql -u professorhawkeinstein_user -pBT1716lit professorhawkeinstein_platform < data/sql/schema.sql
    ```
 
 4. **Configure application:**
@@ -392,7 +387,7 @@ curl http://localhost:8080/health  # agent-service
    EOF
    
    # Configure web server
-   sudo cp Professor_Hawkeinstein.conf /etc/apache2/sites-available/
+   sudo cp infra/apache/Professor_Hawkeinstein.conf /etc/apache2/sites-available/
    sudo a2ensite Professor_Hawkeinstein
    sudo systemctl reload apache2
    ```
@@ -407,13 +402,17 @@ curl http://localhost:8080/health  # agent-service
 
 6. **Build agent service:**
    ```bash
-   cd cpp_agent
+   cd app/cpp_agent
    make clean && make
-   cd ..
+   cd ../..
    ```
 
 7. **Start services:**
    ```bash
+   # Use the convenience script
+   ./scripts/setup/start_services.sh
+   
+   # Or manually:
    # Start llama-server (in background)
    nohup ./llama.cpp/build/bin/llama-server \
        --model models/qwen2.5-1.5b-instruct-q4_k_m.gguf \
@@ -421,7 +420,7 @@ curl http://localhost:8080/health  # agent-service
        > /tmp/llama_server.log 2>&1 &
    
    # Start agent service (in background)
-   nohup ./cpp_agent/bin/agent_service > /tmp/agent_service_full.log 2>&1 &
+   nohup ./app/cpp_agent/bin/agent_service > /tmp/agent_service_full.log 2>&1 &
    
    # Verify services
    curl http://localhost:8090/health
