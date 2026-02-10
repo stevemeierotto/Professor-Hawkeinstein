@@ -293,7 +293,6 @@
       {
         "category": "Feature Guides",
         "files": [
-          "FACIAL_RECOGNITION_GUIDE.md",
           "AGENT_FACTORY_GUIDE.md",
           "AGENT_FACTORY_QUICKSTART.md",
           "MEMORY_POLICY_QUICKREF.md"

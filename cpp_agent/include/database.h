@@ -17,6 +17,25 @@ struct Agent {
     std::map<std::string, std::string> parameters;
 };
 
+struct VectorSearchResult {
+    int contentId;
+    int chunkIndex;
+    std::string chunkText;
+    float similarity;
+    std::string gradeLevel;
+    std::string subject;
+    std::string agentScope;
+};
+
+struct VectorSearchFilters {
+    std::string agentScope;
+    std::string gradeLevel;
+    std::string subject;
+    bool hasAgentScope() const { return !agentScope.empty(); }
+    bool hasGradeLevel() const { return !gradeLevel.empty(); }
+    bool hasSubject() const { return !subject.empty(); }
+};
+
 class Database {
 private:
     MYSQL* connection;
@@ -39,6 +58,10 @@ public:
     std::vector<Agent> getStudentVisibleAgents();
     void storeMemory(int userId, int agentId, const std::string& userMessage, const std::string& agentResponse);
     std::vector<std::string> getRAGDocuments(int agentId, const std::vector<float>& embedding, int limit);
+    std::vector<VectorSearchResult> vectorSearch(const std::vector<float>& embedding,
+                                                int topK = 5,
+                                                const std::string& metric = "cosine",
+                                                const VectorSearchFilters* filters = nullptr);
     void storeEmbedding(int documentId, const std::vector<float>& embedding);
     std::vector<float> getEmbedding(int embeddingId);
     

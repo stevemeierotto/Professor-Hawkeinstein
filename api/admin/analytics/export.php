@@ -1,5 +1,9 @@
 <?php
 /**
+ * 🔒 PRIVACY REGRESSION PROTECTED
+ * Changes to this file require privacy review (see docs/ANALYTICS_PRIVACY_VALIDATION.md)
+ * Required guards: Phase 2 (PII), Phase 3 (Cohort), Phase 4 (Rate limit, Audit, Export)
+ * 
  * Anonymized Data Export API
  * 
  * Exports research-friendly data with proper anonymization
@@ -12,15 +16,35 @@ require_once APP_ROOT . '/config/database.php';
 require_once APP_ROOT . '/api/admin/auth_check.php';
 require_once APP_ROOT . '/api/helpers/analytics_response_guard.php';
 require_once APP_ROOT . '/api/helpers/analytics_cohort_guard.php';
+require_once APP_ROOT . '/api/helpers/analytics_rate_limiter.php';
+require_once APP_ROOT . '/api/helpers/analytics_audit_log.php';
+require_once APP_ROOT . '/api/helpers/analytics_export_guard.php';
 
 setCORSHeaders();
+
+// Add security headers
+header('X-Content-Type-Options: nosniff');
+header('Cache-Control: private, no-cache, no-store, must-revalidate');
+header('X-Frame-Options: DENY');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     sendJSON(['success' => false, 'message' => 'Method not allowed'], 405);
 }
 
 // Require admin authentication
-requireAdmin();
+$adminUser = requireAdmin();
+$userId = $adminUser['user_id'] ?? 'unknown';
+
+// Enforce rate limiting for admin exports (more generous than public)
+try {
+    enforceRateLimit($userId, ADMIN_ANALYTICS_RATE_LIMIT, 'admin_analytics_export');
+} catch (RateLimitExceededException $e) {
+    logAnalyticsAccessFailure('admin_analytics_export', 'Rate limit exceeded', $userId);
+    http_response_code(429);
+    header('Retry-After: ' . ($e->getResetTime() - time()));
+    echo json_encode($e->toResponse());
+    exit;
+}
 
 try {
     $db = getDB();
@@ -29,6 +53,10 @@ try {
     $dataset = $_GET['dataset'] ?? 'user_progress'; // 'user_progress', 'course_metrics', 'platform_aggregate'
     $startDate = $_GET['startDate'] ?? date('Y-m-d', strtotime('-90 days'));
     $endDate = $_GET['endDate'] ?? date('Y-m-d');
+    $confirmed = isset($_GET['confirmed']) && $_GET['confirmed'] === '1';
+    
+    // Validate date range
+    $dateRange = ['start' => $startDate, 'end' => $endDate];
     
     // ========================================================================
     // DATASET: USER PROGRESS SNAPSHOTS (Anonymized)
@@ -55,6 +83,21 @@ try {
         ");
         $stmt->execute(['start_date' => $startDate, 'end_date' => $endDate]);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Validate export limits
+        $validation = validateExportParameters($dataset, $dateRange, count($data), $confirmed);
+        if (!$validation['valid']) {
+            logAnalyticsAccessFailure('admin_analytics_export', 'Validation failed: ' . implode(', ', $validation['errors']), $userId);
+            sendJSON([
+                'success' => false,
+                'message' => 'Export validation failed',
+                'errors' => $validation['errors'],
+                'warnings' => $validation['warnings']
+            ], 400);
+        }
+        
+        // Log export
+        logAnalyticsExport($dataset, $format, $userId, $dateRange, count($data), true);
         
         if ($format === 'csv') {
             exportCSV($data, 'user_progress_export_' . date('Ymd'));
@@ -104,6 +147,21 @@ try {
         $stmt->execute(['start_date' => $startDate, 'end_date' => $endDate]);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
+        // Validate export limits
+        $validation = validateExportParameters($dataset, $dateRange, count($data), $confirmed);
+        if (!$validation['valid']) {
+            logAnalyticsAccessFailure('admin_analytics_export', 'Validation failed: ' . implode(', ', $validation['errors']), $userId);
+            sendJSON([
+                'success' => false,
+                'message' => 'Export validation failed',
+                'errors' => $validation['errors'],
+                'warnings' => $validation['warnings']
+            ], 400);
+        }
+        
+        // Log export
+        logAnalyticsExport($dataset, $format, $userId, $dateRange, count($data), true);
+        
         if ($format === 'csv') {
             exportCSV($data, 'course_metrics_export_' . date('Ymd'));
         } else {
@@ -145,6 +203,21 @@ try {
         $stmt->execute(['start_date' => $startDate, 'end_date' => $endDate]);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
+        // Validate export limits
+        $validation = validateExportParameters($dataset, $dateRange, count($data), $confirmed);
+        if (!$validation['valid']) {
+            logAnalyticsAccessFailure('admin_analytics_export', 'Validation failed: ' . implode(', ', $validation['errors']), $userId);
+            sendJSON([
+                'success' => false,
+                'message' => 'Export validation failed',
+                'errors' => $validation['errors'],
+                'warnings' => $validation['warnings']
+            ], 400);
+        }
+        
+        // Log export
+        logAnalyticsExport($dataset, $format, $userId, $dateRange, count($data), true);
+        
         if ($format === 'csv') {
             exportCSV($data, 'platform_aggregate_export_' . date('Ymd'));
         } else {
@@ -185,6 +258,21 @@ try {
         $stmt->execute(['start_date' => $startDate, 'end_date' => $endDate]);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
+        // Validate export limits
+        $validation = validateExportParameters($dataset, $dateRange, count($data), $confirmed);
+        if (!$validation['valid']) {
+            logAnalyticsAccessFailure('admin_analytics_export', 'Validation failed: ' . implode(', ', $validation['errors']), $userId);
+            sendJSON([
+                'success' => false,
+                'message' => 'Export validation failed',
+                'errors' => $validation['errors'],
+                'warnings' => $validation['warnings']
+            ], 400);
+        }
+        
+        // Log export
+        logAnalyticsExport($dataset, $format, $userId, $dateRange, count($data), true);
+        
         if ($format === 'csv') {
             exportCSV($data, 'agent_metrics_export_' . date('Ymd'));
         } else {
@@ -199,10 +287,12 @@ try {
         return;
     }
     
+    logAnalyticsAccessFailure('admin_analytics_export', 'Invalid dataset: ' . $dataset, $userId);
     sendJSON(['success' => false, 'message' => 'Invalid dataset'], 400);
     
 } catch (Exception $e) {
     error_log("Export error: " . $e->getMessage());
+    logAnalyticsAccessFailure('admin_analytics_export', 'Exception: ' . $e->getMessage(), $userId ?? 'unknown');
     sendJSON(['success' => false, 'message' => 'Failed to generate export'], 500);
 }
 

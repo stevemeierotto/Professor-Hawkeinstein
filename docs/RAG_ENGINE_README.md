@@ -184,36 +184,21 @@ $minSimilarity = 0.3;     // Minimum similarity threshold (0.0-1.0)
 
 ### Run Full RAG Test
 
+The automated test now seeds a deterministic dataset (via `tests/rag_seed_content.php`), verifies VECTOR metadata, runs a `/agent/chat` call, and checks the agent_service logs. Ensure `llama-server` and `agent_service` are running first.
+
 ```bash
 ./tests/rag_flow.test
 ```
 
-This tests:
-- ✅ Migration applied
-- ✅ Content embedding generation
-- ✅ Context retrieval
-- ✅ Database state
-- ✅ Chat integration (if service running)
+### Manual Deep-Dive
 
-### Manual Testing
+Use the helper script to print the indexed rows, similarity ordering, live chat response, and recent RAG logs:
 
 ```bash
-# 1. Check embeddings
-mysql -u professorhawkeinstein_user -pBT1716lit professorhawkeinstein_platform \
-  -e "SELECT COUNT(*) FROM content_embeddings"
-
-# 2. Check content with embeddings
-mysql -u professorhawkeinstein_user -pBT1716lit professorhawkeinstein_platform \
-  -e "SELECT content_id, title, has_embeddings, embedding_count FROM scraped_content WHERE has_embeddings = TRUE"
-
-# 3. Test retrieval
-curl -X POST http://localhost/basic_educational/api/agent/retrieve_context.php \
-  -H 'Content-Type: application/json' \
-  -d '{"query":"What is subtraction?","top_k":3}'
-
-# 4. Check agent logs
-tail -f /tmp/agent_service_full.log | grep RAG
+./tests/rag_manual_verify.sh
 ```
+
+The output includes a short checklist so you can walk through each requirement interactively.
 
 ## Performance
 

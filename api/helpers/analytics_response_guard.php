@@ -1,5 +1,9 @@
 <?php
-// 🚨 PRIVACY ENFORCEMENT BOUNDARY
+// � PRIVACY REGRESSION PROTECTED (Phase 5)
+// Changes to this file require privacy review
+// See: docs/ANALYTICS_PRIVACY_VALIDATION.md
+//
+// �🚨 PRIVACY ENFORCEMENT BOUNDARY
 // Analytics responses MUST pass this validator
 // 
 // This module enforces FERPA and COPPA compliance by blocking any analytics response

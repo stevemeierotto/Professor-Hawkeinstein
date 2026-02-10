@@ -1,5 +1,9 @@
 <?php
 /**
+ * 🔒 PRIVACY REGRESSION PROTECTED
+ * Changes to this file require privacy review (see docs/ANALYTICS_PRIVACY_VALIDATION.md)
+ * Required guards: Phase 2 (PII), Phase 3 (Cohort), Phase 4 (Rate limit, Audit)
+ * 
  * Admin Analytics Overview API
  * 
  * Returns platform-wide aggregate metrics for admin dashboard
@@ -11,15 +15,33 @@ require_once APP_ROOT . '/config/database.php';
 require_once APP_ROOT . '/api/admin/auth_check.php';
 require_once APP_ROOT . '/api/helpers/analytics_response_guard.php';
 require_once APP_ROOT . '/api/helpers/analytics_cohort_guard.php';
+require_once APP_ROOT . '/api/helpers/analytics_rate_limiter.php';
+require_once APP_ROOT . '/api/helpers/analytics_audit_log.php';
 
 setCORSHeaders();
+
+// Security headers
+header('X-Content-Type-Options: nosniff');
+header('Cache-Control: private, no-cache, no-store, must-revalidate');
+header('X-Frame-Options: DENY');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     sendJSON(['success' => false, 'message' => 'Method not allowed'], 405);
 }
 
 // Require admin authentication
-requireAdmin();
+$adminUser = requireAdmin();
+$userId = $adminUser['user_id'] ?? 'unknown';
+
+// Enforce rate limit for admin analytics
+try {
+    enforceRateLimit($userId, ADMIN_ANALYTICS_RATE_LIMIT, 'admin_analytics_overview');
+} catch (RateLimitExceededException $e) {
+    logAnalyticsAccessFailure('admin_analytics_overview', 'Rate limit exceeded', $userId);
+    http_response_code(429);
+    echo json_encode($e->toResponse());
+    exit;
+}
 
 try {
     $db = getDB();
@@ -256,7 +278,12 @@ try {
     // BUILD RESPONSE
     // ========================================================================
     
-    sendProtectedAnalyticsJSON([
+    $parameters = [
+        'startDate' => $startDate,
+        'endDate' => $endDate
+    ];
+    
+    $response = [
         'success' => true,
         'dateRange' => [
             'start' => $startDate,
@@ -294,9 +321,15 @@ try {
         ],
         'topCourses' => $topCourses,
         'topAgents' => $topAgents
-    ], 200, 'admin_analytics_overview');
+    ];
+    
+    // Log successful access
+    logAnalyticsAccess('admin_analytics_overview', 'view_dashboard', $userId, 'admin', $parameters, true);
+    
+    sendProtectedAnalyticsJSON($response, 200, 'admin_analytics_overview');
     
 } catch (Exception $e) {
     error_log("Analytics overview error: " . $e->getMessage());
+    logAnalyticsAccessFailure('admin_analytics_overview', 'Exception: ' . $e->getMessage(), $userId ?? 'unknown');
     sendJSON(['success' => false, 'message' => 'Failed to fetch analytics'], 500);
 }

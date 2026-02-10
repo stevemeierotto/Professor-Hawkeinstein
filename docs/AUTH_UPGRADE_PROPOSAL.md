@@ -808,7 +808,7 @@ php migrations/rollback_oauth_mfa_support.php
 |--------|------|------|----------|
 | SMS OTP | No app required | SIM swapping attacks, costs $0.01-0.05/SMS | ❌ No |
 | TOTP (RFC 6238) | Free, secure, offline | Requires authenticator app | ✅ Yes |
-| WebAuthn/FIDO2 | Phishing-resistant | Requires hardware key or biometrics | Future Phase 3 |
+| WebAuthn/FIDO2 | Phishing-resistant | Requires hardware security key | Future Phase 3 |
 
 **Decision:** TOTP for Phase 1, consider WebAuthn for Phase 3
 

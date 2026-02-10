@@ -40,6 +40,27 @@ This system uses a **strict Dev vs Production separation**. Violating this contr
 
 **Never run native backend services** (llama-server, agent_service) - causes port conflicts!
 
+### MariaDB Vector Plugin Requirement (NEW)
+
+- The `phef-database` container **must** load the MariaDB vector storage engine.
+- Add `plugin_load_add=ha_vector` (and `plugin-maturity=alpha` when required) to the MariaDB config or container environment before running migrations `add_rag_embeddings.sql` or `011_enable_vector_plugin.sql`.
+- After restarting the container, verify support with:
+   ```sql
+   SHOW PLUGINS LIKE 'vector';
+   SHOW CREATE TABLE content_embeddings; -- should report VECTOR(384) columns
+   ```
+- Without the plugin the new VECTOR indexes will fail to create, blocking RAG deployment.
+- Validation query:
+   ```sql
+   SELECT sc.title,
+             VEC_Cosine_Distance(ce.embedding_vector, VEC_FromText('[0,0,0,0,0]')) AS distance
+      FROM content_embeddings ce
+      JOIN educational_content sc USING (content_id)
+    ORDER BY distance ASC
+    LIMIT 3;
+   ```
+   Replace the placeholder `[0,0,0,0,0]` with the full 384-value embedding text you want to test. If the query returns rows ordered by distance, VECTOR search is operational.
+
 ---
 
 ## 📋 THE MENTAL MODEL (What Agents Must Believe)

@@ -26,8 +26,6 @@ size_t LlamaCppClient::writeCallback(void* contents, size_t size, size_t nmemb, 
 }
 
 std::string LlamaCppClient::makeRequest(const std::string& prompt, int maxTokens, float temperature) {
-    std::string responseData;
-    
     // Use provided maxTokens or determine based on prompt type
     int tokenLimit = maxTokens > 0 ? maxTokens : 512;
     long timeout = 180L;    // 3 minutes default timeout
@@ -68,36 +66,7 @@ std::string LlamaCppClient::makeRequest(const std::string& prompt, int maxTokens
     stopSequences.append("\n\n\n");
     request["stop"] = stopSequences;
     
-    Json::StreamWriterBuilder writer;
-    std::string jsonRequest = Json::writeString(writer, request);
-    
-    // Create fresh CURL handle for each request
-    CURL* curl = curl_easy_init();
-    if (!curl) {
-        throw std::runtime_error("Failed to initialize CURL handle");
-    }
-    
-    curl_easy_setopt(curl, CURLOPT_URL, (serverUrl_ + "/completion").c_str());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonRequest.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseData);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
-    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
-    
-    struct curl_slist* headers = nullptr;
-    headers = curl_slist_append(headers, "Content-Type: application/json");
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-    
-    // Make request
-    CURLcode res = curl_easy_perform(curl);
-    curl_slist_free_all(headers);
-    curl_easy_cleanup(curl);
-    
-    if (res != CURLE_OK) {
-        throw std::runtime_error("CURL request failed: " + std::string(curl_easy_strerror(res)));
-    }
-    
-    return responseData;
+    return performPost("/completion", request, timeout);
 }
 
 std::string LlamaCppClient::generate(const std::string& prompt, int maxTokens, float temperature) {
@@ -128,4 +97,84 @@ std::string LlamaCppClient::generate(const std::string& prompt, int maxTokens, f
         std::cerr << "[LlamaCppClient] Error: " << e.what() << std::endl;
         throw;
     }
+}
+
+std::string LlamaCppClient::performPost(const std::string& path, const Json::Value& payload, long timeoutSeconds) {
+    Json::StreamWriterBuilder writer;
+    std::string jsonRequest = Json::writeString(writer, payload);
+    std::string responseData;
+
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        throw std::runtime_error("Failed to initialize CURL handle");
+    }
+
+    curl_easy_setopt(curl, CURLOPT_URL, (serverUrl_ + path).c_str());
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonRequest.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseData);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeoutSeconds);
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
+
+    struct curl_slist* headers = nullptr;
+    headers = curl_slist_append(headers, "Content-Type: application/json");
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+    CURLcode res = curl_easy_perform(curl);
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
+    if (res != CURLE_OK) {
+        throw std::runtime_error("CURL request failed: " + std::string(curl_easy_strerror(res)));
+    }
+
+    return responseData;
+}
+
+std::vector<float> LlamaCppClient::embed(const std::string& text, int expectedDimensions) {
+    if (text.empty()) {
+        throw std::runtime_error("Cannot embed empty text");
+    }
+
+    Json::Value request;
+    request["content"] = text;
+
+    std::string responseData = performPost("/embedding", request, 120L);
+
+    Json::Value response;
+    Json::CharReaderBuilder reader;
+    std::stringstream ss(responseData);
+    std::string errs;
+
+    if (!Json::parseFromStream(reader, ss, &response, &errs)) {
+        throw std::runtime_error("Failed to parse embedding response: " + errs);
+    }
+
+    const Json::Value* embeddingNode = nullptr;
+    if (response.isMember("embedding") && response["embedding"].isArray()) {
+        embeddingNode = &response["embedding"];
+    } else if (response.isMember("data") && response["data"].isArray() && !response["data"].empty()) {
+        const Json::Value& first = response["data"][0];
+        if (first.isMember("embedding") && first["embedding"].isArray()) {
+            embeddingNode = &first["embedding"];
+        }
+    }
+
+    if (!embeddingNode) {
+        throw std::runtime_error("Embedding response missing 'embedding' array");
+    }
+
+    std::vector<float> embedding;
+    embedding.reserve(embeddingNode->size());
+    for (const auto& value : *embeddingNode) {
+        embedding.push_back(value.asFloat());
+    }
+
+    if (expectedDimensions > 0 && static_cast<int>(embedding.size()) != expectedDimensions) {
+        std::ostringstream oss;
+        oss << "Expected embedding dimension " << expectedDimensions << " but received " << embedding.size();
+        throw std::runtime_error(oss.str());
+    }
+
+    return embedding;
 }

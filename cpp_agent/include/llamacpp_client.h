@@ -20,12 +20,15 @@
 #pragma once
 #include <string>
 #include <curl/curl.h>
+#include <vector>
+#include <jsoncpp/json/json.h>
 
 class LlamaCppClient {
 public:
     LlamaCppClient(const std::string& serverUrl, const std::string& modelPath, int contextLength = 2048, float temperature = 0.7f);
     ~LlamaCppClient();
     std::string generate(const std::string& prompt, int maxTokens = -1, float temperature = -1.0f);
+    std::vector<float> embed(const std::string& text, int expectedDimensions = 384);
 
 private:
     std::string serverUrl_;
@@ -35,4 +38,5 @@ private:
     
     static size_t writeCallback(void* contents, size_t size, size_t nmemb, std::string* userp);
     std::string makeRequest(const std::string& prompt, int maxTokens = -1, float temperature = -1.0f);
+    std::string performPost(const std::string& path, const Json::Value& payload, long timeoutSeconds);
 };

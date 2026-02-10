@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sstream>
 #include <algorithm>
+#include <iomanip>
 
 AgentManager::AgentManager(Config& config) : config(config) {
     std::cout << "Initializing Agent Manager with multi-model support..." << std::endl;
@@ -37,7 +38,12 @@ AgentManager::AgentManager(Config& config) : config(config) {
     }
     
     database = std::make_unique<Database>(config.dbHost, config.dbPort, config.dbName, config.dbUser, config.dbPassword);
-    ragEngine = std::make_unique<RAGEngine>(database.get(), nullptr);  // RAG without embeddings for now
+
+    LlamaCppClient* ragClient = nullptr;
+    if (!llamaClients.empty()) {
+        ragClient = getClientForModel(config.defaultModel);
+    }
+    ragEngine = std::make_unique<RAGEngine>(database.get(), ragClient);
     
     std::cout << "Agent Manager initialized with " << llamaClients.size() << " model(s)" << std::endl;
 }
@@ -89,34 +95,137 @@ Agent AgentManager::loadAgent(int agentId) {
     return agent;
 }
 
-std::vector<std::string> AgentManager::retrieveRelevantContext(int agentId, const std::string& query) {
-    // Use RAG engine to find relevant documents (reduced from 5 to 3 for performance)
-    return ragEngine->search(agentId, query, 3);
+std::vector<RetrievedChunk> AgentManager::retrieveRelevantContext(const Agent& agent, const std::string& query) {
+    if (!ragEngine) {
+        std::cerr << "[AgentManager] RAG engine unavailable" << std::endl;
+        return {};
+    }
+
+    auto getParam = [&](const std::string& key) -> std::string {
+        auto it = agent.parameters.find(key);
+        return it != agent.parameters.end() ? it->second : "";
+    };
+
+    RAGSearchContext ctx;
+    ctx.agentId = agent.id;
+    ctx.topK = 5;
+
+    const std::string customTopK = getParam("rag_top_k");
+    if (!customTopK.empty()) {
+        try {
+            ctx.topK = std::stoi(customTopK);
+        } catch (...) {
+            std::cerr << "[AgentManager] Invalid rag_top_k value for agent " << agent.id << std::endl;
+        }
+    }
+
+    const std::string customThreshold = getParam("rag_min_similarity");
+    if (!customThreshold.empty()) {
+        try {
+            ctx.similarityThreshold = std::stof(customThreshold);
+        } catch (...) {
+            std::cerr << "[AgentManager] Invalid rag_min_similarity value for agent " << agent.id << std::endl;
+        }
+    }
+
+    ctx.metric = getParam("rag_metric");
+    ctx.gradeLevel = getParam("grade_level");
+    if (ctx.gradeLevel.empty()) {
+        ctx.gradeLevel = getParam("grade");
+    }
+    ctx.subject = getParam("subject");
+    ctx.agentScope = getParam("rag_scope");
+    if (ctx.agentScope.empty()) {
+        ctx.agentScope = getParam("agent_scope");
+    }
+
+    auto chunks = ragEngine->search(ctx, query);
+    if (chunks.empty()) {
+        std::cout << "[AgentManager] No RAG context returned for agent " << agent.id << std::endl;
+    } else {
+        std::cout << "[AgentManager] Retrieved " << chunks.size() << " filtered RAG chunk(s) for agent "
+                  << agent.id << std::endl;
+    }
+    return chunks;
 }
 
 void AgentManager::storeMemory(int userId, int agentId, const std::string& userMessage, const std::string& agentResponse) {
     database->storeMemory(userId, agentId, userMessage, agentResponse);
 }
 
-std::string AgentManager::buildPrompt(const Agent& agent, const std::string& userMessage, const std::vector<std::string>& context) {
+std::string AgentManager::buildPrompt(const Agent& agent, const std::string& userMessage, const std::vector<RetrievedChunk>& contextChunks) {
     std::ostringstream prompt;
-    
-    // OPTIMIZATION: System prompt sent only on first request, then cached by llama-server
-    // Since we're using cache_prompt=true, the system prompt will be cached automatically
     prompt << agent.systemPrompt << "\n\n";
-    
-    // Context from RAG (limit to top 3 for performance)
-    if (!context.empty()) {
-        prompt << "Relevant information:\n";
-        int contextCount = 0;
-        for (const auto& ctx : context) {
-            if (contextCount++ >= 3) break;  // Cap at 3 context items
-            prompt << "- " << ctx << "\n";
+
+    const std::size_t kContextBudget = 1200;
+    std::size_t usedChars = 0;
+    bool headerWritten = false;
+
+    auto appendChunk = [&](const RetrievedChunk& chunk) -> bool {
+        if (chunk.text.empty()) {
+            return false;
         }
-        prompt << "\n";
+        if (usedChars >= kContextBudget) {
+            return false;
+        }
+
+        std::string snippet = chunk.text;
+        if (usedChars + snippet.size() > kContextBudget) {
+            std::size_t remaining = kContextBudget - usedChars;
+            if (remaining == 0) {
+                return false;
+            }
+            snippet = snippet.substr(0, remaining);
+        }
+
+        const std::string gradeLabel = chunk.gradeLevel.empty() ? "any" : chunk.gradeLevel;
+        const std::string subjectLabel = chunk.subject.empty() ? "any" : chunk.subject;
+
+        std::ostringstream metaLine;
+        metaLine << "[grade=" << gradeLabel
+                 << " subject=" << subjectLabel
+                 << " similarity=" << std::fixed << std::setprecision(2) << chunk.similarity << "]";
+        const std::string meta = metaLine.str();
+
+        if (usedChars + meta.size() >= kContextBudget) {
+            return false;
+        }
+
+        if (!headerWritten) {
+            prompt << "Relevant knowledge:\n";
+            headerWritten = true;
+        }
+
+        std::size_t remaining = kContextBudget - usedChars - meta.size();
+        if (remaining == 0) {
+            return false;
+        }
+
+        if (snippet.size() > remaining) {
+            snippet = snippet.substr(0, remaining);
+        }
+
+        prompt << meta << "\n";
+        prompt << snippet << "\n";
+        usedChars += meta.size() + snippet.size();
+        return true;
+    };
+
+    int injectedChunks = 0;
+    for (const auto& chunk : contextChunks) {
+        if (appendChunk(chunk)) {
+            ++injectedChunks;
+        }
     }
-    
-    // User message
+
+    if (headerWritten) {
+        prompt << "\n";
+        std::cout << "[AgentManager] Injected " << injectedChunks << " RAG chunk(s) (" << usedChars
+                  << " chars of context)" << std::endl;
+    } else {
+        std::cout << "[AgentManager] RAG: no context met threshold for agent " << agent.id << std::endl;
+    }
+
     prompt << "Student: " << userMessage << "\n";
     prompt << "Professor Hawkeinstein: ";
     
@@ -130,8 +239,8 @@ std::string AgentManager::processMessage(int userId, int agentId, const std::str
         // Load agent configuration
         Agent agent = loadAgent(agentId);
         
-        // Retrieve relevant context from RAG (searches educational_content table)
-        std::vector<std::string> context = retrieveRelevantContext(agentId, message);
+        // Retrieve relevant context from RAG (agent-aware filters)
+        std::vector<RetrievedChunk> context = retrieveRelevantContext(agent, message);
         std::cout << "[AgentManager] Retrieved " << context.size() << " RAG context items" << std::endl;
         
         // Build prompt with system prompt + context + user message
@@ -172,9 +281,9 @@ std::string AgentManager::processMessageWithContext(int userId, int agentId, con
         Agent agent = loadAgent(agentId);
         
         // Use provided RAG context
-        std::vector<std::string> context;
+        std::vector<RetrievedChunk> context;
         if (!ragContext.empty()) {
-            context.push_back(ragContext);
+            context.push_back({-1, 0, ragContext, 1.0f, "", "", ""});
             std::cout << "RAG context injected into prompt" << std::endl;
         }
         

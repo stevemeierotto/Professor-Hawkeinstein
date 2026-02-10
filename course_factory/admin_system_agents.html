@@ -334,8 +334,8 @@
 
                 <div class="form-group">
                     <label for="systemPrompt">System Prompt</label>
-                    <textarea id="systemPrompt" placeholder="Enter the system prompt that defines this agent's behavior..." readonly></textarea>
-                    <p class="form-help">(Read-only: prompt editing not supported in this UI)</p>
+                    <textarea id="systemPrompt" placeholder="Enter the system prompt that defines this agent's behavior..."></textarea>
+                    <p class="form-help">Define the agent's behavior and instructions</p>
                 </div>
 
                 <div class="form-row">
@@ -444,9 +444,8 @@
             let filtered = systemAgents;
             if (filter) {
                 filtered = systemAgents.filter(agent => {
-                    // agent_type or agent_role may be used depending on backend
-                    return (agent.agent_type && agent.agent_type.toLowerCase() === filter) ||
-                           (agent.agent_role && agent.agent_role.toLowerCase() === filter);
+                    // agent_type is the actual database column
+                    return (agent.agent_type && agent.agent_type.toLowerCase() === filter);
                 });
             }
             if (filtered.length === 0) {
@@ -459,7 +458,7 @@
                 return;
             }
             grid.innerHTML = filtered.map(agent => {
-                const role = roleConfig[agent.agent_role] || roleConfig['other'];
+                const role = roleConfig[agent.agent_type] || roleConfig['other'];
                 const promptPreview = agent.system_prompt ? 
                     agent.system_prompt.substring(0, 100) + (agent.system_prompt.length > 100 ? '...' : '') : 
                     'No prompt configured';
@@ -541,7 +540,6 @@
                 alert('Error updating agent status');
             }
         }
-        </script>
 
         function editAgent(agentId) {
             const agent = systemAgents.find(a => a.agent_id === agentId);
@@ -554,7 +552,7 @@
             document.getElementById('modalTitle').textContent = 'Edit System Agent';
             document.getElementById('agentId').value = agent.agent_id;
             document.getElementById('agentName').value = agent.agent_name || '';
-            document.getElementById('agentRole').value = agent.agent_role || 'other';
+            document.getElementById('agentRole').value = agent.agent_type || 'other';
             document.getElementById('agentDescription').value = agent.specialization || '';
             document.getElementById('temperature').value = agent.temperature || 0.7;
             document.getElementById('maxTokens').value = agent.max_tokens || 2048;
@@ -591,6 +589,7 @@
                 agent_name: document.getElementById('agentName').value,
                 temperature: parseFloat(document.getElementById('temperature').value),
                 specialization: document.getElementById('agentDescription').value,
+                system_prompt: document.getElementById('systemPrompt').value,
                 is_active: document.getElementById('isActive').value === '1'
             };
 
@@ -685,15 +684,15 @@
         document.getElementById('editModal').addEventListener('click', (e) => {
             if (e.target === document.getElementById('editModal')) closeModal();
         });
-    }
-    // Add filter logic and Agent Factory launcher
-    document.getElementById('agentTypeFilter').addEventListener('change', function() {
-        renderAgentCards();
-    });
 
-    function openAgentFactory() {
-        window.location.href = 'admin_agent_factory.html';
-    }
+        // Add filter logic and Agent Factory launcher
+        document.getElementById('agentTypeFilter').addEventListener('change', function() {
+            renderAgentCards();
+        });
+
+        function openAgentFactory() {
+            window.location.href = 'admin_agent_factory.html';
+        }
     </script>
 </body>
 </html>

@@ -6,6 +6,22 @@ A web-based educational system with AI tutoring built on LAMP stack (Linux, Apac
 
 **Architecture:** Browser → PHP/Apache → C++ Agent Service (port 8080) → llama-server (port 8090)
 
+## Authentication & Access Control (February 2026)
+
+- **Student & Observer access** continues to use username/password login through [api/auth/login.php](api/auth/login.php) with HS256 JWTs. Google OAuth is available on every login page; accounts created without an invitation default to the `student` role.
+- **Course Factory admins** are provisioned exclusively through invitations. Root users call [api/admin/invite_admin.php](api/admin/invite_admin.php) to mint tokens stored in `admin_invitations` (7-day expiry). Invitees land on [course_factory/admin_accept_invite.html](course_factory/admin_accept_invite.html), validate the token, and must complete Google SSO via [api/auth/google/login.php](api/auth/google/login.php) and [api/auth/google/callback.php](api/auth/google/callback.php).
+- During callback, the system enforces email matching, upgrades the role, writes audit rows via `logAuthEvent()` (stored in `auth_events`), and sets `auth_provider_required='google'`. Subsequent password attempts for that user are blocked inside [api/auth/login.php](api/auth/login.php).
+- All admin endpoints enforce JWT scopes in [api/admin/auth_check.php](api/admin/auth_check.php), and the frontend guard in [course_factory/admin_auth.js](course_factory/admin_auth.js) refuses to load pages for non-admin roles.
+- **Bootstrap access:** the `root` account (created by [setup_root_admin.sh](setup_root_admin.sh)) still exists for emergency and provisioning work. Change its password after installation; additional admins must use the invitation flow.
+
+## Security Highlights
+
+- Every API endpoint invokes `set_api_security_headers()` from [api/helpers/security_headers.php](api/helpers/security_headers.php), applying CSP, HSTS (production HTTPS only), `X-Frame-Options: DENY`, a strict Permissions-Policy, and an allowlisted CORS configuration.
+- Phased hardening documented in [SECURITY.md](SECURITY.md) removed legacy debug endpoints, required prepared statements, standardized error responses, and centralized logging.
+- OAuth state tokens live in the `oauth_states` table with a 10-minute TTL. All auth activity (password or Google) is written to `auth_events` for audit trails.
+- Admin invitations, acceptance attempts, and role upgrades are logged through `logActivity()` calls, giving visibility into approval workflows.
+- Environment separation is enforced operationally: edit code in `/home/steve/Professor_Hawkeinstein`, then run `make sync-web` to deploy to `/var/www/html/basic_educational` as described in [docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md](docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md).
+
 ## System Architecture
 
 The project is organized as a **two-subsystem architecture**:
@@ -74,8 +90,9 @@ The project is organized as a **two-subsystem architecture**:
 **Authentication System**
 - JWT-based authentication for all API endpoints
 - Admin endpoints require `requireAdmin()` middleware
-- Root user can create admin accounts
-- Session management via PHP
+- Root user provisions additional admins through the invitation workflow (`admin_invitations` table + Google SSO requirement)
+- Google OAuth Authorization Code flow implemented server-side with state storage, audit logging, and role upgrades
+- Session management via PHP plus secure cookies (`SameSite=Strict`, `ENV`-aware `secure` flag)
 
 ### ⏳ Partially Implemented
 

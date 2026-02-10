@@ -124,6 +124,26 @@ CREATE TABLE embeddings (
     INDEX idx_agent_id (agent_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Content Embeddings table: authoritative VECTOR storage for RAG chunks
+CREATE TABLE content_embeddings (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    content_id BIGINT NOT NULL,
+    chunk_index INT NOT NULL,
+    text_chunk LONGTEXT NOT NULL,
+    chunk_metadata JSON NULL,
+    embedding_vector VECTOR(384) NOT NULL,
+    vector_dimension INT DEFAULT 384,
+    model_used VARCHAR(100) DEFAULT 'llama.cpp',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_content_id (content_id),
+    INDEX idx_chunk_index (chunk_index),
+    INDEX idx_text_chunk (text_chunk(255))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE VECTOR INDEX vdx_content_embeddings_cossim
+    ON content_embeddings (embedding_vector)
+    USING COSINE;
+
 -- Courses table: Learning content organized into courses
 CREATE TABLE courses (
     course_id INT AUTO_INCREMENT PRIMARY KEY,

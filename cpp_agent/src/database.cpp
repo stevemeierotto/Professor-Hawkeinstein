@@ -4,6 +4,51 @@
 #include <stdexcept>
 #include <ctime>
 #include <cstring>
+#include <iomanip>
+#include <vector>
+#include <cstdlib>
+#include <algorithm>
+#include <cctype>
+
+namespace {
+constexpr int kEmbeddingDimension = 384;
+
+std::string serializeVector(const std::vector<float>& embedding) {
+    std::ostringstream embStr;
+    embStr.setf(std::ios::fixed);
+    embStr << "[";
+    for (size_t i = 0; i < embedding.size(); ++i) {
+        if (i > 0) {
+            embStr << ",";
+        }
+        embStr << std::setprecision(8) << embedding[i];
+    }
+    embStr << "]";
+    return embStr.str();
+}
+
+std::vector<float> parseVector(const std::string& text) {
+    std::vector<float> values;
+    if (text.empty()) {
+        return values;
+    }
+
+    std::string trimmed = text;
+    if (trimmed.front() == '[' && trimmed.back() == ']') {
+        trimmed = trimmed.substr(1, trimmed.size() - 2);
+    }
+
+    std::stringstream ss(trimmed);
+    std::string token;
+    while (std::getline(ss, token, ',')) {
+        if (!token.empty()) {
+            values.push_back(static_cast<float>(std::atof(token.c_str())));
+        }
+    }
+
+    return values;
+}
+}
 
 Database::Database(const std::string& host, int port, const std::string& dbName, 
                    const std::string& user, const std::string& password)
@@ -148,88 +193,520 @@ void Database::storeMemory(int userId, int agentId, const std::string& userMessa
 
 std::vector<std::string> Database::getRAGDocuments(int agentId, const std::vector<float>& embedding, int limit) {
     std::vector<std::string> documents;
-    
-    // Build embedding string for vector similarity search
-    std::ostringstream embStr;
-    embStr << "[";
-    for (size_t i = 0; i < embedding.size(); ++i) {
-        if (i > 0) embStr << ",";
-        embStr << embedding[i];
-    }
-    embStr << "]";
-    
-    // Query using vector similarity (MariaDB vector functions)
-    std::ostringstream query;
-    query << "SELECT rd.content, VEC_DISTANCE(e.embedding_vector, VEC_FromText('" << embStr.str() << "')) as distance "
-          << "FROM rag_documents rd "
-          << "JOIN embeddings e ON rd.id = e.document_id "
-          << "WHERE rd.agent_id = " << agentId << " "
-          << "ORDER BY distance ASC "
-          << "LIMIT " << limit;
-    
-    if (mysql_query(connection, query.str().c_str())) {
-        std::cerr << "Failed to query RAG documents: " << mysql_error(connection) << std::endl;
+    (void)agentId; // Agent-specific filtering will be layered on later phases
+
+    if (embedding.empty() || limit <= 0) {
         return documents;
     }
-    
-    MYSQL_RES* result = mysql_store_result(connection);
-    if (!result) {
+
+    if (embedding.size() != static_cast<size_t>(kEmbeddingDimension)) {
+        std::cerr << "[Database] getRAGDocuments rejected vector with dimension " << embedding.size()
+                  << " (expected " << kEmbeddingDimension << ")" << std::endl;
         return documents;
     }
-    
-    MYSQL_ROW row;
-    while ((row = mysql_fetch_row(result))) {
-        if (row[0]) {
-            documents.push_back(row[0]);
+
+    const std::string serializedEmbedding = serializeVector(embedding);
+
+    const char* sql =
+        "SELECT sc.title, ce.text_chunk, VEC_Cosine_Distance(ce.embedding_vector, VEC_FromText(?)) AS distance "
+        "FROM content_embeddings ce "
+        "JOIN educational_content sc ON ce.content_id = sc.content_id "
+        "ORDER BY distance ASC "
+        "LIMIT ?";
+
+    MYSQL_STMT* stmt = mysql_stmt_init(connection);
+    if (!stmt) {
+        std::cerr << "[Database] Failed to init statement for vector search" << std::endl;
+        return documents;
+    }
+
+    if (mysql_stmt_prepare(stmt, sql, std::strlen(sql)) != 0) {
+        std::cerr << "[Database] Failed to prepare vector search: " << mysql_stmt_error(stmt) << std::endl;
+        mysql_stmt_close(stmt);
+        return documents;
+    }
+
+    MYSQL_BIND params[2];
+    std::memset(params, 0, sizeof(params));
+    params[0].buffer_type = MYSQL_TYPE_STRING;
+    params[0].buffer = const_cast<char*>(serializedEmbedding.c_str());
+    params[0].buffer_length = serializedEmbedding.size();
+
+    unsigned long embedLength = serializedEmbedding.size();
+    params[0].length = &embedLength;
+
+    int limitValue = limit;
+    params[1].buffer_type = MYSQL_TYPE_LONG;
+    params[1].buffer = &limitValue;
+    params[1].buffer_length = sizeof(limitValue);
+
+    if (mysql_stmt_bind_param(stmt, params) != 0) {
+        std::cerr << "[Database] Failed to bind vector search params: " << mysql_stmt_error(stmt) << std::endl;
+        mysql_stmt_close(stmt);
+        return documents;
+    }
+
+    if (mysql_stmt_execute(stmt) != 0) {
+        std::cerr << "[Database] Vector search execute failed: " << mysql_stmt_error(stmt) << std::endl;
+        mysql_stmt_close(stmt);
+        return documents;
+    }
+
+    if (mysql_stmt_store_result(stmt) != 0) {
+        std::cerr << "[Database] Failed to buffer vector search results: " << mysql_stmt_error(stmt) << std::endl;
+        mysql_stmt_close(stmt);
+        return documents;
+    }
+
+    MYSQL_BIND resultBinds[3];
+    std::memset(resultBinds, 0, sizeof(resultBinds));
+    bool titleNull = false;
+    bool chunkNull = false;
+    unsigned long titleLen = 0;
+    unsigned long chunkLen = 0;
+    float distance = 0.0f;
+
+    char titleStub = '\0';
+    char chunkStub = '\0';
+
+    resultBinds[0].buffer_type = MYSQL_TYPE_STRING;
+    resultBinds[0].buffer = &titleStub;
+    resultBinds[0].buffer_length = 0;
+    resultBinds[0].is_null = &titleNull;
+    resultBinds[0].length = &titleLen;
+
+    resultBinds[1].buffer_type = MYSQL_TYPE_STRING;
+    resultBinds[1].buffer = &chunkStub;
+    resultBinds[1].buffer_length = 0;
+    resultBinds[1].is_null = &chunkNull;
+    resultBinds[1].length = &chunkLen;
+
+    resultBinds[2].buffer_type = MYSQL_TYPE_FLOAT;
+    resultBinds[2].buffer = &distance;
+
+    if (mysql_stmt_bind_result(stmt, resultBinds) != 0) {
+        std::cerr << "[Database] Failed to bind vector search results: " << mysql_stmt_error(stmt) << std::endl;
+        mysql_stmt_close(stmt);
+        return documents;
+    }
+
+    auto fetchStringColumn = [&](unsigned int columnIndex, unsigned long valueLength) {
+        std::string value;
+        if (valueLength == 0) {
+            return value;
         }
+
+        std::vector<char> buffer(valueLength + 1, '\0');
+        MYSQL_BIND fetchBind{};
+        fetchBind.buffer_type = MYSQL_TYPE_STRING;
+        fetchBind.buffer = buffer.data();
+        fetchBind.buffer_length = valueLength;
+
+        if (mysql_stmt_fetch_column(stmt, &fetchBind, columnIndex, 0) == 0) {
+            value.assign(buffer.data(), valueLength);
+        }
+
+        return value;
+    };
+
+    while (true) {
+        int fetchStatus = mysql_stmt_fetch(stmt);
+        if (fetchStatus == MYSQL_NO_DATA) {
+            break;
+        }
+        if (fetchStatus != 0 && fetchStatus != MYSQL_DATA_TRUNCATED) {
+            std::cerr << "[Database] Vector search fetch error: " << mysql_stmt_error(stmt) << std::endl;
+            break;
+        }
+
+        std::string title = titleNull ? "" : fetchStringColumn(0, titleLen);
+        std::string chunk = chunkNull ? "" : fetchStringColumn(1, chunkLen);
+
+        if (chunk.empty()) {
+            continue;
+        }
+
+        std::ostringstream formatted;
+        formatted << "## " << (title.empty() ? "Referenced Content" : title) << "\n" << chunk;
+        documents.push_back(formatted.str());
     }
-    
-    mysql_free_result(result);
+
+    mysql_stmt_close(stmt);
     return documents;
 }
 
+std::vector<VectorSearchResult> Database::vectorSearch(const std::vector<float>& embedding,
+                                                       int topK,
+                                                       const std::string& metric,
+                                                       const VectorSearchFilters* filters) {
+    std::vector<VectorSearchResult> results;
+
+    if (embedding.empty()) {
+        return results;
+    }
+
+    if (embedding.size() != static_cast<size_t>(kEmbeddingDimension)) {
+        std::cerr << "[Database] vectorSearch rejected vector with dimension " << embedding.size()
+                  << " (expected " << kEmbeddingDimension << ")" << std::endl;
+        return results;
+    }
+
+    int effectiveTopK = topK > 0 ? topK : 5;
+
+    std::string metricLower = metric;
+    std::transform(metricLower.begin(), metricLower.end(), metricLower.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+
+    bool useL2 = (metricLower == "l2" || metricLower == "euclidean" || metricLower == "l2_distance");
+    const std::string distanceFunction = useL2 ? "VEC_L2_Distance" : "VEC_Cosine_Distance";
+
+    const std::string serializedEmbedding = serializeVector(embedding);
+    std::string sql =
+        "SELECT content_id, chunk_index, text_chunk, "
+        "JSON_UNQUOTE(JSON_EXTRACT(chunk_metadata, '$.grade_level')) AS grade_level, "
+        "JSON_UNQUOTE(JSON_EXTRACT(chunk_metadata, '$.subject')) AS subject, "
+        "JSON_UNQUOTE(JSON_EXTRACT(chunk_metadata, '$.agent_scope')) AS agent_scope, ";
+    sql += distanceFunction;
+    sql += "(embedding_vector, VEC_FromText(?)) AS distance "
+           "FROM content_embeddings WHERE 1=1";
+
+    if (filters) {
+        if (filters->hasAgentScope()) {
+            sql += " AND JSON_UNQUOTE(JSON_EXTRACT(chunk_metadata, '$.agent_scope')) = ?";
+        }
+        if (filters->hasGradeLevel()) {
+            sql += " AND JSON_UNQUOTE(JSON_EXTRACT(chunk_metadata, '$.grade_level')) = ?";
+        }
+        if (filters->hasSubject()) {
+            sql += " AND JSON_UNQUOTE(JSON_EXTRACT(chunk_metadata, '$.subject')) = ?";
+        }
+    }
+
+    sql += " ORDER BY distance ASC LIMIT ?";
+
+    MYSQL_STMT* stmt = mysql_stmt_init(connection);
+    if (!stmt) {
+        std::cerr << "[Database] Failed to init statement for vectorSearch" << std::endl;
+        return results;
+    }
+
+    if (mysql_stmt_prepare(stmt, sql.c_str(), sql.length()) != 0) {
+        std::cerr << "[Database] Failed to prepare vectorSearch: " << mysql_stmt_error(stmt) << std::endl;
+        mysql_stmt_close(stmt);
+        return results;
+    }
+
+    unsigned long embedLength = serializedEmbedding.size();
+    int limitValue = effectiveTopK;
+
+    std::vector<MYSQL_BIND> params;
+    params.reserve(5);
+
+    MYSQL_BIND embeddingBind{};
+    embeddingBind.buffer_type = MYSQL_TYPE_STRING;
+    embeddingBind.buffer = const_cast<char*>(serializedEmbedding.c_str());
+    embeddingBind.buffer_length = serializedEmbedding.size();
+    embeddingBind.length = &embedLength;
+    params.push_back(embeddingBind);
+
+    std::vector<std::string> stringStorage;
+    std::vector<unsigned long> lengthStorage;
+    stringStorage.reserve(3);
+    lengthStorage.reserve(3);
+
+    if (filters) {
+        if (filters->hasAgentScope()) {
+            stringStorage.push_back(filters->agentScope);
+            lengthStorage.push_back(static_cast<unsigned long>(stringStorage.back().size()));
+            MYSQL_BIND bind{};
+            bind.buffer_type = MYSQL_TYPE_STRING;
+            bind.buffer = const_cast<char*>(stringStorage.back().c_str());
+            bind.buffer_length = stringStorage.back().size();
+            bind.length = &lengthStorage.back();
+            params.push_back(bind);
+        }
+        if (filters->hasGradeLevel()) {
+            stringStorage.push_back(filters->gradeLevel);
+            lengthStorage.push_back(static_cast<unsigned long>(stringStorage.back().size()));
+            MYSQL_BIND bind{};
+            bind.buffer_type = MYSQL_TYPE_STRING;
+            bind.buffer = const_cast<char*>(stringStorage.back().c_str());
+            bind.buffer_length = stringStorage.back().size();
+            bind.length = &lengthStorage.back();
+            params.push_back(bind);
+        }
+        if (filters->hasSubject()) {
+            stringStorage.push_back(filters->subject);
+            lengthStorage.push_back(static_cast<unsigned long>(stringStorage.back().size()));
+            MYSQL_BIND bind{};
+            bind.buffer_type = MYSQL_TYPE_STRING;
+            bind.buffer = const_cast<char*>(stringStorage.back().c_str());
+            bind.buffer_length = stringStorage.back().size();
+            bind.length = &lengthStorage.back();
+            params.push_back(bind);
+        }
+    }
+
+    MYSQL_BIND limitBind{};
+    limitBind.buffer_type = MYSQL_TYPE_LONG;
+    limitBind.buffer = &limitValue;
+    limitBind.buffer_length = sizeof(limitValue);
+    params.push_back(limitBind);
+
+    if (mysql_stmt_bind_param(stmt, params.data()) != 0) {
+        std::cerr << "[Database] Failed to bind vectorSearch params: " << mysql_stmt_error(stmt) << std::endl;
+        mysql_stmt_close(stmt);
+        return results;
+    }
+
+    if (mysql_stmt_execute(stmt) != 0) {
+        std::cerr << "[Database] vectorSearch execute failed: " << mysql_stmt_error(stmt) << std::endl;
+        mysql_stmt_close(stmt);
+        return results;
+    }
+
+    if (mysql_stmt_store_result(stmt) != 0) {
+        std::cerr << "[Database] Failed to buffer vectorSearch results: " << mysql_stmt_error(stmt) << std::endl;
+        mysql_stmt_close(stmt);
+        return results;
+    }
+
+    MYSQL_BIND resultBinds[7];
+    std::memset(resultBinds, 0, sizeof(resultBinds));
+    int contentId = 0;
+    int chunkIndex = 0;
+    bool textNull = false;
+    unsigned long textLength = 0;
+    bool gradeNull = false;
+    unsigned long gradeLength = 0;
+    bool subjectNull = false;
+    unsigned long subjectLength = 0;
+    bool scopeNull = false;
+    unsigned long scopeLength = 0;
+    float distance = 0.0f;
+    char textStub = '\0';
+    char gradeStub = '\0';
+    char subjectStub = '\0';
+    char scopeStub = '\0';
+
+    resultBinds[0].buffer_type = MYSQL_TYPE_LONG;
+    resultBinds[0].buffer = &contentId;
+    resultBinds[0].buffer_length = sizeof(contentId);
+
+    resultBinds[1].buffer_type = MYSQL_TYPE_LONG;
+    resultBinds[1].buffer = &chunkIndex;
+    resultBinds[1].buffer_length = sizeof(chunkIndex);
+
+    resultBinds[2].buffer_type = MYSQL_TYPE_STRING;
+    resultBinds[2].buffer = &textStub;
+    resultBinds[2].buffer_length = 0;
+    resultBinds[2].is_null = &textNull;
+    resultBinds[2].length = &textLength;
+
+    resultBinds[3].buffer_type = MYSQL_TYPE_STRING;
+    resultBinds[3].buffer = &gradeStub;
+    resultBinds[3].buffer_length = 0;
+    resultBinds[3].is_null = &gradeNull;
+    resultBinds[3].length = &gradeLength;
+
+    resultBinds[4].buffer_type = MYSQL_TYPE_STRING;
+    resultBinds[4].buffer = &subjectStub;
+    resultBinds[4].buffer_length = 0;
+    resultBinds[4].is_null = &subjectNull;
+    resultBinds[4].length = &subjectLength;
+
+    resultBinds[5].buffer_type = MYSQL_TYPE_STRING;
+    resultBinds[5].buffer = &scopeStub;
+    resultBinds[5].buffer_length = 0;
+    resultBinds[5].is_null = &scopeNull;
+    resultBinds[5].length = &scopeLength;
+
+    resultBinds[6].buffer_type = MYSQL_TYPE_FLOAT;
+    resultBinds[6].buffer = &distance;
+    resultBinds[6].buffer_length = sizeof(distance);
+
+    if (mysql_stmt_bind_result(stmt, resultBinds) != 0) {
+        std::cerr << "[Database] Failed to bind vectorSearch results: " << mysql_stmt_error(stmt) << std::endl;
+        mysql_stmt_close(stmt);
+        return results;
+    }
+
+    auto fetchStringColumn = [&](unsigned int columnIndex, unsigned long valueLength) {
+        std::string value;
+        if (valueLength == 0) {
+            return value;
+        }
+
+        std::vector<char> buffer(valueLength + 1, '\0');
+        MYSQL_BIND fetchBind{};
+        fetchBind.buffer_type = MYSQL_TYPE_STRING;
+        fetchBind.buffer = buffer.data();
+        fetchBind.buffer_length = valueLength;
+
+        if (mysql_stmt_fetch_column(stmt, &fetchBind, columnIndex, 0) == 0) {
+            value.assign(buffer.data(), valueLength);
+        }
+
+        return value;
+    };
+
+    while (true) {
+        int fetchStatus = mysql_stmt_fetch(stmt);
+        if (fetchStatus == MYSQL_NO_DATA) {
+            break;
+        }
+        if (fetchStatus != 0 && fetchStatus != MYSQL_DATA_TRUNCATED) {
+            std::cerr << "[Database] vectorSearch fetch error: " << mysql_stmt_error(stmt) << std::endl;
+            break;
+        }
+
+        VectorSearchResult row{};
+        row.contentId = contentId;
+        row.chunkIndex = chunkIndex;
+        row.chunkText = textNull ? "" : fetchStringColumn(2, textLength);
+        row.gradeLevel = gradeNull ? "" : fetchStringColumn(3, gradeLength);
+        row.subject = subjectNull ? "" : fetchStringColumn(4, subjectLength);
+        row.agentScope = scopeNull ? "" : fetchStringColumn(5, scopeLength);
+        if (row.chunkText.empty()) {
+            continue;
+        }
+
+        float similarity = 0.0f;
+        if (useL2) {
+            similarity = 1.0f / (1.0f + std::max(distance, 0.0f));
+        } else {
+            similarity = 1.0f - distance;
+        }
+        similarity = std::clamp(similarity, 0.0f, 1.0f);
+        row.similarity = similarity;
+        results.push_back(std::move(row));
+    }
+
+    mysql_stmt_close(stmt);
+    return results;
+}
+
 void Database::storeEmbedding(int documentId, const std::vector<float>& embedding) {
-    // Build embedding string
-    std::ostringstream embStr;
-    embStr << "[";
-    for (size_t i = 0; i < embedding.size(); ++i) {
-        if (i > 0) embStr << ",";
-        embStr << embedding[i];
+    if (embedding.size() != static_cast<size_t>(kEmbeddingDimension)) {
+        std::cerr << "[Database] storeEmbedding rejected vector with dimension " << embedding.size()
+                  << " (expected " << kEmbeddingDimension << ")" << std::endl;
+        return;
     }
-    embStr << "]";
-    
-    std::ostringstream query;
-    query << "INSERT INTO embeddings (document_id, embedding_vector, created_at) VALUES "
-          << "(" << documentId << ", VEC_FromText('" << embStr.str() << "'), NOW())";
-    
-    if (mysql_query(connection, query.str().c_str())) {
-        std::cerr << "Failed to store embedding: " << mysql_error(connection) << std::endl;
+
+    const std::string serializedEmbedding = serializeVector(embedding);
+    const char* sql =
+        "INSERT INTO content_embeddings (content_id, chunk_index, text_chunk, chunk_metadata, embedding_vector, vector_dimension, model_used) "
+        "VALUES (?, 0, '', NULL, VEC_FromText(?), ?, 'llama.cpp')";
+
+    MYSQL_STMT* stmt = mysql_stmt_init(connection);
+    if (!stmt) {
+        std::cerr << "[Database] Failed to init statement for embedding insert" << std::endl;
+        return;
     }
+
+    if (mysql_stmt_prepare(stmt, sql, std::strlen(sql)) != 0) {
+        std::cerr << "[Database] Failed to prepare embedding insert: " << mysql_stmt_error(stmt) << std::endl;
+        mysql_stmt_close(stmt);
+        return;
+    }
+
+    int contentId = documentId;
+    int dimension = kEmbeddingDimension;
+    unsigned long vectorLength = serializedEmbedding.size();
+
+    MYSQL_BIND params[3];
+    std::memset(params, 0, sizeof(params));
+    params[0].buffer_type = MYSQL_TYPE_LONG;
+    params[0].buffer = &contentId;
+    params[0].buffer_length = sizeof(contentId);
+
+    params[1].buffer_type = MYSQL_TYPE_STRING;
+    params[1].buffer = const_cast<char*>(serializedEmbedding.c_str());
+    params[1].buffer_length = serializedEmbedding.size();
+    params[1].length = &vectorLength;
+
+    params[2].buffer_type = MYSQL_TYPE_LONG;
+    params[2].buffer = &dimension;
+    params[2].buffer_length = sizeof(dimension);
+
+    if (mysql_stmt_bind_param(stmt, params) != 0) {
+        std::cerr << "[Database] Failed to bind embedding insert params: " << mysql_stmt_error(stmt) << std::endl;
+        mysql_stmt_close(stmt);
+        return;
+    }
+
+    if (mysql_stmt_execute(stmt) != 0) {
+        std::cerr << "[Database] Embedding insert failed: " << mysql_stmt_error(stmt) << std::endl;
+    }
+
+    mysql_stmt_close(stmt);
 }
 
 std::vector<float> Database::getEmbedding(int embeddingId) {
     std::vector<float> embedding;
-    
-    std::ostringstream query;
-    query << "SELECT VEC_ToText(embedding_vector) FROM embeddings WHERE id = " << embeddingId;
-    
-    if (mysql_query(connection, query.str().c_str())) {
+
+    const char* sql = "SELECT VEC_ToText(embedding_vector) FROM content_embeddings WHERE id = ?";
+    MYSQL_STMT* stmt = mysql_stmt_init(connection);
+    if (!stmt) {
+        std::cerr << "[Database] Failed to init statement for getEmbedding" << std::endl;
         return embedding;
     }
-    
-    MYSQL_RES* result = mysql_store_result(connection);
-    if (!result) {
+
+    if (mysql_stmt_prepare(stmt, sql, std::strlen(sql)) != 0) {
+        std::cerr << "[Database] Failed to prepare getEmbedding: " << mysql_stmt_error(stmt) << std::endl;
+        mysql_stmt_close(stmt);
         return embedding;
     }
-    
-    MYSQL_ROW row = mysql_fetch_row(result);
-    if (row && row[0]) {
-        // Parse the vector string [1.23,4.56,...]
-        std::string vecStr = row[0];
-        // TODO: Implement vector string parsing
+
+    MYSQL_BIND param{};
+    param.buffer_type = MYSQL_TYPE_LONG;
+    param.buffer = &embeddingId;
+    param.buffer_length = sizeof(embeddingId);
+    if (mysql_stmt_bind_param(stmt, &param) != 0) {
+        std::cerr << "[Database] Failed to bind getEmbedding param: " << mysql_stmt_error(stmt) << std::endl;
+        mysql_stmt_close(stmt);
+        return embedding;
     }
-    
-    mysql_free_result(result);
+
+    if (mysql_stmt_execute(stmt) != 0) {
+        std::cerr << "[Database] getEmbedding execute failed: " << mysql_stmt_error(stmt) << std::endl;
+        mysql_stmt_close(stmt);
+        return embedding;
+    }
+
+    MYSQL_BIND resultBind{};
+    bool isNull = false;
+    unsigned long valueLength = 0;
+    resultBind.buffer_type = MYSQL_TYPE_STRING;
+    resultBind.is_null = &isNull;
+    resultBind.length = &valueLength;
+
+    if (mysql_stmt_bind_result(stmt, &resultBind) != 0) {
+        std::cerr << "[Database] Failed to bind getEmbedding result: " << mysql_stmt_error(stmt) << std::endl;
+        mysql_stmt_close(stmt);
+        return embedding;
+    }
+
+    if (mysql_stmt_store_result(stmt) != 0) {
+        std::cerr << "[Database] Failed to buffer getEmbedding result: " << mysql_stmt_error(stmt) << std::endl;
+        mysql_stmt_close(stmt);
+        return embedding;
+    }
+
+    if (mysql_stmt_fetch(stmt) == 0 && !isNull && valueLength > 0) {
+        std::vector<char> buffer(valueLength + 1, '\0');
+        MYSQL_BIND fetchBind{};
+        fetchBind.buffer_type = MYSQL_TYPE_STRING;
+        fetchBind.buffer = buffer.data();
+        fetchBind.buffer_length = valueLength;
+
+        if (mysql_stmt_fetch_column(stmt, &fetchBind, 0, 0) == 0) {
+            embedding = parseVector(std::string(buffer.data(), valueLength));
+        }
+    }
+
+    mysql_stmt_close(stmt);
     return embedding;
 }
 

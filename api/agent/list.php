@@ -6,7 +6,7 @@
 
 require_once __DIR__ . '/../helpers/security_headers.php';
 set_api_security_headers();
-
+require_once __DIR__ . '/../../config/database.php';
 
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {

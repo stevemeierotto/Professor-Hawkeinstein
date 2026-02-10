@@ -68,6 +68,11 @@ try {
         $params[] = $input['specialization'] ?: null;
     }
     
+    if (isset($input['system_prompt'])) {
+        $updates[] = "system_prompt = ?";
+        $params[] = $input['system_prompt'] ?: null;
+    }
+    
     if (isset($input['is_active'])) {
         $updates[] = "is_active = ?";
         $params[] = intval($input['is_active']);

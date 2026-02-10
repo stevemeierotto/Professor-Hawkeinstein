@@ -537,7 +537,26 @@ async function authenticatedFetch(url, options = {}) {
         throw new Error('Session expired');
     }
     
-    return await response.json();
+    // Check if response has content before parsing
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Non-JSON response:', text);
+        throw new Error(`Server returned non-JSON response (${response.status}): ${text.substring(0, 100)}`);
+    }
+    
+    const text = await response.text();
+    if (!text) {
+        console.error('Empty response from:', url);
+        throw new Error('Server returned empty response');
+    }
+    
+    try {
+        return JSON.parse(text);
+    } catch (e) {
+        console.error('JSON parse error:', e, 'Response:', text.substring(0, 200));
+        throw new Error(`Invalid JSON response: ${text.substring(0, 100)}`);
+    }
 }
 
 /**

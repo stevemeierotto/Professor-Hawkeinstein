@@ -1,5 +1,9 @@
 <?php
 /**
+ * 🔒 PRIVACY REGRESSION PROTECTED
+ * Changes to this file require privacy review (see docs/ANALYTICS_PRIVACY_VALIDATION.md)
+ * Required guards: Phase 2 (PII), Phase 3 (Cohort), Phase 4 (Rate limit, Audit)
+ * 
  * Admin Course Analytics API
  * 
  * Returns course-specific effectiveness metrics
@@ -11,15 +15,33 @@ require_once APP_ROOT . '/config/database.php';
 require_once APP_ROOT . '/api/admin/auth_check.php';
 require_once APP_ROOT . '/api/helpers/analytics_response_guard.php';
 require_once APP_ROOT . '/api/helpers/analytics_cohort_guard.php';
+require_once APP_ROOT . '/api/helpers/analytics_rate_limiter.php';
+require_once APP_ROOT . '/api/helpers/analytics_audit_log.php';
 
 setCORSHeaders();
+
+// Security headers
+header('X-Content-Type-Options: nosniff');
+header('Cache-Control: private, no-cache, no-store, must-revalidate');
+header('X-Frame-Options: DENY');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     sendJSON(['success' => false, 'message' => 'Method not allowed'], 405);
 }
 
 // Require admin authentication
-requireAdmin();
+$adminUser = requireAdmin();
+$userId = $adminUser['user_id'] ?? 'unknown';
+
+// Enforce rate limit for admin analytics
+try {
+    enforceRateLimit($userId, ADMIN_ANALYTICS_RATE_LIMIT, 'admin_analytics_course');
+} catch (RateLimitExceededException $e) {
+    logAnalyticsAccessFailure('admin_analytics_course', 'Rate limit exceeded', $userId);
+    http_response_code(429);
+    echo json_encode($e->toResponse());
+    exit;
+}
 
 try {
     $db = getDB();
@@ -85,6 +107,9 @@ try {
             ");
             $courses = $directCoursesStmt->fetchAll();
         }
+        
+        // Log successful access
+        logAnalyticsAccess('admin_analytics_course', 'list_courses', $userId, 'admin', [], true);
         
         sendProtectedAnalyticsJSON([
             'success' => true,
@@ -193,6 +218,9 @@ try {
     $agentUsageStmt->execute(['course_id' => $courseId]);
     $agentUsage = $agentUsageStmt->fetchAll();
     
+    // Log successful access
+    logAnalyticsAccess('admin_analytics_course', 'view_course_detail', $userId, 'admin', ['courseId' => $courseId], true);
+    
     sendProtectedAnalyticsJSON([
         'success' => true,
         'course' => $course,
@@ -214,5 +242,6 @@ try {
     
 } catch (Exception $e) {
     error_log("Course analytics error: " . $e->getMessage());
+    logAnalyticsAccessFailure('admin_analytics_course', 'Exception: ' . $e->getMessage(), $userId ?? 'unknown');
     sendJSON(['success' => false, 'message' => 'Failed to fetch course analytics'], 500);
 }

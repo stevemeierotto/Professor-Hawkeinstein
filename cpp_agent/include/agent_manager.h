@@ -21,9 +21,9 @@ private:
     std::map<int, Agent> agentCache;
     
     Agent loadAgent(int agentId);
-    std::vector<std::string> retrieveRelevantContext(int agentId, const std::string& query);
+    std::vector<RetrievedChunk> retrieveRelevantContext(const Agent& agent, const std::string& query);
     void storeMemory(int userId, int agentId, const std::string& userMessage, const std::string& agentResponse);
-    std::string buildPrompt(const Agent& agent, const std::string& userMessage, const std::vector<std::string>& context);
+    std::string buildPrompt(const Agent& agent, const std::string& userMessage, const std::vector<RetrievedChunk>& contextChunks);
     LlamaCppClient* getClientForModel(const std::string& modelName);
     
 public:

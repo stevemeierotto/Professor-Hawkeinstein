@@ -3,27 +3,29 @@
 -- Author: System
 -- Date: 2025-11-28
 
--- Add text_chunk column to embeddings table if not exists
-ALTER TABLE embeddings 
-ADD COLUMN IF NOT EXISTS text_chunk TEXT AFTER source_id,
-ADD COLUMN IF NOT EXISTS chunk_metadata JSON AFTER text_chunk;
+-- Legacy embeddings table is being superseded by content_embeddings with VECTOR storage
+-- (kept for backward compatibility but no longer altered by this migration)
 
 -- Create content_embeddings table for educational content chunks
 CREATE TABLE IF NOT EXISTS content_embeddings (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     content_id BIGINT NOT NULL,
     chunk_index INT NOT NULL,
-    text_chunk TEXT NOT NULL,
-    embedding_vector BLOB NOT NULL,
+    text_chunk LONGTEXT NOT NULL,
+    chunk_metadata JSON NULL,
+    embedding_vector VECTOR(384) NOT NULL,
     vector_dimension INT DEFAULT 384,
-    model_used VARCHAR(100) DEFAULT 'all-MiniLM-L6-v2',
+    model_used VARCHAR(100) DEFAULT 'llama.cpp',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_content_id (content_id),
     INDEX idx_chunk_index (chunk_index),
-    FULLTEXT idx_text_chunk (text_chunk)
+    INDEX idx_text_chunk (text_chunk(255))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Add embedding tracking to educational_content
+CREATE VECTOR INDEX vdx_content_embeddings_cossim
+    ON content_embeddings (embedding_vector)
+    USING COSINE;
+
 ALTER TABLE educational_content
 ADD COLUMN IF NOT EXISTS has_embeddings BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS embedding_count INT DEFAULT 0,

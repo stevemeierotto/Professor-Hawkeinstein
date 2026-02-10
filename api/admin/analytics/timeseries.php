@@ -1,5 +1,9 @@
 <?php
 /**
+ * 🔒 PRIVACY REGRESSION PROTECTED
+ * Changes to this file require privacy review (see docs/ANALYTICS_PRIVACY_VALIDATION.md)
+ * Required guards: Phase 2 (PII), Phase 3 (Cohort), Phase 4 (Rate limit, Audit)
+ * 
  * Admin Time-Series Analytics API
  * 
  * Returns trend data over time (daily/weekly/monthly)
@@ -11,15 +15,33 @@ require_once APP_ROOT . '/config/database.php';
 require_once APP_ROOT . '/api/admin/auth_check.php';
 require_once APP_ROOT . '/api/helpers/analytics_response_guard.php';
 require_once APP_ROOT . '/api/helpers/analytics_cohort_guard.php';
+require_once APP_ROOT . '/api/helpers/analytics_rate_limiter.php';
+require_once APP_ROOT . '/api/helpers/analytics_audit_log.php';
 
 setCORSHeaders();
+
+// Security headers
+header('X-Content-Type-Options: nosniff');
+header('Cache-Control: private, no-cache, no-store, must-revalidate');
+header('X-Frame-Options: DENY');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     sendJSON(['success' => false, 'message' => 'Method not allowed'], 405);
 }
 
 // Require admin authentication
-requireAdmin();
+$adminUser = requireAdmin();
+$userId = $adminUser['user_id'] ?? 'unknown';
+
+// Enforce rate limit for admin analytics
+try {
+    enforceRateLimit($userId, ADMIN_ANALYTICS_RATE_LIMIT, 'admin_analytics_timeseries');
+} catch (RateLimitExceededException $e) {
+    logAnalyticsAccessFailure('admin_analytics_timeseries', 'Rate limit exceeded', $userId);
+    http_response_code(429);
+    echo json_encode($e->toResponse());
+    exit;
+}
 
 try {
     $db = getDB();
@@ -71,6 +93,9 @@ try {
             ]];
         }
         
+        // Log successful access
+        logAnalyticsAccess('admin_analytics_timeseries', 'view_daily_trend', $userId, 'admin', ['period' => 'daily', 'startDate' => $startDate, 'endDate' => $endDate], true);
+        
         sendProtectedAnalyticsJSON([
             'success' => true,
             'period' => 'daily',
@@ -106,6 +131,9 @@ try {
         $stmt = $db->prepare($query);
         $stmt->execute(['start_date' => $startDate, 'end_date' => $endDate]);
         $data = $stmt->fetchAll();
+        
+        // Log successful access
+        logAnalyticsAccess('admin_analytics_timeseries', 'view_weekly_trend', $userId, 'admin', ['period' => 'weekly', 'startDate' => $startDate, 'endDate' => $endDate], true);
         
         sendProtectedAnalyticsJSON([
             'success' => true,
@@ -143,6 +171,9 @@ try {
         $stmt->execute(['start_date' => $startDate, 'end_date' => $endDate]);
         $data = $stmt->fetchAll();
         
+        // Log successful access
+        logAnalyticsAccess('admin_analytics_timeseries', 'view_monthly_trend', $userId, 'admin', ['period' => 'monthly', 'startDate' => $startDate, 'endDate' => $endDate], true);
+        
         sendProtectedAnalyticsJSON([
             'success' => true,
             'period' => 'monthly',
@@ -156,5 +187,6 @@ try {
     
 } catch (Exception $e) {
     error_log("Time-series analytics error: " . $e->getMessage());
+    logAnalyticsAccessFailure('admin_analytics_timeseries', 'Exception: ' . $e->getMessage(), $userId ?? 'unknown');
     sendJSON(['success' => false, 'message' => 'Failed to fetch time-series data'], 500);
 }

@@ -2,6 +2,13 @@
 
 An AI-powered educational platform with automated course generation, personalized student advisors, and interactive workbooks. Built with local LLM inference using llama.cpp.
 
+## Primary References
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) — Source of truth for subsystem boundaries and allowed responsibilities.
+- [docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md](docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md) — Required dev/prod workflow and sync rules (read before editing files).
+- [SECURITY.md](SECURITY.md) — Phase-by-phase record of the 2026 hardening work.
+- [OAUTH_IMPLEMENTATION_COMPLETE.md](OAUTH_IMPLEMENTATION_COMPLETE.md) — Google OAuth configuration checklist and supporting docs.
+
 ## Development vs Production Environment
 
 **Read before making changes:** [`docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md`](docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md)
@@ -11,9 +18,9 @@ An AI-powered educational platform with automated course generation, personalize
 
 Changes in DEV do not automatically sync to PROD. Deploy explicitly using `make sync-web`.
 
-## Current Status (January 2026)
+## Current Status (February 2026)
 
-**Alpha Release** - Core features functional, tested, not production-ready.
+**Alpha Release** — Core features functional, tested, not production-ready. Admin onboarding now requires invitations plus Google SSO.
 
 | Feature | Status |
 |---------|--------|
@@ -24,6 +31,9 @@ Changes in DEV do not automatically sync to PROD. Deploy explicitly using `make 
 | Student advisors with persistent memory | ✅ Working |
 | Interactive workbook with lessons and questions | ✅ Working |
 | Admin dashboard for course creation | ✅ Working |
+| Invitation-only admin onboarding + Google SSO enforcement | ✅ Working |
+| Admin OAuth audit logging and auth_provider_required enforcement | ✅ Working |
+| Centralized security headers (CSP, HSTS, CORS allowlist) | ✅ Working |
 | Docker deployment | ✅ Working |
 | Quiz grading system (auto + AI-powered) | ✅ Working |
 | Lesson quizzes and unit tests | ✅ Working |
@@ -40,6 +50,49 @@ Changes in DEV do not automatically sync to PROD. Deploy explicitly using `make 
 | Agent Service | C++ HTTP microservice | 8080 |
 | LLM Server | llama-server (llama.cpp) | 8090 |
 | Model | Qwen 2.5 1.5B Q4_K_M (quantized) | - |
+
+## Authentication & Authorization
+
+- **Subsystem boundaries:** The Student Portal and Course Factory run from separate directories and never share UI or authority. See [ARCHITECTURE.md](ARCHITECTURE.md) for the definitive rules.
+- **JWT everywhere:** All PHP endpoints mint HS256 JWTs via `generateToken()` in [config/database.php](config/database.php). Tokens are stored in the `auth_token` cookie with `SameSite=Strict`; the `ENV` variable controls whether the cookie is marked `secure`.
+
+### Student & Observer Login
+
+- Username/password login flows (root site and `student_portal/`) post to [api/auth/login.php](api/auth/login.php). The endpoint applies `set_api_security_headers()`, enforces prepared statements, updates `last_login`, and logs failures.
+- Google Sign-In buttons on [login.html](login.html) and [student_portal/login.html](student_portal/login.html) reuse the same OAuth endpoints described below. Accounts created without an invitation default to the `student` role.
+
+### Course Factory Admin Access
+
+- Bootstrap access is still provided by the root account that `setup_root_admin.sh` creates (username `root`, password `Root1234`). Change this password immediately after installation.
+- All Course Factory API endpoints gate through `requireAdmin()` or `requireRoot()` in [api/admin/auth_check.php](api/admin/auth_check.php). Frontend pages import [course_factory/admin_auth.js](course_factory/admin_auth.js) to redirect anyone whose JWT role is not `admin` or `root`.
+
+### Invitation-Only Admin Workflow
+
+1. A root user calls [api/admin/invite_admin.php](api/admin/invite_admin.php) to generate a cryptographically secure token stored in `admin_invitations` with a seven-day expiry. Only `admin`, `staff`, or `root` roles can be requested.
+2. Invitation status can be reviewed via [api/admin/list_invitations.php](api/admin/list_invitations.php) (GET with optional `pending_only=true`) and is surfaced in Course Factory UI.
+3. Invitees land on [course_factory/admin_accept_invite.html](course_factory/admin_accept_invite.html), which validates the token through [api/admin/validate_invitation.php](api/admin/validate_invitation.php) before launching Google OAuth.
+4. During OAuth, the invite token is injected into the state parameter by [api/auth/google/login.php](api/auth/google/login.php). The callback handler [api/auth/google/callback.php](api/auth/google/callback.php) verifies the state (10-minute TTL via the `oauth_states` table), ensures the Google email matches the invitation, upgrades the role, sets `auth_provider_required='google'`, and marks the invitation used.
+5. All subsequent password attempts for these accounts are blocked by the provider check inside [api/auth/login.php](api/auth/login.php), forcing Google SSO for invited admins.
+
+### OAuth 2.0 Details
+
+- The implementation is server-side only using the League OAuth2 client. Minimal scopes (`openid email profile`) are requested.
+- Helper functions in [config/database.php](config/database.php) handle state generation/storage, linking Google IDs, and writing audit rows to `auth_events` via `logAuthEvent()`.
+- OAuth requests must use a `localhost` redirect URI during development (see `OAUTH_*` docs). Production domains belong on the allowlist before going live.
+
+### Session Handling & Frontend API Calls
+
+- The `admin_auth.js` helper injects the JWT into every `fetch` call via `getAuthHeaders()` and forces re-login if the token is missing.
+- Student portal JS (`student_portal/app.js`) stores tokens separately for student-facing APIs so student and admin scopes never overlap.
+
+## Security Posture
+
+- The hardening work documented in [SECURITY.md](SECURITY.md) is applied project-wide. All API entrypoints start with `set_api_security_headers()` from [api/helpers/security_headers.php](api/helpers/security_headers.php), which adds CSP, X-Frame-Options, Permissions-Policy, HSTS (when `ENV=production` over HTTPS), and an environment-aware CORS allowlist.
+- SQL access is through prepared statements only; legacy debug endpoints and raw queries were removed during Phase 1.
+- Authentication events funnel through `logAuthEvent()` in [config/database.php](config/database.php) and persist to the `auth_events` table for auditability. Invitation creation and usage are logged as well.
+- Error responses are standardized (no stack traces), while detailed context lands in `/tmp` logs or Apache error logs for administrators.
+- Admin and root actions are separated from student APIs both in PHP (`requireAdmin()` / `requireRoot()`) and in frontend code (`admin_auth.js`), ensuring Course Factory tooling cannot call student data endpoints directly.
+- Security headers, OAuth enforcement, and JWT cookies are all environment-aware so development remains practical without diluting production requirements.
 
 ## Architecture
 
@@ -202,6 +255,15 @@ ACTIVE_MODEL="qwen2.5-1.5b-instruct-q4_k_m.gguf"  # Change model here
 ```
 
 **Hybrid method:** Uses Docker model (see docker-compose.yml)
+
+## Google OAuth Configuration
+
+1. Register a Web OAuth client in Google Cloud Console and add `http://localhost/api/auth/google/callback.php` as an authorized redirect URI for local testing (production domains must be HTTPS).
+2. Populate `.env` with `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and (optionally) `GOOGLE_REDIRECT_URI`. These values are consumed by [api/auth/google/login.php](api/auth/google/login.php) and [api/auth/google/callback.php](api/auth/google/callback.php).
+3. Ensure the database has run `migrations/add_oauth_support.sql` so the `oauth_states`, `auth_providers`, and `auth_events` tables exist.
+4. Follow [OAUTH_IMPLEMENTATION_COMPLETE.md](OAUTH_IMPLEMENTATION_COMPLETE.md), [OAUTH_TESTING_GUIDE.md](OAUTH_TESTING_GUIDE.md), and [docs/OAUTH_LOCALHOST_SETUP.md](docs/OAUTH_LOCALHOST_SETUP.md) for validation steps.
+
+Without a valid OAuth configuration, invitation-based admin onboarding will fail because invited accounts are forced to complete Google SSO.
 
 ## Quick Start
 
@@ -366,10 +428,21 @@ curl http://localhost:8080/health  # agent-service
    curl http://localhost:8080/health
    ```
 
-### Default Credentials
+## Admin Onboarding Workflow
 
-- **Admin:** `root` / `Root1234`
-- **Test Student:** `john_doe` / `student123`
+1. **Bootstrap root access.** Run [setup_root_admin.sh](setup_root_admin.sh) (or the equivalent SQL) to ensure the `root` account exists, then change its password after the first login.
+2. **Invite administrators.** While authenticated as root, POST to [api/admin/invite_admin.php](api/admin/invite_admin.php) (or use the Course Factory UI) with the invitee's email and role. Tokens are stored for seven days in `admin_invitations`.
+3. **Share the invite link.** The API response includes the `course_factory/admin_accept_invite.html?token=...` URL. Invitees can also see pending invitations via [api/admin/list_invitations.php](api/admin/list_invitations.php).
+4. **Validate and launch OAuth.** The accept page calls [api/admin/validate_invitation.php](api/admin/validate_invitation.php) before initiating Google OAuth via [api/auth/google/login.php](api/auth/google/login.php).
+5. **Complete Google SSO.** The callback at [api/auth/google/callback.php](api/auth/google/callback.php) enforces email matching, upgrades the role, marks the invitation used, and sets `auth_provider_required='google'` so password logins are blocked for that account.
+6. **Operate Course Factory.** Newly provisioned admins must use the Google button on [course_factory/admin_login.html](course_factory/admin_login.html). JWTs are injected into API calls by [course_factory/admin_auth.js](course_factory/admin_auth.js).
+
+This flow guarantees that Course Factory authority can only be granted through an auditable invitation approved by a root user.
+
+### Default & Demo Accounts
+
+- **Root bootstrap:** `root` / `Root1234` (created by [setup_root_admin.sh](setup_root_admin.sh)). Change this password before exposing the system outside of a lab environment.
+- **Demo students:** Seed data is defined in [schema.sql](schema.sql) and updated by [migrations/012_fix_student_accounts.sql](migrations/012_fix_student_accounts.sql). Apply the migration to align `john_doe` and `Jack` test accounts with the documented demo passwords, or create fresh student records for your environment.
 
 ## API Reference
 
@@ -553,50 +626,18 @@ This platform does not use "beginner/intermediate/advanced" or "easy/medium/hard
 
 ## Documentation
 
-### Quick Reference
 | Document | Purpose |
 |----------|---------|
-| [docs/SETUP_STATUS.md](docs/SETUP_STATUS.md) | **System status, URLs, credentials** |
-| [docs/DEBUG_TROUBLESHOOTING.md](docs/DEBUG_TROUBLESHOOTING.md) | **Debugging guide, common issues** |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | **Deployment procedures** |
-
-### Detailed Docs
-| Document | Purpose |
-|----------|---------|
-| [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) | System architecture overview |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Technical architecture details |
-| [docs/COURSE_GENERATION_ARCHITECTURE.md](docs/COURSE_GENERATION_ARCHITECTURE.md) | Agent pipeline specifications |
-| [docs/COURSE_GENERATION_API.md](docs/COURSE_GENERATION_API.md) | Course creation API reference |
-| [docs/ADVISOR_INSTANCE_API.md](docs/ADVISOR_INSTANCE_API.md) | Student advisor system API |
-| [docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md](docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md) | Dev/prod separation rules |
-| [docs/ERROR_HANDLING_GUIDE.md](docs/ERROR_HANDLING_GUIDE.md) | Error handling patterns |
-| [docs/FILE_SYNC_GUIDE.md](docs/FILE_SYNC_GUIDE.md) | File sync procedurecomprehensive unit assessments
-- [ ] **Implement Content Validator agent (ID 22)** - QA check for generated content
-- [ ] **Add course publishing workflow** - Final approval step before making courses live
-
-### Medium Priority
-- [ ] Implement true vector similarity search for RAG
-- [ ] Add WebSocket support for real-time LLM streaming
-- [ ] Support multiple LLM models per agent type
-- [ ] Add course versioning and rollback
-- [ ] Implement student progress analytics dashboard
-
-### Low Priority
-- [ ] Add multimedia content support (videos, audio)
-- [ ] Implement horizontal scaling with load balancing
-- [ ] Add collaborative course editing for multiple admins
-- [ ] Support for custom question types beyond fill-in/multiple-choice/essay
-
-## Documentation
-
-| Document | Purpose |
-|----------|---------|
-| [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) | System architecture |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Technical architecture |
-| [docs/COURSE_GENERATION_API.md](docs/COURSE_GENERATION_API.md) | Course creation API |
-| [docs/ADVISOR_INSTANCE_API.md](docs/ADVISOR_INSTANCE_API.md) | Student advisor system |
-| [docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md](docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md) | Dev/prod separation |
-| [docs/REFACTOR_TODO.md](docs/REFACTOR_TODO.md) | Pending tasks |
+| [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) | Concise summary of subsystems, services, and current limitations |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Canonical reference for Student Portal vs Course Factory boundaries |
+| [SECURITY.md](SECURITY.md) | Timeline of the 2026 security hardening phases and header/audit policies |
+| [docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md](docs/DEPLOYMENT_ENVIRONMENT_CONTRACT.md) | Required workflow for DEV ⇄ PROD syncs (`make sync-web`) |
+| [OAUTH_IMPLEMENTATION_COMPLETE.md](OAUTH_IMPLEMENTATION_COMPLETE.md) | Google OAuth design notes and configuration checklist |
+| [OAUTH_TESTING_GUIDE.md](OAUTH_TESTING_GUIDE.md) | Step-by-step verification of OAuth login, database tables, and logs |
+| [docs/OAUTH_LOCALHOST_SETUP.md](docs/OAUTH_LOCALHOST_SETUP.md) | Explains why OAuth must use `localhost` and how to configure Apache aliases |
+| [docs/COURSE_GENERATION_API.md](docs/COURSE_GENERATION_API.md) | Admin API reference for the five-agent course builder |
+| [docs/ADVISOR_INSTANCE_API.md](docs/ADVISOR_INSTANCE_API.md) | Student advisor storage and API contract |
+| [FUTURE_IMPROVEMENTS.md](FUTURE_IMPROVEMENTS.md) | Roadmap items and open design questions |
 
 ## License
 

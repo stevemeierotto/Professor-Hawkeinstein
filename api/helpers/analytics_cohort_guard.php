@@ -1,5 +1,8 @@
 <?php
-// 🚨 K-ANONYMITY ENFORCEMENT BOUNDARY
+// � PRIVACY REGRESSION PROTECTED (Phase 5)
+// Changes require privacy review: docs/ANALYTICS_PRIVACY_VALIDATION.md
+//
+// �🚨 K-ANONYMITY ENFORCEMENT BOUNDARY
 // Analytics responses MUST pass cohort size validation
 // 
 // This module enforces k-anonymity principles (k=5) by suppressing analytics metrics

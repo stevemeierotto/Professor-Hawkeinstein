@@ -1,215 +1,155 @@
 #!/bin/bash
-# RAG Flow End-to-End Test
-# Tests: Scrape → Embed → Retrieve → Chat pipeline
+# Phase 6 RAG Flow Validation
 
-set -e
+set -euo pipefail
 
 TEST_NAME="RAG Flow Test"
-PROJECT_ROOT="/home/steve/Professor_Hawkeinstein"
-API_BASE="http://localhost/basic_educational/api"
-ADMIN_TOKEN=""
-TEST_CONTENT_ID=""
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LLAMA_URL="${LLAMA_SERVER_URL:-http://127.0.0.1:8090}"
+AGENT_SERVICE_URL="${AGENT_SERVICE_URL:-http://127.0.0.1:8080}"
+AGENT_LOG="/tmp/agent_service_full.log"
 
-echo "=== $TEST_NAME ==="
-echo "Testing complete RAG pipeline from content ingestion to chat"
-echo
-
-# Colors for output
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 function pass() {
-    echo -e "${GREEN}✓ PASSED:${NC} $1"
+    printf "%b\n" "${GREEN}✓${NC} $1"
 }
 
 function fail() {
-    echo -e "${RED}✗ FAILED:${NC} $1"
+    printf "%b\n" "${RED}✗${NC} $1"
     exit 1
 }
 
 function info() {
-    echo -e "${YELLOW}ℹ INFO:${NC} $1"
+    printf "%b\n" "${YELLOW}ℹ${NC} $1"
 }
 
-# Step 1: Apply migration
-echo "Step 1: Apply RAG embeddings migration"
-mysql -u professorhawkeinstein_user -pBT1716lit professorhawkeinstein_platform < "$PROJECT_ROOT/migrations/add_rag_embeddings.sql" 2>&1 | grep -v "Warning" || true
-pass "Migration applied"
-echo
-
-# Step 2: Check if test content exists
-echo "Step 2: Check for test content"
-CONTENT_CHECK=$(mysql -u professorhawkeinstein_user -pBT1716lit professorhawkeinstein_platform -se "SELECT content_id FROM scraped_content LIMIT 1" 2>/dev/null)
-
-if [ -z "$CONTENT_CHECK" ]; then
-    info "No scraped content found. Creating test content..."
-    
-    # Insert test content
-    mysql -u professorhawkeinstein_user -pBT1716lit professorhawkeinstein_platform << 'EOSQL'
-INSERT INTO scraped_content (url, title, subject, grade_level, content_text, content_html, scraped_by, review_status)
-VALUES (
-    'http://test.local/test',
-    'Mathematics - Addition and Subtraction',
-    'Mathematics',
-    'grade_1',
-    'Addition is combining two or more numbers together. For example, 2 + 3 = 5. Subtraction is taking away one number from another. For example, 5 - 2 = 3. These are fundamental operations in mathematics that students learn in first grade.',
-    '<p>Addition is combining two or more numbers together. For example, 2 + 3 = 5.</p><p>Subtraction is taking away one number from another. For example, 5 - 2 = 3.</p>',
-    1,
-    'approved'
-);
-EOSQL
-    
-    TEST_CONTENT_ID=$(mysql -u professorhawkeinstein_user -pBT1716lit professorhawkeinstein_platform -se "SELECT LAST_INSERT_ID()" 2>/dev/null)
-    pass "Test content created (ID: $TEST_CONTENT_ID)"
-else
-    TEST_CONTENT_ID=$CONTENT_CHECK
-    pass "Using existing content (ID: $TEST_CONTENT_ID)"
-fi
-echo
-
-# Step 3: Generate embeddings for content
-echo "Step 3: Generate embeddings for content"
-info "Content ID: $TEST_CONTENT_ID"
-
-# Create a simple PHP script to generate embeddings
-php -r "
-require_once '$PROJECT_ROOT/api/helpers/embedding_generator.php';
-require_once '$PROJECT_ROOT/config/database.php';
-
-\$db = getDB();
-\$generator = new EmbeddingGenerator();
-
-// Get content
-\$stmt = \$db->prepare('SELECT content_text FROM scraped_content WHERE content_id = ?');
-\$stmt->execute([$TEST_CONTENT_ID]);
-\$content = \$stmt->fetch();
-
-if (!\$content) {
-    echo 'Content not found\n';
-    exit(1);
+function require_command() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        fail "Required command '$1' not found in PATH"
+    fi
 }
 
-// Generate embeddings
-\$chunks = \$generator->chunkText(\$content['content_text'], 500, 50);
-echo 'Chunks generated: ' . count(\$chunks) . '\n';
-
-\$db->beginTransaction();
-\$insertStmt = \$db->prepare('
-    INSERT INTO content_embeddings (content_id, chunk_index, text_chunk, embedding_vector, vector_dimension, model_used)
-    VALUES (?, ?, ?, ?, ?, ?)
-');
-
-foreach (\$chunks as \$index => \$chunk) {
-    \$embedding = \$generator->generateEmbedding(\$chunk);
-    \$blob = \$generator->serializeEmbedding(\$embedding);
-    \$insertStmt->execute([$TEST_CONTENT_ID, \$index, \$chunk, \$blob, 384, 'all-MiniLM-L6-v2']);
+function parse_seed_output() {
+    local output="$1"
+    declare -gA SEED_MAP=()
+    while IFS='=' read -r key value; do
+        [[ -z "${key}" ]] && continue
+        SEED_MAP["$key"]="$value"
+    done <<< "$output"
 }
 
-// Update scraped_content
-\$updateStmt = \$db->prepare('UPDATE scraped_content SET has_embeddings = TRUE, embedding_count = ? WHERE content_id = ?');
-\$updateStmt->execute([count(\$chunks), $TEST_CONTENT_ID]);
+info "=== $TEST_NAME ==="
+info "Validating metadata-aware RAG pipeline end-to-end"
 
-\$db->commit();
-echo 'Embeddings stored: ' . count(\$chunks) . '\n';
-"
+require_command mysql
+require_command php
+require_command curl
 
-if [ $? -eq 0 ]; then
-    pass "Embeddings generated successfully"
-else
-    fail "Embedding generation failed"
+info "Loading database credentials from config/database.php"
+DB_HOST=$(php -r "require '$PROJECT_ROOT/config/database.php'; echo DB_HOST;" | tr -d '\n')
+DB_PORT=$(php -r "require '$PROJECT_ROOT/config/database.php'; echo DB_PORT;" | tr -d '\n')
+DB_NAME=$(php -r "require '$PROJECT_ROOT/config/database.php'; echo DB_NAME;" | tr -d '\n')
+DB_USER=$(php -r "require '$PROJECT_ROOT/config/database.php'; echo DB_USER;" | tr -d '\n')
+DB_PASS=$(php -r "require '$PROJECT_ROOT/config/database.php'; echo DB_PASS;" | tr -d '\n')
+
+export MYSQL_PWD="$DB_PASS"
+MYSQL_CMD=(mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" --default-character-set=utf8mb4 "$DB_NAME")
+
+info "Checking llama-server health at $LLAMA_URL"
+curl -fsS "$LLAMA_URL/health" >/dev/null || fail "llama-server is not healthy on $LLAMA_URL"
+pass "llama-server healthy"
+
+info "Checking agent_service health at $AGENT_SERVICE_URL"
+curl -fsS "$AGENT_SERVICE_URL/health" >/dev/null || fail "agent_service is not healthy on $AGENT_SERVICE_URL"
+pass "agent_service healthy"
+
+info "Seeding deterministic RAG dataset via tests/rag_seed_content.php"
+SEED_OUTPUT=$(php "$PROJECT_ROOT/tests/rag_seed_content.php")
+parse_seed_output "$SEED_OUTPUT"
+
+AGENT_ID="${SEED_MAP[AGENT_ID]:-}"
+USER_ID="${SEED_MAP[USER_ID]:-}"
+PRIMARY_CONTENT_ID="${SEED_MAP[PRIMARY_CONTENT_ID]:-}"
+ALL_CONTENT_IDS="${SEED_MAP[ALL_CONTENT_IDS]:-}"
+AGENT_SCOPE="${SEED_MAP[AGENT_SCOPE]:-}"
+TEST_QUERY="${SEED_MAP[TEST_QUERY]:-}"
+QUERY_VECTOR="${SEED_MAP[QUERY_VECTOR]:-}"
+
+if [[ -z "$AGENT_ID" || -z "$USER_ID" || -z "$PRIMARY_CONTENT_ID" || -z "$ALL_CONTENT_IDS" || -z "$TEST_QUERY" || -z "$QUERY_VECTOR" ]]; then
+    echo "$SEED_OUTPUT"
+    fail "Seed data incomplete; ensure rag_seed_content.php completed successfully"
 fi
-echo
 
-# Step 4: Test context retrieval
-echo "Step 4: Test context retrieval"
-QUERY="What is addition?"
-
-RETRIEVE_RESULT=$(php -r "
-require_once '$PROJECT_ROOT/api/helpers/embedding_generator.php';
-require_once '$PROJECT_ROOT/config/database.php';
-
-\$db = getDB();
-\$generator = new EmbeddingGenerator();
-
-\$query = '$QUERY';
-\$queryEmbedding = \$generator->generateEmbedding(\$query);
-
-\$stmt = \$db->prepare('
-    SELECT ce.text_chunk, ce.embedding_vector, sc.title
-    FROM content_embeddings ce
-    JOIN scraped_content sc ON ce.content_id = sc.content_id
-    WHERE sc.has_embeddings = TRUE
-');
-\$stmt->execute();
-\$embeddings = \$stmt->fetchAll();
-
-\$similarities = [];
-foreach (\$embeddings as \$row) {
-    \$vec = \$generator->deserializeEmbedding(\$row['embedding_vector']);
-    \$vec = array_values(\$vec);
-    \$sim = \$generator->cosineSimilarity(\$queryEmbedding, \$vec);
-    if (\$sim >= 0.3) {
-        \$similarities[] = ['chunk' => \$row['text_chunk'], 'similarity' => \$sim];
-    }
-}
-
-usort(\$similarities, function(\$a, \$b) { return \$b['similarity'] <=> \$a['similarity']; });
-echo count(\$similarities) . ' relevant chunks found\n';
-if (count(\$similarities) > 0) {
-    echo 'Top similarity: ' . number_format(\$similarities[0]['similarity'], 3) . '\n';
-}
-")
-
-echo "$RETRIEVE_RESULT"
-if echo "$RETRIEVE_RESULT" | grep -q "relevant chunks found"; then
-    pass "Context retrieval works"
-else
-    fail "Context retrieval failed"
+IFS=',' read -r -a CONTENT_IDS <<< "$ALL_CONTENT_IDS"
+if [[ ${#CONTENT_IDS[@]} -lt 2 ]]; then
+    fail "Expected multiple content IDs but received: $ALL_CONTENT_IDS"
 fi
-echo
+pass "Seeded dataset for content IDs: $ALL_CONTENT_IDS"
 
-# Step 5: Test full chat integration
-echo "Step 5: Test chat with RAG context"
-info "This requires agent_service to be running"
+info "Verifying content_embeddings.embedding_vector uses MariaDB VECTOR type"
+VECTOR_TYPE=$("${MYSQL_CMD[@]}" -N -B -e "SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='${DB_NAME}' AND TABLE_NAME='content_embeddings' AND COLUMN_NAME='embedding_vector';")
+[[ "$VECTOR_TYPE" == "vector" ]] || fail "content_embeddings.embedding_vector is '$VECTOR_TYPE' (expected VECTOR)"
+pass "VECTOR column confirmed"
 
-if ! curl -sf http://localhost:8080/health > /dev/null 2>&1; then
-    info "agent_service not running - skipping chat integration test"
-else
-    pass "agent_service is healthy"
-    # Full chat integration would be tested here
-fi
-echo
+info "Ensuring embeddings exist for every seeded content item"
+CHUNK_TOTAL=$("${MYSQL_CMD[@]}" -N -B -e "SELECT COUNT(*) FROM content_embeddings WHERE content_id IN ($ALL_CONTENT_IDS);")
+[[ "$CHUNK_TOTAL" -ge ${#CONTENT_IDS[@]} ]] || fail "Only $CHUNK_TOTAL embeddings found for content_ids $ALL_CONTENT_IDS"
+PRIMARY_COUNT=$("${MYSQL_CMD[@]}" -N -B -e "SELECT COUNT(*) FROM content_embeddings WHERE content_id=$PRIMARY_CONTENT_ID;")
+[[ "$PRIMARY_COUNT" -eq 1 ]] || fail "Primary content_id $PRIMARY_CONTENT_ID expected exactly 1 chunk"
+pass "Embeddings present ($CHUNK_TOTAL total rows)"
 
-# Step 6: Verify database state
-echo "Step 6: Verify database state"
-DB_CHECK=$(mysql -u professorhawkeinstein_user -pBT1716lit professorhawkeinstein_platform -se "
-SELECT 
-    COUNT(*) as total_embeddings,
-    COUNT(DISTINCT content_id) as content_with_embeddings
-FROM content_embeddings
-" 2>/dev/null)
+info "Validating chunk metadata with agent scope '$AGENT_SCOPE'"
+META_SQL="SELECT COUNT(*) FROM content_embeddings WHERE content_id IN ($ALL_CONTENT_IDS) AND JSON_UNQUOTE(JSON_EXTRACT(chunk_metadata, '$.agent_scope')) = '$AGENT_SCOPE' AND JSON_UNQUOTE(JSON_EXTRACT(chunk_metadata, '$.grade_level')) <> '' AND JSON_UNQUOTE(JSON_EXTRACT(chunk_metadata, '$.subject')) <> '';"
+META_COUNT=$("${MYSQL_CMD[@]}" -N -B -e "$META_SQL")
+[[ "$META_COUNT" -eq ${#CONTENT_IDS[@]} ]] || fail "Metadata missing for $(( ${#CONTENT_IDS[@]} - META_COUNT )) chunk(s)"
+pass "Chunk metadata stored"
 
-echo "Database state: $DB_CHECK"
-if echo "$DB_CHECK" | grep -q "[0-9]"; then
-    pass "Database state verified"
-else
-    fail "Database check failed"
-fi
-echo
+info "Computing similarity ordering via VEC_Cosine_Distance"
+SIMILARITY_SQL="SELECT content_id, chunk_index, ROUND(1 - VEC_Cosine_Distance(embedding_vector, VEC_FromText('$QUERY_VECTOR')), 4) AS similarity FROM content_embeddings WHERE content_id IN ($ALL_CONTENT_IDS) ORDER BY similarity DESC;"
+SIMILARITY_ROWS=$("${MYSQL_CMD[@]}" -N -B -e "$SIMILARITY_SQL")
+[[ -n "$SIMILARITY_ROWS" ]] || fail "Similarity query returned no rows"
 
-echo "=== All RAG Tests Passed ==="
+TOP_CONTENT_ID=$(awk -F'\t' 'NR==1 {print $1}' <<< "$SIMILARITY_ROWS")
+TOP_SIM=$(awk -F'\t' 'NR==1 {print $3}' <<< "$SIMILARITY_ROWS")
+[[ "$TOP_CONTENT_ID" == "$PRIMARY_CONTENT_ID" ]] || fail "Expected content $PRIMARY_CONTENT_ID to rank first but saw $TOP_CONTENT_ID"
+pass "Primary content ranked first (similarity $TOP_SIM)"
+
+info "Similarity ranking (content_id chunk_index similarity):"
+while IFS=$'\t' read -r content chunk sim; do
+    [[ -z "$content" ]] && continue
+    printf "    %s chunk %s -> %s\n" "$content" "$chunk" "$sim"
+done <<< "$SIMILARITY_ROWS"
+
+info "Calling $AGENT_SERVICE_URL/agent/chat with seeded query"
+CHAT_BODY=$(php -r '$payload=["userId"=>(int)$argv[1],"agentId"=>(int)$argv[2],"message"=>$argv[3]]; echo json_encode($payload, JSON_UNESCAPED_UNICODE);' "$USER_ID" "$AGENT_ID" "$TEST_QUERY")
+CHAT_RESPONSE=$(curl -fsS -X POST -H "Content-Type: application/json" -d "$CHAT_BODY" "$AGENT_SERVICE_URL/agent/chat")
+CHAT_SUCCESS=$(php -r '$data=json_decode(stream_get_contents(STDIN), true); echo !empty($data["success"]) ? "1" : "";' <<< "$CHAT_RESPONSE")
+[[ -n "$CHAT_SUCCESS" ]] || fail "agent_service response did not include success=true"
+CHAT_SNIPPET=$(php -r '$data=json_decode(stream_get_contents(STDIN), true); $text=isset($data["response"]) ? trim(preg_replace("/\s+/", " ", $data["response"])) : ""; echo substr($text, 0, 140);' <<< "$CHAT_RESPONSE")
+pass "agent_service responded"
+info "Agent response snippet: $CHAT_SNIPPET"
+
+info "Verifying RAG logs emitted to $AGENT_LOG"
+[[ -f "$AGENT_LOG" ]] || fail "Agent log $AGENT_LOG not found"
+LOG_WINDOW=$(tail -n 400 "$AGENT_LOG")
+[[ -n "$LOG_WINDOW" ]] || fail "Agent log is empty"
+grep -Fq "[RAGEngine] RAGSearch" <<< "$LOG_WINDOW" || fail "RAGEngine search log entry missing"
+grep -Fq "[AgentManager] Injected" <<< "$LOG_WINDOW" || fail "AgentManager injection log missing"
+pass "Log entries confirmed"
+info "Recent RAG log lines:"
+echo "$LOG_WINDOW" | grep -E "RAGEngine|AgentManager" | tail -n 5 | sed 's/^/    /'
+
 echo
 echo "Summary:"
-echo "- Migration applied ✓"
-echo "- Test content created/found ✓"
-echo "- Embeddings generated ✓"
-echo "- Context retrieval works ✓"
-echo "- Database state verified ✓"
+echo "- Seeded dataset for content IDs: $ALL_CONTENT_IDS"
+echo "- VECTOR storage confirmed in content_embeddings"
+echo "- Similarity search ranked content $PRIMARY_CONTENT_ID first"
+echo "- /agent/chat returned success and logged RAG context"
+echo "- Detailed manual drill-down: ./tests/rag_manual_verify.sh"
 echo
-echo "Manual validation:"
-echo "1. Check embeddings: SELECT COUNT(*) FROM content_embeddings;"
-echo "2. Check content: SELECT content_id, title, has_embeddings, embedding_count FROM scraped_content WHERE has_embeddings = TRUE;"
-echo "3. Test API: curl -X POST http://localhost/basic_educational/api/agent/retrieve_context.php -H 'Content-Type: application/json' -d '{\"query\":\"What is addition?\",\"top_k\":3}'"
-echo
+pass "All RAG validations completed"
+
