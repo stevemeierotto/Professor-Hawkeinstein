@@ -31,6 +31,10 @@
 require_once __DIR__ . '/../helpers/security_headers.php';
 set_api_security_headers();
 
+// Rate limiting (public endpoint but still rate-limited)
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('admin_validate_invitation');
+
 require_once __DIR__ . '/../../config/database.php';
 
 try {

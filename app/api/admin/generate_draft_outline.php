@@ -3,7 +3,11 @@
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/auth_check.php';
 require_once __DIR__ . '/../helpers/system_agent_helper.php';
-requireAdmin();
+$adminUser = requireAdmin();
+
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit('GENERATION', 'generate_draft_outline');
+
 header('Content-Type: application/json');
 
 $input = json_decode(file_get_contents('php://input'), true);

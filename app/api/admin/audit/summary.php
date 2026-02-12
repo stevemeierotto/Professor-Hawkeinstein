@@ -41,6 +41,9 @@ $user = requireAdmin();
 $userId = $user['user_id'] ?? 'unknown';
 $userRole = $user['role'] ?? 'admin';
 
+require_once APP_ROOT . '/api/helpers/rate_limiter.php';
+require_rate_limit_auto('admin_audit_summary');
+
 // Log this audit access
 logAuditAccess('view_summary', $userId, $userRole, [
     'time_window' => $_GET['window'] ?? '7d'

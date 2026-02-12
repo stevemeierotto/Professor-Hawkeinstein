@@ -48,6 +48,9 @@ require_once __DIR__ . '/../admin/auth_check.php';
 $adminUser = requireAdmin();
 
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+
+require_rate_limit('GENERATION', 'generate_full_course');
 require_once __DIR__ . '/../course/CourseMetadata.php';
 
 header('Content-Type: application/json');

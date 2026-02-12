@@ -13,6 +13,10 @@ require_once __DIR__ . '/../../config/database.php';
 // Require admin authorization
 $admin = requireAdmin();
 
+// Rate limiting
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('admin_delete_agent');
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['error' => 'Method not allowed']);

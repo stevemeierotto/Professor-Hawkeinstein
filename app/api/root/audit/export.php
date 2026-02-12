@@ -36,6 +36,11 @@ setCORSHeaders();
 // Security headers
 header('X-Content-Type-Options: nosniff');
 
+// ROOT auth and rate limiting
+$rootUser = requireRoot();
+require_once APP_ROOT . '/api/helpers/rate_limiter.php';
+require_rate_limit_auto('root_audit_export');
+
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     sendJSON(['success' => false, 'message' => 'Method not allowed'], 405);
 }

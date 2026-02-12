@@ -14,6 +14,10 @@ require_once __DIR__ . '/../../config/database.php';
 // Require admin authentication (server-side, never trust client role)
 $adminUser = requireAdmin(); // 401 if not authenticated, 403 if not admin/root
 
+// Rate limiting
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('admin_approve_outline');
+
 header('Content-Type: application/json');
 
 // Get request body

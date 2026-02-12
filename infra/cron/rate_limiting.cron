@@ -1,0 +1,24 @@
+# Rate Limiting Cron Jobs
+# 
+# Add these entries to your crontab to enable automated monitoring
+#
+# Edit crontab: crontab -e
+# View crontab: crontab -l
+#
+# Created: February 11, 2026
+# Part of Phase 8 Rate Limiting Initiative
+
+# Monitor rate limits every 5 minutes and log to file
+*/5 * * * * /home/steve/Professor_Hawkeinstein/scripts/monitor_rate_limits.sh --json >> /tmp/rate_limit_monitoring.log 2>&1
+
+# Check for alerts every 10 minutes and email if triggered
+*/10 * * * * /home/steve/Professor_Hawkeinstein/scripts/monitor_rate_limits.sh --alert | mail -s "Rate Limit Alert" admin@example.com
+
+# Generate daily summary report at 9 AM
+0 9 * * * /home/steve/Professor_Hawkeinstein/scripts/analyze_rate_limits.sh --hours 24 > /tmp/rate_limit_daily_$(date +\%Y\%m\%d).txt
+
+# Clean up old rate limit entries weekly (Sunday at 3 AM)
+0 3 * * 0 mysql -h 127.0.0.1 -P 3307 -u root phef -e "DELETE FROM rate_limits WHERE window_start < DATE_SUB(NOW(), INTERVAL 7 DAY);" 2>&1 | logger -t rate_limit_cleanup
+
+# Archive logs monthly (1st of month at 2 AM)
+0 2 1 * * gzip -c /tmp/rate_limit.log > /var/log/rate_limit_$(date +\%Y\%m).log.gz && > /tmp/rate_limit.log

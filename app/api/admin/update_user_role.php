@@ -12,6 +12,9 @@ require_once __DIR__ . '/../../config/database.php';
 // Require root authorization
 $currentUser = requireRoot(); // 401 if not authenticated, 403 if not root
 
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('admin_update_user_role');
+
 $data = json_decode(file_get_contents('php://input'), true);
 
 if (!isset($data['user_id']) || !isset($data['role'])) {

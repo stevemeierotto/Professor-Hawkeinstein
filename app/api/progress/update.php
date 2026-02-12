@@ -12,6 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $userData = requireAuth();
+
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('progress_update');
+
 $input = getJSONInput();
 
 $courseId = $input['courseId'] ?? null;

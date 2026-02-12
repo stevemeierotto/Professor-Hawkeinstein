@@ -1,6 +1,4 @@
-// Require authentication (never trust client userId)
-require_once __DIR__ . '/../helpers/auth_helpers.php';
-$userData = requireAuth();
+
 <?php
 /**
  * Get Lesson Content for Workbook (Student Access)
@@ -11,6 +9,13 @@ $userData = requireAuth();
  */
 
 require_once '../../config/database.php';
+
+// Require authentication (never trust client userId)
+require_once __DIR__ . '/../helpers/auth_helpers.php';
+$userData = requireAuth();
+
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('course_get_lesson_content');
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');

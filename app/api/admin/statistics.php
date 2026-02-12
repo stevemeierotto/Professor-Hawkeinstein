@@ -11,6 +11,10 @@ require_once __DIR__ . '/../../config/database.php';
 // Require admin authorization
 $admin = requireAdmin();
 
+// Rate limiting
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('admin_statistics');
+
 $db = getDB();
 
 // Get total agents

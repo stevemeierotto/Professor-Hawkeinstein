@@ -44,6 +44,10 @@ try {
     // This terminates with 401/403 if not authenticated as root
     $rootUser = requireRoot();
     
+    // Rate limiting
+    require_once __DIR__ . '/../helpers/rate_limiter.php';
+    require_rate_limit_auto('admin_invite_admin');
+    
     // Only accept POST requests
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         http_response_code(405);

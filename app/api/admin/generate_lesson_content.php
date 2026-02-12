@@ -19,7 +19,10 @@
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/auth_check.php';
 require_once __DIR__ . '/../helpers/system_agent_helper.php';
-requireAdmin();
+$adminUser = requireAdmin();
+
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit('GENERATION', 'generate_lesson_content');
 
 // DEBUG: Log start of script
 file_put_contents('/tmp/lesson_gen_debug.log', date('Y-m-d H:i:s') . " - Script started\n", FILE_APPEND);

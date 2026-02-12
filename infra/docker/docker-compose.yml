@@ -9,8 +9,9 @@ services:
       MYSQL_USER: professorhawkeinstein_user
       MYSQL_PASSWORD: ${DB_PASSWORD:-BT1716lit}
     volumes:
-      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-      - ./migrations:/docker-entrypoint-initdb.d/migrations
+      # Schema initialization temporarily disabled - VECTOR type not supported in base image
+      # - ../../data/sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      # - ../../migrations:/docker-entrypoint-initdb.d/migrations
       - db_data:/var/lib/mysql
     ports:
       - "3307:3306"  # Use 3307 on host to avoid conflict with local MariaDB
@@ -24,10 +25,10 @@ services:
 
   # Llama.cpp Server (LLM inference)
   llama-server:
-    build: ./llama-server
+    build: ../../llama-server
     container_name: phef-llama
     volumes:
-      - ./models:/app/models:ro
+      - ../../models:/app/models:ro
     ports:
       - "8090:8090"
     networks:
@@ -54,7 +55,7 @@ services:
 
   # C++ Agent Service
   agent-service:
-    build: ./cpp_agent
+    build: ../../cpp_agent
     container_name: phef-agent
     depends_on:
       database:
@@ -74,7 +75,7 @@ services:
 
   # PHP API (Apache)
   api:
-    build: .
+    build: ../../
     container_name: phef-api
     depends_on:
       database:
@@ -89,7 +90,7 @@ services:
       DB_NAME: professorhawkeinstein_platform
       AGENT_SERVICE_URL: http://agent-service:8080
     volumes:
-      - .:/var/www/html  # Mount source for development
+      - ../../:/var/www/html  # Mount source for development
     ports:
       - "8081:80"  # Use 8081 on host to avoid conflict with local Apache
     networks:

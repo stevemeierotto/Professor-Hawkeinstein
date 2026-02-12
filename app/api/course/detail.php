@@ -15,6 +15,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 // Require authentication (never trust client userId)
 $userData = requireAuth();
 
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('course_detail');
+
 $courseId = $_GET['courseId'] ?? null;
 
 if (empty($courseId)) {

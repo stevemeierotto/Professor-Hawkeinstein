@@ -15,6 +15,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 requireAuth();
 
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('agent_list');
+
 try {
     $db = getDB();
     

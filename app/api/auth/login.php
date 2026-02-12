@@ -12,6 +12,10 @@ ini_set('log_errors', 1);
 ini_set('error_log', '/var/www/html/Professor_Hawkeinstein/logs/login_errors.log');
 
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+
+// Enforce automatic rate limiting (PUBLIC for unauthenticated endpoint)
+require_rate_limit_auto('auth_login');
 
 try {
     $db = getDB();

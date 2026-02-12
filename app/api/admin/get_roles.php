@@ -10,6 +10,10 @@ require_once __DIR__ . '/auth_check.php';
 // Require admin authorization
 requireAdmin();
 
+// Rate limiting
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('admin_get_roles');
+
 // Return available roles
 echo json_encode([
     ['value' => 'student', 'label' => 'Student'],

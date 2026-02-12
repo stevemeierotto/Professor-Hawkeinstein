@@ -19,6 +19,9 @@ try {
 
     $userData = requireAuth();
     error_log('[Agent Chat] Authenticated user ' . $userData['userId']);
+    
+    require_once __DIR__ . '/../helpers/rate_limiter.php';
+    require_rate_limit_auto('agent_chat');
 
     $input = getJSONInput();
 

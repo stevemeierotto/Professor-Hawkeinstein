@@ -12,6 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 $userData = requireAuth();
+
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('progress_course');
+
 $userId = $_GET['userId'] ?? $userData['userId'];
 $courseId = $_GET['courseId'] ?? null;
 

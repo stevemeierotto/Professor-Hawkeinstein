@@ -22,7 +22,10 @@
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/auth_check.php';
 require_once __DIR__ . '/../helpers/system_agent_helper.php';
-requireAdmin();
+$adminUser = requireAdmin();
+
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit('GENERATION', 'generate_lesson_questions');
 
 
 require_once __DIR__ . '/../helpers/security_headers.php';

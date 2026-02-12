@@ -13,6 +13,10 @@ $user = requireAuth();
 $userId = $user['userId'];
 $userRole = $user['role'];
 
+// Rate limiting
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('admin_get_agent_instance');
+
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);
     echo json_encode(['error' => 'Method not allowed']);

@@ -36,6 +36,10 @@ try {
     // SECURITY: Only admin/root users can view invitations
     $adminUser = requireAdmin();
     
+    // Rate limiting
+    require_once __DIR__ . '/../helpers/rate_limiter.php';
+    require_rate_limit_auto('admin_list_invitations');
+    
     // Only accept GET requests
     if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
         http_response_code(405);

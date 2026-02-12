@@ -8,6 +8,9 @@
 require_once __DIR__ . '/../helpers/security_headers.php';
 set_api_security_headers();
 
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('auth_logout');
+
 // CORS headers if needed
 
 

@@ -14,6 +14,9 @@ require_once __DIR__ . '/../../config/database.php';
 // Require admin authorization
 $admin = requireAdmin();
 
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit('GENERATION', 'generate_lesson');
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['error' => 'Method not allowed']);

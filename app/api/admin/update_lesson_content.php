@@ -23,6 +23,10 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/auth_check.php';
 requireAdmin();
 
+// Rate limiting
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('admin_update_lesson_content');
+
 header('Content-Type: application/json');
 
 // Get JSON body

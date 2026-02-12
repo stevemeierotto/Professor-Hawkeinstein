@@ -3,6 +3,10 @@ require_once __DIR__ . '/../helpers/auth_helpers.php';
 require_once __DIR__ . '/../helpers/security_headers.php';
 set_api_security_headers();
 $userData = requireAuth();
+
+// Rate limiting
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('course_get_course_draft');
 <?php
 /**
  * Get draft_id for a published course

@@ -1,8 +1,4 @@
-// Require authentication (never trust client userId)
-require_once __DIR__ . '/../helpers/auth_helpers.php';
-require_once __DIR__ . '/../helpers/security_headers.php';
-set_api_security_headers();
-$userData = requireAuth();
+
 <?php
 /**
  * Get Unit Test Questions (All lessons in a unit)
@@ -13,6 +9,15 @@ $userData = requireAuth();
  */
 
 require_once '../../config/database.php';
+
+// Require authentication (never trust client userId)
+require_once __DIR__ . '/../helpers/auth_helpers.php';
+require_once __DIR__ . '/../helpers/security_headers.php';
+set_api_security_headers();
+$userData = requireAuth();
+
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('course_get_unit_test_questions');
 
 
 

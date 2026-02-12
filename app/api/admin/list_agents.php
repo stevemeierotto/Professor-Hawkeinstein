@@ -11,6 +11,9 @@ require_once __DIR__ . '/../../config/database.php';
 // Require admin authorization
 $admin = requireAdmin();
 
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('admin_list_agents');
+
 try {
     $db = getDB();
     

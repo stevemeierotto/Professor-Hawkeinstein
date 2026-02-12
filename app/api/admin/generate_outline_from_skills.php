@@ -15,6 +15,9 @@ require_once __DIR__ . '/../../config/database.php';
 // Require admin authentication
 $adminUser = requireAdmin();
 
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit('GENERATION', 'generate_outline_from_skills');
+
 header('Content-Type: application/json');
 
 // Get request body

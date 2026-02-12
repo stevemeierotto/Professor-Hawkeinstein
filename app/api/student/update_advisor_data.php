@@ -13,6 +13,9 @@ setCORSHeaders();
 $student = requireAuth();
 $studentId = $student['userId'];
 
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('student_update_advisor');
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     echo json_encode(['error' => 'Method not allowed']);

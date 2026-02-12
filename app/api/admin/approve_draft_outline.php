@@ -9,6 +9,10 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/auth_check.php';
 requireAdmin();
 
+// Rate limiting
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('admin_approve_draft_outline');
+
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

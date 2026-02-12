@@ -16,6 +16,10 @@ require_once __DIR__ . '/auth_check.php';
 require_once __DIR__ . '/../helpers/system_agent_helper.php';
 requireAdmin();
 
+// Rate limiting
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('admin_course_agent');
+
 header('Content-Type: application/json');
 
 // Parse input from GET params or JSON body

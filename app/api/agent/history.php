@@ -15,6 +15,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 // Require authentication and get user from JWT (never trust client userId)
 $userData = requireAuth();
 
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('agent_history');
+
 
 $agentId = $_GET['agentId'] ?? null;
 $limit = min((int)($_GET['limit'] ?? 50), 100); // Max 100

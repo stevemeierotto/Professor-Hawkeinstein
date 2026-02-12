@@ -29,6 +29,9 @@ require_once __DIR__ . '/../../../vendor/autoload.php';
 use League\OAuth2\Client\Provider\Google;
 use League\OAuth2\Client\Provider\Exception\IdentityProviderException;
 
+require_once __DIR__ . '/../../helpers/rate_limiter.php';
+require_rate_limit_auto('auth_google_callback');
+
 // Don't send JSON for redirects, but set error logging
 ini_set('display_errors', 0);
 error_reporting(E_ALL);

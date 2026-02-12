@@ -25,22 +25,9 @@ header('X-Content-Type-Options: nosniff');
 header('Cache-Control: public, max-age=300');  // 5 minute cache
 header('X-Frame-Options: DENY');
 
-// Enforce rate limiting for public endpoint
-$clientIP = getClientIP();
-try {
-    enforceRateLimit($clientIP, PUBLIC_ANALYTICS_RATE_LIMIT, 'public_metrics');
-    $rateLimitStatus = getRateLimitStatus($clientIP, 'public_metrics');
-    addRateLimitHeaders(
-        $rateLimitStatus['limit'],
-        $rateLimitStatus['remaining'],
-        $rateLimitStatus['reset']
-    );
-} catch (RateLimitExceededException $e) {
-    http_response_code(429);
-    header('Retry-After: ' . ($e->getResetTime() - time()));
-    echo json_encode($e->toResponse());
-    exit;
-}
+// Enforce centralized automatic rate limiting for public endpoint
+require_once APP_ROOT . '/api/helpers/rate_limiter.php';
+require_rate_limit_auto('public_metrics');
 
 // Reject any query parameters (public endpoint returns only pre-computed data)
 if (!empty($_GET)) {

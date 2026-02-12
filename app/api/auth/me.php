@@ -5,6 +5,8 @@ require_once '../../../config/database.php';
 require_once __DIR__ . '/../helpers/security_headers.php';
 set_api_security_headers();
 
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+
 // Get JWT from cookie
 $token = $_COOKIE['auth_token'] ?? '';
 if (!$token) {
@@ -19,6 +21,9 @@ if (!$userData) {
     echo json_encode(['success' => false, 'message' => 'Authentication failed']);
     exit;
 }
+
+// Enforce automatic rate limiting (AUTHENTICATED - detected from JWT)
+require_rate_limit_auto('auth_me');
 
 // Only return minimal user info for dashboard
 $response = [

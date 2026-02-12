@@ -14,6 +14,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('course_get_available');
+
 $indexFile = __DIR__ . '/courses_index.json';
 $coursesDir = __DIR__ . '/courses';
 

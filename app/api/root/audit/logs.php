@@ -44,6 +44,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 $rootUser = requireRoot();
 $userId = $rootUser['user_id'] ?? 'unknown';
 
+require_once APP_ROOT . '/api/helpers/rate_limiter.php';
+require_rate_limit_auto('root_audit_logs');
+
 // Parse query parameters
 $filters = [
     'startDate' => $_GET['startDate'] ?? date('Y-m-d', strtotime('-7 days')),

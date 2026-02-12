@@ -16,6 +16,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // Require authentication and always use authenticated userId (never trust client userId)
 $userData = requireAuth();
 
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('agent_set_active');
+
 $input = getJSONInput();
 $agentId = $input['agentId'] ?? null;
 

@@ -14,6 +14,10 @@ require_once __DIR__ . '/../../config/database.php';
 // Require admin authentication
 $adminUser = requireAdmin();
 
+// Rate limiting
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('admin_save_simplified_skills');
+
 header('Content-Type: application/json');
 
 // Get request body

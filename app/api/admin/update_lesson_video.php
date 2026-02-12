@@ -12,6 +12,10 @@ header('Content-Type: application/json');
 // Require admin authentication
 requireAdmin();
 
+// Rate limiting
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('admin_update_lesson_video');
+
 try {
     $input = json_decode(file_get_contents('php://input'), true);
     

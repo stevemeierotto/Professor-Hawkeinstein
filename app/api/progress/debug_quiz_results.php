@@ -33,6 +33,9 @@ if ($debugKey !== 'true') {
     exit;
 }
 
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+require_rate_limit_auto('progress_debug_quiz');
+
 try {
     $db = getDb();
     

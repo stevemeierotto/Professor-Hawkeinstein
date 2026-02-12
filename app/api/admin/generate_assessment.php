@@ -50,10 +50,13 @@
  */
 
 require_once __DIR__ . '/../admin/auth_check.php';
-requireAdmin();
+$adminUser = requireAdmin();
 
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../course/CourseMetadata.php';
+require_once __DIR__ . '/../helpers/rate_limiter.php';
+
+require_rate_limit('GENERATION', 'generate_assessment');
 
 // Set longer timeout for assessment generation
 set_time_limit(300); // 5 minutes

@@ -13,6 +13,9 @@ require_once APP_ROOT . '/config/database.php';
 
 setCORSHeaders();
 
+require_once APP_ROOT . '/api/helpers/rate_limiter.php';
+require_rate_limit_auto('progress_submit_quiz');
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     sendJSON(['success' => false, 'message' => 'Method not allowed'], 405);
 }
