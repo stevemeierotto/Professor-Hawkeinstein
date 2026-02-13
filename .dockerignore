@@ -6,6 +6,7 @@
 app/cpp_agent/build/
 app/cpp_agent/bin/
 llama.cpp/
+llama-server/
 build/
 bin/
 
@@ -28,6 +29,9 @@ infra/env/
 
 # Archive
 archive/
+
+# Migrations (run separately)
+migrations/
 
 # PHP dependencies (will be installed in container if needed)
 vendor/

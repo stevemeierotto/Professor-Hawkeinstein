@@ -17,6 +17,13 @@ help:
 	@echo "  make stop-services     - Stop all services"
 	@echo "  make agent-build       - Rebuild C++ agent service"
 	@echo ""
+	@echo "Docker:"
+	@echo "  make docker-up         - Start all Docker containers"
+	@echo "  make docker-down       - Stop all Docker containers"
+	@echo "  make docker-restart    - Restart Docker containers"
+	@echo "  make docker-logs       - Show Docker logs"
+	@echo "  make docker-ps         - Show running containers"
+	@echo ""
 
 # ==============================================================================
 # FILE SYNC TARGETS
@@ -143,3 +150,47 @@ commit:
 	@git add -A
 	@git commit -m "$(msg)"
 	@echo "✅ Committed: $(msg)"
+
+# ==============================================================================
+# DOCKER OPERATIONS
+# ==============================================================================
+
+# Start Docker containers
+docker-up:
+	@echo "🐳 Starting Docker containers..."
+	@cd infra/docker && docker compose up -d
+	@echo "✅ Containers started"
+	@echo ""
+	@echo "Services available at:"
+	@echo "  - Database:        localhost:3307"
+	@echo "  - Llama Server:    http://localhost:8090"
+	@echo "  - Agent Service:   http://localhost:8080"
+	@echo "  - PHP API:         http://localhost:8081"
+
+# Stop Docker containers
+docker-down:
+	@echo "🛑 Stopping Docker containers..."
+	@cd infra/docker && docker compose down
+	@echo "✅ Containers stopped"
+
+# Restart Docker containers
+docker-restart:
+	@echo "🔄 Restarting Docker containers..."
+	@cd infra/docker && docker compose restart
+	@echo "✅ Containers restarted"
+
+# Show Docker logs
+docker-logs:
+	@cd infra/docker && docker compose logs -f
+
+# Show running containers
+docker-ps:
+	@cd infra/docker && docker compose ps
+
+# Rebuild and restart containers
+docker-rebuild:
+	@echo "🔨 Rebuilding Docker containers..."
+	@cd infra/docker && docker compose build
+	@echo "🚀 Starting containers..."
+	@cd infra/docker && docker compose up -d
+	@echo "✅ Rebuild complete"

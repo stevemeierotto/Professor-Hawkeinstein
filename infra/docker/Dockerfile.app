@@ -16,14 +16,11 @@ RUN echo "PassEnv DB_NAME" >> /etc/apache2/conf-available/environment.conf && \
     echo "PassEnv DB_HOST" >> /etc/apache2/conf-available/environment.conf && \
     a2enconf environment
 
-# Copy your PHP code
+#  Update DocumentRoot to /var/www/html (root is now app/)
+RUN sed -i 's#/var/www/html#/var/www/html#g' /etc/apache2/sites-available/000-default.conf
+
+# Copy app directory contents
 COPY . /var/www/html/
-
-# Copy Apache config
-COPY infra/apache/.htaccess /var/www/html/app/
-
-# Update DocumentRoot to point to app/ directory
-RUN sed -i 's#/var/www/html#/var/www/html/app#g' /etc/apache2/sites-available/000-default.conf
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html

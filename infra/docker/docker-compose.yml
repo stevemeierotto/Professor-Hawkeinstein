@@ -55,7 +55,7 @@ services:
 
   # C++ Agent Service
   agent-service:
-    build: ../../cpp_agent
+    build: ../../app/cpp_agent
     container_name: phef-agent
     depends_on:
       database:
@@ -75,7 +75,9 @@ services:
 
   # PHP API (Apache)
   api:
-    build: ../../
+    build:
+      context: ../../app
+      dockerfile: ../infra/docker/Dockerfile.app
     container_name: phef-api
     depends_on:
       database:
@@ -90,7 +92,7 @@ services:
       DB_NAME: professorhawkeinstein_platform
       AGENT_SERVICE_URL: http://agent-service:8080
     volumes:
-      - ../../:/var/www/html  # Mount source for development
+      - ../../app:/var/www/html  # Mount app directory for development
     ports:
       - "8081:80"  # Use 8081 on host to avoid conflict with local Apache
     networks:
