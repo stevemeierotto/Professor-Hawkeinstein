@@ -9,7 +9,6 @@ error_reporting(E_ALL);
 
 // Log errors to file instead of display
 ini_set('log_errors', 1);
-ini_set('error_log', '/var/www/html/Professor_Hawkeinstein/logs/register_errors.log');
 
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../helpers/rate_limiter.php';

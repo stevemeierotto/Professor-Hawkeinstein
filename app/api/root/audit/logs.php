@@ -24,7 +24,7 @@
  * Created: 2026-02-09 (Phase 6: Audit Access)
  */
 
-define('APP_ROOT', '/var/www/html/basic_educational');
+define('APP_ROOT', dirname(__DIR__, 4));
 require_once APP_ROOT . '/config/database.php';
 require_once APP_ROOT . '/api/admin/auth_check.php';
 require_once APP_ROOT . '/api/helpers/role_check.php';

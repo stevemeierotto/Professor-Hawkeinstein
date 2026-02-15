@@ -4,8 +4,8 @@
  * Grades quiz submissions with auto-grading for MC/FIB and AI agent for short answer
  */
 
-// HARD-LOCKED PATHS - No relative path math
-define('APP_ROOT', '/var/www/html/basic_educational');
+// Dynamic path resolution - works in any deployment location
+define('APP_ROOT', dirname(__DIR__, 3));
 define('API_ROOT', APP_ROOT . '/api');
 define('LOG_PATH', '/tmp/quiz_debug.log');
 

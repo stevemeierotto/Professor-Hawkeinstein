@@ -9,7 +9,6 @@ set_api_security_headers();
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 ini_set('log_errors', 1);
-ini_set('error_log', '/var/www/html/Professor_Hawkeinstein/logs/login_errors.log');
 
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../helpers/rate_limiter.php';
