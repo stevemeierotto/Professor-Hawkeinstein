@@ -10,7 +10,7 @@ require_rate_limit_auto('admin_list_course_drafts');
 
 header('Content-Type: application/json');
 
-$db = getDb();
+$db = getDB();
 
 // Get all drafts that are not published
 $stmt = $db->prepare("SELECT draft_id, course_name, subject, grade, status, created_at FROM course_drafts WHERE status != 'published' ORDER BY created_at DESC");

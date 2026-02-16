@@ -29,7 +29,7 @@ if (empty($input['agent_name'])) {
     exit;
 }
 
-$db = getDb();
+$db = getDB();
 
 try {
     $agentName = trim($input['agent_name']);

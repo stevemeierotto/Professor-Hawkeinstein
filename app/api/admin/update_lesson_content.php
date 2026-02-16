@@ -48,7 +48,7 @@ if (!$draftId || $unitIndex === null || $lessonIndex === null || empty($updates)
     exit;
 }
 
-$db = getDb();
+$db = getDB();
 
 try {
     $db->beginTransaction();

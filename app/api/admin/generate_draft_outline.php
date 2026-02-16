@@ -17,7 +17,7 @@ if (!$input || empty($input['draftId'])) {
 }
 
 $draftId = intval($input['draftId']);
-$db = getDb();
+$db = getDB();
 
 $stmt = $db->prepare("SELECT * FROM course_drafts WHERE draft_id = ?");
 $stmt->execute([$draftId]);

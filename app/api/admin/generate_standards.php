@@ -88,6 +88,9 @@ PROMPT;
     error_log("[Generate Standards] Agent response: " . substr($rawResponse, 0, 500));
     
     // Note: Timestamp and markdown cleaning now handled by cleanAgentResponse() in callSystemAgent()
+
+    // Strip any markdown code fences like ```json ... ``` that break JSON decoding
+    $rawResponse = preg_replace('/```[a-zA-Z0-9]*\s*/', '', $rawResponse);
     
     // Remove any title/header lines before JSON (e.g., "3rd Grade Science Standards")
     // Look for lines that don't start with [ or {
@@ -96,6 +99,9 @@ PROMPT;
     $foundJson = false;
     foreach ($lines as $line) {
         $trimmedLine = trim($line);
+        if ($trimmedLine === '') {
+            continue;
+        }
         if (!$foundJson && ($trimmedLine[0] === '[' || $trimmedLine[0] === '{')) {
             $foundJson = true;
         }

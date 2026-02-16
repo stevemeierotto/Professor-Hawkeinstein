@@ -18,7 +18,7 @@ require_rate_limit_auto('auth_register');
 
 try {
     // Use standard database connection
-    $db = getDb();
+    $db = getDB();
 
     // Get JSON input
     $input = json_decode(file_get_contents('php://input'), true);

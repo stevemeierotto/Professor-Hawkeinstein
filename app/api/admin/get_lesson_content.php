@@ -24,12 +24,14 @@ $draftId = isset($_GET['draftId']) ? (int)$_GET['draftId'] : 0;
 $unitIndex = isset($_GET['unitIndex']) ? (int)$_GET['unitIndex'] : null;
 $lessonIndex = isset($_GET['lessonIndex']) ? (int)$_GET['lessonIndex'] : null;
 
+error_log("[get_lesson_content] params draftId=$draftId unitIndex=" . var_export($unitIndex, true) . " lessonIndex=" . var_export($lessonIndex, true));
+
 if (!$draftId) {
     echo json_encode(['success' => false, 'message' => 'draftId required']);
     exit;
 }
 
-$db = getDb();
+$db = getDB();
 
 try {
     if ($unitIndex !== null && $lessonIndex !== null) {
@@ -40,8 +42,6 @@ try {
                 dlc.unit_index,
                 dlc.lesson_index,
                 dlc.relevance_score,
-                dlc.approved,
-                dlc.approved_at,
                 dlc.added_at,
                 sc.content_id,
                 sc.url,
@@ -58,6 +58,7 @@ try {
         ");
         $stmt->execute([$draftId, $unitIndex, $lessonIndex]);
         $content = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        error_log("[get_lesson_content] draft=$draftId unit=$unitIndex lesson=$lessonIndex rows=" . count($content));
         
         echo json_encode([
             'success' => true,
@@ -74,8 +75,6 @@ try {
                 dlc.unit_index,
                 dlc.lesson_index,
                 COUNT(*) as content_count,
-                MAX(dlc.approved) as approved,
-                MAX(dlc.approved_at) as approved_at,
                 GROUP_CONCAT(sc.title SEPARATOR '|||') as titles
             FROM draft_lesson_content dlc
             JOIN educational_content sc ON dlc.content_id = sc.content_id
@@ -94,8 +93,8 @@ try {
                 'unitIndex' => (int)$row['unit_index'],
                 'lessonIndex' => (int)$row['lesson_index'],
                 'contentCount' => (int)$row['content_count'],
-                'approved' => (bool)$row['approved'],
-                'approvedAt' => $row['approved_at'],
+                'approved' => false,
+                'approvedAt' => null,
                 'titles' => explode('|||', $row['titles'])
             ];
         }

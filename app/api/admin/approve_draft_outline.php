@@ -31,7 +31,7 @@ if (empty($input['draftId'])) {
 $draftId = (int)$input['draftId'];
 
 try {
-    $db = getDb();
+    $db = getDB();
     
     // First check if draft exists and get current status
     $stmt = $db->prepare("

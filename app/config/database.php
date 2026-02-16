@@ -1,5 +1,24 @@
 <?php
-require_once __DIR__ . '/../../vendor/autoload.php';
+$autoloadPaths = [
+    __DIR__ . '/../../vendor/autoload.php',
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../../vendor/autoload.php'
+];
+
+foreach ($autoloadPaths as $autoloadPath) {
+    if (file_exists($autoloadPath)) {
+        require_once $autoloadPath;
+        break;
+    }
+}
+
+if (!class_exists('Firebase\\JWT\\JWT')) {
+    error_log('[database.php] Unable to locate vendor/autoload.php for JWT support');
+    http_response_code(500);
+    echo json_encode(['success' => false, 'message' => 'Server configuration error']);
+    exit;
+}
+
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 /**

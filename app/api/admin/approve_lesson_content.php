@@ -39,7 +39,7 @@ if (!$draftId) {
     exit;
 }
 
-$db = getDb();
+$db = getDB();
 
 try {
     // Update the approval status in draft_lesson_content

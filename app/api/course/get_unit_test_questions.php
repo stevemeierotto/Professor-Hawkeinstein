@@ -34,7 +34,7 @@ if (!$courseId || $unitIndex === null) {
     exit;
 }
 
-$db = getDb();
+$db = getDB();
 
 try {
     // Use helper function to resolve course IDs

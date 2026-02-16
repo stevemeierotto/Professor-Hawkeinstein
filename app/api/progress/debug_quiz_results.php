@@ -37,7 +37,7 @@ require_once __DIR__ . '/../helpers/rate_limiter.php';
 require_rate_limit_auto('progress_debug_quiz');
 
 try {
-    $db = getDb();
+    $db = getDB();
     
     // Get the most recent assessment submission (quiz or unit test)
     $stmt = $db->query("

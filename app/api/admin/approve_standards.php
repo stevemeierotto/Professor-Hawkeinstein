@@ -19,7 +19,7 @@ if (!$input || empty($input['draftId']) || !isset($input['standards'])) {
 $draftId = intval($input['draftId']);
 $standards = $input['standards']; // Array of {standard_id, standard_code, description}
 
-$db = getDb();
+$db = getDB();
 
 // Remove any existing approved standards for this draft
 $db->prepare("DELETE FROM approved_standards WHERE draft_id = ?")->execute([$draftId]);

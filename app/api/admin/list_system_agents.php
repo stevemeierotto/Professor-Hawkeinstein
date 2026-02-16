@@ -17,7 +17,7 @@ require_rate_limit_auto('admin_list_system_agents');
 require_once __DIR__ . '/../helpers/security_headers.php';
 set_api_security_headers();
 
-$db = getDb();
+$db = getDB();
 
 try {
     // Get all system agents (agent_type = 'system')

@@ -36,7 +36,7 @@ if (!$courseId || $unitIndex === null || $lessonIndex === null) {
     exit;
 }
 
-$db = getDb();
+$db = getDB();
 
 try {
     // First, try to get from published course (courses → units → lessons)

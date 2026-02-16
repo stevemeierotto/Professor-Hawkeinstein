@@ -110,7 +110,7 @@ try {
     // This only runs if:
     // - auth_provider_required is NULL (no restriction), OR
     // - auth_provider_required is 'local' (password explicitly allowed)
-    if (!password_verify($password, $user['password_hash'])) {
+    if (!verifyPassword($password, $user['password_hash'])) {
         http_response_code(401);
         error_log("Login attempt failed: invalid password for username: $username");
         echo json_encode(['success' => false, 'message' => 'Invalid credentials']);

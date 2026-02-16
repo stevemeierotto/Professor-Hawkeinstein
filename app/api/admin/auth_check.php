@@ -162,14 +162,33 @@ function getAdminUser($userId) {
  */
 function logAdminAction($userId, $action, $details, $metadata = []) {
     $db = getDB();
-    
+
+    static $activityTableChecked = false;
+    static $activityTableExists = false;
+
+    if (!$activityTableChecked) {
+        try {
+            $result = $db->query("SHOW TABLES LIKE 'admin_activity_log'");
+            $activityTableExists = (bool) $result->fetch();
+        } catch (Exception $e) {
+            error_log('[logAdminAction] Failed to verify admin_activity_log table: ' . $e->getMessage());
+            $activityTableExists = false;
+        }
+        $activityTableChecked = true;
+    }
+
+    if (!$activityTableExists) {
+        error_log('[logAdminAction] admin_activity_log table missing; skipping audit insert for action ' . $action);
+        return;
+    }
+
     $metadataJson = json_encode($metadata);
-    
+
     $stmt = $db->prepare("
         INSERT INTO admin_activity_log (user_id, action, details, metadata, created_at)
         VALUES (?, ?, ?, ?, NOW())
     ");
-    
+
     $stmt->execute([$userId, $action, $details, $metadataJson]);
 }
 

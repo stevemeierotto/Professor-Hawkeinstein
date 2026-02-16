@@ -17,7 +17,7 @@ if (!$draftId) {
     exit;
 }
 
-$db = getDb();
+$db = getDB();
 $stmt = $db->prepare("SELECT outline_json FROM course_outlines WHERE draft_id = ? ORDER BY generated_at DESC LIMIT 1");
 $stmt->execute([$draftId]);
 $result = $stmt->fetch(PDO::FETCH_ASSOC);

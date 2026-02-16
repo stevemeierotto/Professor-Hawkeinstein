@@ -15,7 +15,7 @@ require_once __DIR__ . '/../../config/database.php';
  * @return array|null Agent configuration or null if not found
  */
 function getSystemAgent($purpose) {
-    $db = getDb();
+    $db = getDB();
     
     // Map purpose to agent names (system agents are identified by name pattern)
     $namePatterns = [

@@ -17,7 +17,7 @@ if (!$draftId) {
     exit;
 }
 
-$db = getDb();
+$db = getDB();
 $stmt = $db->prepare("SELECT id, standard_id, standard_code, description FROM approved_standards WHERE draft_id = ? ORDER BY id");
 $stmt->execute([$draftId]);
 $standards = $stmt->fetchAll(PDO::FETCH_ASSOC);

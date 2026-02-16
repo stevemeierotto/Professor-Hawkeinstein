@@ -28,7 +28,7 @@ $action = $_GET['action'] ?? $input['action'] ?? 'status';
 $draftId = $_GET['draftId'] ?? $input['draftId'] ?? null;
 
 try {
-    $db = getDb();
+    $db = getDB();
     
     switch ($action) {
         case 'status':

@@ -27,7 +27,7 @@ foreach ($required as $field) {
 }
 
 // Prepare DB
-$db = getDb();
+$db = getDB();
 $stmt = $db->prepare("INSERT INTO course_drafts (course_name, subject, grade, created_by, created_at) VALUES (?, ?, ?, ?, NOW())");
 $adminId = getAdminId(); // From session/JWT
 $stmt->execute([

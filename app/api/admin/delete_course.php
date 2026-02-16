@@ -17,7 +17,7 @@ if (!$input || empty($input['draftId'])) {
 }
 
 $draftId = intval($input['draftId']);
-$db = getDb();
+$db = getDB();
 
 // Cascading delete handled by FK constraints
 $stmt = $db->prepare("DELETE FROM course_drafts WHERE draft_id = ?");

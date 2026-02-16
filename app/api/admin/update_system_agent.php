@@ -34,7 +34,7 @@ if (empty($input['agent_name'])) {
     exit;
 }
 
-$db = getDb();
+$db = getDB();
 
 try {
     $agentId = (int)$input['agent_id'];

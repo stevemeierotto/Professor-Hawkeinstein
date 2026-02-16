@@ -20,7 +20,7 @@ if (!$input || empty($input['courseId'])) {
 }
 
 $courseId = intval($input['courseId']);
-$db = getDb();
+$db = getDB();
 
 // First get course info for confirmation
 $stmt = $db->prepare("SELECT course_id, course_name, subject_area FROM courses WHERE course_id = ?");

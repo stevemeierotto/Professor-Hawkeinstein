@@ -11,7 +11,7 @@
 
 require_once __DIR__ . '/config/database.php';
 
-$db = getDb();
+$db = getDB();
 
 // List courses function
 function listCourses($db) {

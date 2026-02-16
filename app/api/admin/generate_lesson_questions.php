@@ -31,7 +31,7 @@ require_rate_limit('GENERATION', 'generate_lesson_questions');
 require_once __DIR__ . '/../helpers/security_headers.php';
 set_api_security_headers();
 
-$db = getDb();
+$db = getDB();
 
 // Handle GET - retrieve existing questions
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {

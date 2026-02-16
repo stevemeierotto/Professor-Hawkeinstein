@@ -61,7 +61,7 @@ error_log("[generate_lesson_content] Request for draftId=$draftId, unit=$unitInd
 
 try {
     // Use standard database connection
-    $db = getDb();
+    $db = getDB();
     
     // Verify which database we're connected to
     $debugCheck = $db->query('SELECT DATABASE() as current_db');

@@ -42,7 +42,7 @@ if (!in_array($questionType, $validTypes)) {
 }
 
 try {
-    $db = getDb();
+    $db = getDB();
     
     // Delete existing bank for this lesson/type
     $stmt = $db->prepare("
